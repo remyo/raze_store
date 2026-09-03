@@ -43,9 +43,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       title: 'Products',
       actions: [
         IconButton(
-          onPressed: () => context.push('/catalog'),
-          tooltip: 'Browse Philippine catalog',
-          icon: const Icon(Icons.cloud_outlined),
+          onPressed: () => context.push('/quick-sell'),
+          tooltip: 'Quick add by unit',
+          icon: const Icon(Icons.widgets_outlined),
         ),
         IconButton(
           onPressed: () => context.push('/products/quick-add'),

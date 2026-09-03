@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/core/money/money.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/core/widgets/bounded_network_image.dart';
 import 'package:raze_store/features/catalog/application/catalog_api_providers.dart';
@@ -30,6 +31,7 @@ class _RemoteCatalogScreenState extends ConsumerState<RemoteCatalogScreen> {
   bool _hasNextPage = false;
   int _page = 1;
   int _requestGeneration = 0;
+  String? _selectingProductId;
 
   @override
   void initState() {
@@ -153,10 +155,12 @@ class _RemoteCatalogScreenState extends ConsumerState<RemoteCatalogScreen> {
             );
           }
           final product = _products[index];
+          final selecting = _selectingProductId == product.catalogProductId;
+          final selectionLocked = _selectingProductId != null;
           return Card(
             child: ListTile(
               key: ValueKey('remote-product-${product.catalogProductId}'),
-              onTap: () => _chooseProduct(product),
+              onTap: selectionLocked ? null : () => _chooseProduct(product),
               leading: _RemoteProductImage(url: product.remoteImageUrl),
               title: Text(product.name),
               subtitle: Text(
@@ -165,11 +169,27 @@ class _RemoteCatalogScreenState extends ConsumerState<RemoteCatalogScreen> {
                   product.unitLabel,
                   product.category,
                   product.barcode,
+                  if (product.metadata.suggestedPriceCentavos case final price?)
+                    'SRP/ref ${Money.fromCentavos(price).format()}',
                 ].whereType<String>().join(' · '),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              trailing: const Icon(Icons.chevron_right_rounded),
+              trailing: FilledButton.tonalIcon(
+                key: ValueKey(
+                  'remote-product-select-${product.catalogProductId}',
+                ),
+                onPressed: selectionLocked
+                    ? null
+                    : () => _chooseProduct(product),
+                icon: selecting
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_rounded),
+                label: Text(selecting ? 'Opening…' : 'Select'),
+              ),
             ),
           );
         },
@@ -234,6 +254,30 @@ class _RemoteCatalogScreenState extends ConsumerState<RemoteCatalogScreen> {
   }
 
   Future<void> _chooseProduct(RemoteCatalogProduct remoteProduct) async {
+    if (_selectingProductId != null) return;
+    setState(() => _selectingProductId = remoteProduct.catalogProductId);
+    try {
+      await _completeProductSelection(remoteProduct);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This product could not be opened. Please try again.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _selectingProductId = null);
+      }
+    }
+  }
+
+  Future<void> _completeProductSelection(
+    RemoteCatalogProduct remoteProduct,
+  ) async {
     final localRepository = ref.read(catalogRepositoryProvider);
     var local = await localRepository.findByBarcode(remoteProduct.barcode);
     final source = remoteProduct.metadata.source;

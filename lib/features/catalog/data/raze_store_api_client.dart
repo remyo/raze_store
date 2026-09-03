@@ -277,6 +277,10 @@ final class RazeStoreApiClient implements RemoteCatalogRepository {
     if (updatedAt == null) {
       throw _invalidResponse('The product update timestamp is invalid.');
     }
+    final suggestedPriceCentavos = _optionalPositiveInt(
+      payload,
+      'suggestedPriceCentavos',
+    );
     try {
       final metadata = CatalogMetadata(
         barcode: _requiredString(payload, 'barcode', maximumLength: 160),
@@ -287,6 +291,7 @@ final class RazeStoreApiClient implements RemoteCatalogRepository {
         remoteImageUrl: remoteImageUrl,
         source: source,
         sourceProductId: sourceProductId,
+        suggestedPriceCentavos: suggestedPriceCentavos,
       );
       return RemoteCatalogProduct(
         catalogProductId: catalogProductId,
@@ -336,6 +341,13 @@ final class RazeStoreApiClient implements RemoteCatalogRepository {
       throw _invalidResponse('The catalog field "$key" is too long.');
     }
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  int? _optionalPositiveInt(Map<String, Object?> payload, String key) {
+    final value = payload[key];
+    if (value == null) return null;
+    if (value is int && value > 0) return value;
+    throw _invalidResponse('The catalog field "$key" is invalid.');
   }
 
   CatalogApiException _statusException(_ApiResponse response) {

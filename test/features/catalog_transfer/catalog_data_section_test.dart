@@ -8,52 +8,139 @@ import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_res
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 
 void main() {
-  testWidgets(
-    'explains backup and CSV behavior and confirms destructive restore',
-    (tester) async {
-      final operations = _FakeTransferOperations();
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            catalogTransferCoordinatorProvider.overrideWithValue(operations),
-          ],
-          child: MaterialApp(
-            theme: AppTheme.light,
-            home: const Scaffold(
-              body: SingleChildScrollView(child: CatalogDataSection()),
-            ),
+  testWidgets('explains safe pack merge, backup, and CSV behavior', (
+    tester,
+  ) async {
+    final operations = _FakeTransferOperations();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogTransferCoordinatorProvider.overrideWithValue(operations),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: SingleChildScrollView(child: CatalogDataSection()),
           ),
         ),
-      );
+      ),
+    );
 
-      expect(
-        find.text(
-          'Backup files are not encrypted. They contain prices, store details, and copies of product photos, so keep them private.',
+    expect(
+      find.text(
+        'Backup files are not encrypted. They contain prices, store details, and copies of product photos, so keep them private.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Import adds or updates'), findsOneWidget);
+
+    expect(find.text('Offline catalog pack'), findsOneWidget);
+    expect(
+      find.textContaining('Your product details, selling prices'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
+    await tester.pumpAndSettle();
+    expect(find.text('Import offline catalog pack?'), findsOneWidget);
+    expect(operations.packImportCalls, 0);
+    await tester.tap(find.text('Choose pack and import'));
+    await tester.pumpAndSettle();
+    expect(operations.packImportCalls, 1);
+
+    await tester.ensureVisible(find.text('Restore backup'));
+    await tester.tap(find.text('Restore backup'));
+    await tester.pumpAndSettle();
+    expect(find.text('Replace this catalog?'), findsOneWidget);
+    expect(operations.restoreCalls, 0);
+    await tester.tap(find.text('Choose file and replace'));
+    await tester.pumpAndSettle();
+    expect(operations.restoreCalls, 1);
+
+    ScaffoldMessenger.of(
+      tester.element(find.byType(CatalogDataSection)),
+    ).hideCurrentSnackBar();
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import CSV'));
+    await tester.pumpAndSettle();
+    expect(find.text('Import product CSV?'), findsOneWidget);
+    expect(operations.importCalls, 0);
+    await tester.tap(find.text('Choose CSV and import'));
+    await tester.pumpAndSettle();
+    expect(operations.importCalls, 1);
+  });
+
+  testWidgets('confirmation dialogs scroll at large text sizes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogTransferCoordinatorProvider.overrideWithValue(
+            _FakeTransferOperations(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: CatalogDataSection()),
+          ),
         ),
-        findsOneWidget,
+      ),
+    );
+
+    Future<void> expectScrollableDialog({
+      required Finder trigger,
+      required String title,
+    }) async {
+      await tester.ensureVisible(trigger);
+      await tester.pumpAndSettle();
+      await tester.tap(trigger);
+      await tester.pumpAndSettle();
+
+      expect(find.text(title), findsOneWidget);
+      expect(
+        tester.widget<AlertDialog>(find.byType(AlertDialog)).scrollable,
+        isTrue,
       );
-      expect(find.textContaining('Import adds or updates'), findsOneWidget);
+      expect(tester.takeException(), isNull);
 
-      await tester.tap(find.text('Restore backup'));
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(find.text('Replace this catalog?'), findsOneWidget);
-      expect(operations.restoreCalls, 0);
-      await tester.tap(find.text('Choose file and replace'));
-      await tester.pumpAndSettle();
-      expect(operations.restoreCalls, 1);
+    }
 
-      await tester.tap(find.text('Import CSV'));
-      await tester.pumpAndSettle();
-      expect(find.text('Import product CSV?'), findsOneWidget);
-      expect(operations.importCalls, 0);
-      await tester.tap(find.text('Choose CSV and import'));
-      await tester.pumpAndSettle();
-      expect(operations.importCalls, 1);
-    },
-  );
+    await expectScrollableDialog(
+      trigger: find.byKey(const ValueKey('import-catalog-pack')),
+      title: 'Import offline catalog pack?',
+    );
+    await expectScrollableDialog(
+      trigger: find.text('Restore backup'),
+      title: 'Replace this catalog?',
+    );
+    await expectScrollableDialog(
+      trigger: find.text('Import CSV'),
+      title: 'Import product CSV?',
+    );
+  });
 }
 
 final class _FakeTransferOperations implements CatalogTransferOperations {
+  var packImportCalls = 0;
   var restoreCalls = 0;
   var importCalls = 0;
 
@@ -72,6 +159,17 @@ final class _FakeTransferOperations implements CatalogTransferOperations {
       action: CatalogTransferAction.csvImport,
       message: 'Imported.',
       productCount: 1,
+    );
+  }
+
+  @override
+  Future<CatalogTransferResult> importCatalogPackMerging() async {
+    packImportCalls++;
+    return const CatalogTransferSuccess(
+      action: CatalogTransferAction.catalogPackImport,
+      message: 'Catalog pack imported.',
+      productCount: 1,
+      photoCount: 1,
     );
   }
 

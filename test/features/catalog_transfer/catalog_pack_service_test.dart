@@ -1,0 +1,805 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:raze_store/core/database/app_database.dart' show AppDatabase;
+import 'package:raze_store/core/storage/local_product_image_store.dart';
+import 'package:raze_store/features/cart/data/local_cart_repository.dart';
+import 'package:raze_store/features/catalog/data/local_catalog_repository.dart';
+import 'package:raze_store/features/catalog/domain/catalog_product.dart';
+import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
+import 'package:raze_store/features/settings/data/local_settings_repository.dart';
+import 'package:raze_store/features/settings/domain/store_profile.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  late Directory testRoot;
+  late AppDatabase database;
+  late LocalProductImageStore imageStore;
+  late CatalogPackService service;
+  var packNumber = 0;
+
+  setUp(() async {
+    testRoot = await Directory.systemTemp.createTemp('raze_store_pack_test_');
+    database = AppDatabase.forTesting(NativeDatabase.memory());
+    imageStore = LocalProductImageStore(
+      root: Directory('${testRoot.path}/managed'),
+    );
+    service = CatalogPackService(database: database, imageStore: imageStore);
+  });
+
+  tearDown(() async {
+    await database.close();
+    if (await testRoot.exists()) await testRoot.delete(recursive: true);
+  });
+
+  test(
+    'imports a new product, image, and optional attribution metadata',
+    () async {
+      final sourceUpdatedAt = DateTime.utc(2026, 9, 3, 4, 5, 6);
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'coffee-001',
+            barcode: '4800012345678',
+            name: 'Filipino Coffee',
+            updatedAt: sourceUpdatedAt,
+            priceCentavos: 1299,
+            image: 'images/coffee-001.png',
+          )..addAll({
+            'sourceUrl': 'https://example.test/products/coffee-001',
+            'imageSourceUrl': 'https://example.test/images/coffee-001',
+            'imageLicense': 'CC-BY-SA-4.0',
+          }),
+        ],
+        images: {'images/coffee-001.png': _pngBytes(1)},
+        includeAttribution: true,
+      );
+
+      final result = await service.importMerging(pack.path);
+
+      expect(result.success, isTrue);
+      expect(result.productCount, 1);
+      expect(result.createdCount, 1);
+      expect(result.updatedCount, 0);
+      expect(result.imageCount, 1);
+      final imported = (await LocalCatalogRepository(
+        database,
+        imageStore: imageStore,
+      ).searchProducts('')).single;
+      expect(imported.name, 'Filipino Coffee');
+      expect(imported.barcode, '4800012345678');
+      expect(imported.priceCentavos, 1299);
+      expect(imported.metadata.source, 'raze_store_api');
+      expect(imported.metadata.sourceProductId, 'coffee-001');
+      expect(imported.sourceUpdatedAt, sourceUpdatedAt);
+      expect(imported.localImagePath, isNull);
+      expect(imported.catalogImagePath, isNotNull);
+      expect(
+        await File(imported.catalogImagePath!).readAsBytes(),
+        _pngBytes(1),
+      );
+    },
+  );
+
+  test(
+    'matched product preserves owner fields, prices, units, photo, cart, and profile',
+    () async {
+      final localPhotoSource = File('${testRoot.path}/owner.png');
+      await localPhotoSource.writeAsBytes(_pngBytes(8));
+      final localPhoto = await imageStore.persistFile(localPhotoSource);
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      final original = await catalog.createProduct(
+        ProductDraft(
+          id: 'owner-product',
+          barcode: '4800012345678',
+          name: 'Owner Name',
+          brand: 'Owner Brand',
+          category: 'Owner Category',
+          unitLabel: 'Owner Pack',
+          remoteImageUrl: 'https://owner.test/image.png',
+          localImagePath: localPhoto,
+          priceCentavos: 4321,
+          sellingUnits: [
+            SellingUnitDraft(
+              id: 'owner-piece',
+              label: 'Owner Piece',
+              priceCentavos: 321,
+            ),
+          ],
+        ),
+      );
+      await LocalCartRepository(database).addProduct(original);
+      await LocalSettingsRepository(database).saveStoreProfile(
+        const StoreProfile(
+          storeName: 'Owner Store',
+          address: 'Quezon City',
+          contact: '09170000000',
+          receiptFooter: 'Owner footer',
+        ),
+      );
+      final originalUpdatedAt = original.updatedAt;
+      final packUpdatedAt = DateTime.utc(2026, 9, 3);
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'shared-coffee',
+            barcode: original.barcode,
+            name: 'Pack Name',
+            updatedAt: packUpdatedAt,
+            priceCentavos: 9999,
+            image: 'images/shared-coffee.png',
+          )..addAll({
+            'brand': 'Pack Brand',
+            'category': 'Pack Category',
+            'unitLabel': 'Pack Unit',
+            'remoteImageUrl': 'https://pack.test/image.png',
+          }),
+        ],
+        images: {'images/shared-coffee.png': _pngBytes(2)},
+      );
+
+      final result = await service.importMerging(pack.path);
+
+      expect(result.success, isTrue);
+      expect(result.createdCount, 0);
+      expect(result.updatedCount, 1);
+      final preserved = (await catalog.searchProducts('')).single;
+      expect(preserved.id, original.id);
+      expect(preserved.name, 'Owner Name');
+      expect(preserved.brand, 'Owner Brand');
+      expect(preserved.category, 'Owner Category');
+      expect(preserved.unitLabel, 'Owner Pack');
+      expect(preserved.barcode, '4800012345678');
+      expect(preserved.remoteImageUrl, 'https://owner.test/image.png');
+      expect(preserved.priceCentavos, 4321);
+      expect(preserved.localImagePath, localPhoto);
+      expect(preserved.sellingUnits.single.id, 'owner-piece');
+      expect(preserved.sellingUnits.single.label, 'Owner Piece');
+      expect(preserved.sellingUnits.single.priceCentavos, 321);
+      expect(preserved.updatedAt, originalUpdatedAt);
+      expect(preserved.metadata.source, 'raze_store_api');
+      expect(preserved.metadata.sourceProductId, 'shared-coffee');
+      expect(preserved.sourceUpdatedAt, packUpdatedAt);
+      expect(
+        await File(preserved.catalogImagePath!).readAsBytes(),
+        _pngBytes(2),
+      );
+      final cart = await LocalCartRepository(database).getDraft();
+      expect(cart.items.single.name, 'Owner Name');
+      expect(cart.items.single.unitPriceCentavos, 4321);
+      final profile = await LocalSettingsRepository(database).getStoreProfile();
+      expect(profile.storeName, 'Owner Store');
+      expect(profile.receiptFooter, 'Owner footer');
+    },
+  );
+
+  test(
+    'newer pack leaves an existing linked product and image unchanged',
+    () async {
+      final firstPack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'stable-product',
+            barcode: '4800012345678',
+            name: 'First Name',
+            updatedAt: DateTime.utc(2026, 1, 1),
+            priceCentavos: 1000,
+            image: 'images/stable-product.png',
+          ),
+        ],
+        images: {'images/stable-product.png': _pngBytes(3)},
+      );
+      expect((await service.importMerging(firstPack.path)).success, isTrue);
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      final before = (await catalog.searchProducts('')).single;
+      final beforeImage = before.catalogImagePath!;
+
+      final newerPack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        revision: 2,
+        products: [
+          _product(
+            id: 'stable-product',
+            barcode: 'DIFFERENT-ALIAS',
+            name: 'New Pack Name',
+            updatedAt: DateTime.utc(2027, 1, 1),
+            priceCentavos: 9000,
+            image: 'images/stable-product.png',
+          ),
+        ],
+        images: {'images/stable-product.png': _pngBytes(4)},
+      );
+
+      final result = await service.importMerging(newerPack.path);
+
+      expect(result.success, isTrue);
+      expect(result.createdCount, 0);
+      expect(result.updatedCount, 0);
+      expect(result.imageCount, 0);
+      final after = (await catalog.searchProducts('')).single;
+      expect(after.name, 'First Name');
+      expect(after.barcode, '4800012345678');
+      expect(after.priceCentavos, 1000);
+      expect(after.catalogImagePath, beforeImage);
+      expect(after.sourceUpdatedAt, DateTime.utc(2026, 1, 1));
+      expect(await File(beforeImage).readAsBytes(), _pngBytes(3));
+    },
+  );
+
+  test(
+    'reimport repairs a missing catalog image without rolling time back',
+    () async {
+      final firstTimestamp = DateTime.utc(2026, 6, 1);
+      final firstPack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'repair-product',
+            barcode: '4800012345678',
+            name: 'Repair Product',
+            updatedAt: firstTimestamp,
+            priceCentavos: 1000,
+            image: 'images/repair-product.png',
+          ),
+        ],
+        images: {'images/repair-product.png': _pngBytes(5)},
+      );
+      expect((await service.importMerging(firstPack.path)).success, isTrue);
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      final before = (await catalog.searchProducts('')).single;
+      await File(before.catalogImagePath!).delete();
+
+      final olderPack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'repair-product',
+            barcode: '4800012345678',
+            name: 'Ignored Older Name',
+            updatedAt: DateTime.utc(2025, 1, 1),
+            priceCentavos: 9999,
+            image: 'images/repair-product.png',
+          ),
+        ],
+        images: {'images/repair-product.png': _pngBytes(6)},
+      );
+
+      final result = await service.importMerging(olderPack.path);
+
+      expect(result.success, isTrue);
+      expect(result.updatedCount, 1);
+      expect(result.imageCount, 1);
+      final repaired = (await catalog.searchProducts('')).single;
+      expect(repaired.name, 'Repair Product');
+      expect(repaired.priceCentavos, 1000);
+      expect(repaired.sourceUpdatedAt, firstTimestamp);
+      expect(
+        await File(repaired.catalogImagePath!).readAsBytes(),
+        _pngBytes(6),
+      );
+    },
+  );
+
+  test('source and barcode split conflict changes nothing', () async {
+    final catalog = LocalCatalogRepository(database);
+    await catalog.createProduct(
+      ProductDraft(
+        id: 'source-owner',
+        barcode: '111',
+        name: 'Source Owner',
+        source: 'raze_store_api',
+        sourceProductId: 'conflicted',
+        priceCentavos: 100,
+      ),
+    );
+    await catalog.createProduct(
+      ProductDraft(
+        id: 'barcode-owner',
+        barcode: '222',
+        name: 'Barcode Owner',
+        priceCentavos: 200,
+      ),
+    );
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'conflicted',
+          barcode: '222',
+          name: 'Conflict',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 300,
+          image: 'images/conflicted.png',
+        ),
+      ],
+      images: {'images/conflicted.png': _pngBytes(7)},
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isFalse);
+    expect(result.failureCode, CatalogImportFailureCode.validationFailed);
+    final products = await catalog.searchProducts('');
+    expect(products, hasLength(2));
+    expect(
+      products.singleWhere((item) => item.id == 'source-owner').priceCentavos,
+      100,
+    );
+    expect(
+      products
+          .singleWhere((item) => item.id == 'barcode-owner')
+          .metadata
+          .source,
+      isNull,
+    );
+    expect(await (await imageStore.managedDirectory()).list().isEmpty, isTrue);
+  });
+
+  test('checksum mismatch is rejected before database changes', () async {
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'bad-checksum',
+          barcode: '4800012345678',
+          name: 'Bad Checksum',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 100,
+        ),
+      ],
+      catalogChecksumOverride: List.filled(64, '0').join(),
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isFalse);
+    expect(result.failureCode, CatalogImportFailureCode.integrityMismatch);
+    expect(await LocalCatalogRepository(database).searchProducts(''), isEmpty);
+  });
+
+  test(
+    'path traversal entry is rejected without writing outside staging',
+    () async {
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: const [],
+        unexpectedEntries: {'../escaped.txt': utf8.encode('unsafe')},
+      );
+
+      final result = await service.importMerging(pack.path);
+
+      expect(result.success, isFalse);
+      expect(result.failureCode, CatalogImportFailureCode.unsafeArchive);
+      expect(await File('${testRoot.path}/escaped.txt').exists(), isFalse);
+      expect(
+        await LocalCatalogRepository(database).searchProducts(''),
+        isEmpty,
+      );
+    },
+  );
+
+  test('an undescribed archive entry is rejected', () async {
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: const [],
+      unexpectedEntries: {'unexpected.txt': utf8.encode('not described')},
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isFalse);
+    expect(result.failureCode, CatalogImportFailureCode.invalidFile);
+    expect(await LocalCatalogRepository(database).searchProducts(''), isEmpty);
+  });
+
+  test('case-conflicting archive entry names are rejected', () async {
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: const [],
+      unexpectedEntries: {'CATALOG.JSON': utf8.encode('{"products":[]}')},
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isFalse);
+    expect(result.failureCode, CatalogImportFailureCode.invalidFile);
+  });
+
+  test('an image whose bytes do not match its extension is rejected', () async {
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'bad-image',
+          barcode: '4800012345678',
+          name: 'Bad Image',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 100,
+          image: 'images/bad-image.png',
+        ),
+      ],
+      images: {'images/bad-image.png': utf8.encode('this is not a PNG image')},
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isFalse);
+    expect(result.failureCode, CatalogImportFailureCode.validationFailed);
+    expect(await (await imageStore.managedDirectory()).list().isEmpty, isTrue);
+    expect(await LocalCatalogRepository(database).searchProducts(''), isEmpty);
+  });
+
+  final oversizedImages = <String, List<int>>{
+    'PNG dimension': _pngWithDimensions(width: 5000, height: 1),
+    'JPEG pixel count': _jpegWithDimensions(width: 4000, height: 4000),
+    'WebP pixel count': _webpWithDimensions(width: 4000, height: 4000),
+  };
+  for (final fixture in oversizedImages.entries) {
+    test('rejects unsafe ${fixture.key}', () async {
+      final extension = switch (fixture.key) {
+        final value when value.startsWith('PNG') => 'png',
+        final value when value.startsWith('JPEG') => 'jpg',
+        _ => 'webp',
+      };
+      final imagePath = 'images/oversized.$extension';
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'oversized-$extension',
+            barcode: '4800012345678',
+            name: 'Oversized $extension',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 100,
+            image: imagePath,
+          ),
+        ],
+        images: {imagePath: fixture.value},
+      );
+
+      final result = await service.importMerging(pack.path);
+
+      expect(result.success, isFalse);
+      expect(result.failureCode, CatalogImportFailureCode.validationFailed);
+      expect(result.message, contains('unsafe dimensions'));
+      expect(
+        await (await imageStore.managedDirectory()).list().isEmpty,
+        isTrue,
+      );
+      expect(
+        await LocalCatalogRepository(database).searchProducts(''),
+        isEmpty,
+      );
+    });
+  }
+
+  test('duplicate product barcodes reject the whole pack', () async {
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'duplicate-one',
+          barcode: '4800012345678',
+          name: 'Duplicate One',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 100,
+        ),
+        _product(
+          id: 'duplicate-two',
+          barcode: '4800012345678',
+          name: 'Duplicate Two',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 200,
+        ),
+      ],
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isFalse);
+    expect(result.failureCode, CatalogImportFailureCode.validationFailed);
+    expect(await LocalCatalogRepository(database).searchProducts(''), isEmpty);
+  });
+
+  test('zero and omitted suggested prices import as zero', () async {
+    final omittedPrice = _product(
+      id: 'omitted-price',
+      barcode: '222',
+      name: 'Omitted Price',
+      updatedAt: DateTime.utc(2026),
+      priceCentavos: null,
+    )..remove('suggestedPriceCentavos');
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'zero-price',
+          barcode: '111',
+          name: 'Zero Price',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 0,
+        ),
+        omittedPrice,
+      ],
+    );
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isTrue);
+    expect(result.createdCount, 2);
+    final products = await LocalCatalogRepository(database).searchProducts('');
+    expect(products, hasLength(2));
+    expect(products.every((product) => product.priceCentavos == 0), isTrue);
+  });
+
+  test(
+    'database failure removes an image persisted before the transaction',
+    () async {
+      await database.close();
+      final failingDatabase = AppDatabase.forTesting(
+        NativeDatabase(File('${testRoot.path}/failing.sqlite')),
+      );
+      addTearDown(() async {
+        try {
+          await failingDatabase.close();
+        } catch (_) {
+          // The failure image store intentionally closes it during import.
+        }
+      });
+      final failingRoot = Directory('${testRoot.path}/failing-managed');
+      final failingImages = _DatabaseClosingImageStore(
+        root: failingRoot,
+        database: failingDatabase,
+      );
+      final failingService = CatalogPackService(
+        database: failingDatabase,
+        imageStore: failingImages,
+      );
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'rollback-image',
+            barcode: '4800012345678',
+            name: 'Rollback Image',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 100,
+            image: 'images/rollback-image.png',
+          ),
+        ],
+        images: {'images/rollback-image.png': _pngBytes(9)},
+      );
+
+      final result = await failingService.importMerging(pack.path);
+
+      expect(result.success, isFalse);
+      expect(result.failureCode, CatalogImportFailureCode.databaseFailure);
+      final managedDirectory = await failingImages.managedDirectory();
+      expect(await managedDirectory.list().isEmpty, isTrue);
+    },
+  );
+}
+
+Map<String, Object?> _product({
+  required String id,
+  required String? barcode,
+  required String name,
+  required DateTime updatedAt,
+  required int? priceCentavos,
+  String? image,
+}) => <String, Object?>{
+  'catalogProductId': id,
+  'source': 'raze_store_api',
+  'sourceProductId': id,
+  'updatedAt': updatedAt.toUtc().toIso8601String(),
+  'barcode': barcode,
+  'name': name,
+  'brand': 'Pack Brand',
+  'unitLabel': 'Pack',
+  'category': 'Pack Category',
+  'remoteImageUrl': 'https://example.test/$id.png',
+  'suggestedPriceCentavos': priceCentavos,
+  'image': image,
+};
+
+Future<File> _writePack(
+  Directory root, {
+  required int number,
+  required List<Map<String, Object?>> products,
+  Map<String, List<int>> images = const {},
+  int revision = 1,
+  bool includeAttribution = false,
+  String? catalogChecksumOverride,
+  Map<String, List<int>> unexpectedEntries = const {},
+}) async {
+  final catalogBytes = utf8.encode(jsonEncode({'products': products}));
+  final files = <String, List<int>>{'catalog.json': catalogBytes, ...images};
+  if (includeAttribution) {
+    files['ATTRIBUTION.md'] = utf8.encode(
+      '# Attribution\nOpen Food Facts data: ODbL. Images as individually noted.',
+    );
+  }
+  final descriptors = [
+    for (final entry in files.entries)
+      <String, Object?>{
+        'path': entry.key,
+        'size': entry.value.length,
+        'sha256': entry.key == 'catalog.json' && catalogChecksumOverride != null
+            ? catalogChecksumOverride
+            : sha256.convert(entry.value).toString(),
+      },
+  ]..sort((a, b) => (a['path']! as String).compareTo(b['path']! as String));
+  final manifestBytes = utf8.encode(
+    jsonEncode({
+      'format': 'raze-store-catalog-pack',
+      'packVersion': 1,
+      'packId': 'test-pack',
+      'revision': revision,
+      'createdAt': DateTime.utc(2026, 9, 3).toIso8601String(),
+      'dataFile': 'catalog.json',
+      'title': 'Filipino sari-sari starter',
+      'description': 'Test catalog pack',
+      'dataLicense': 'ODbL-1.0',
+      'imageLicense': 'various',
+      'attribution': 'See ATTRIBUTION.md',
+      'files': descriptors,
+      'counts': {'products': products.length, 'images': images.length},
+    }),
+  );
+  final archive = Archive()
+    ..add(ArchiveFile.bytes('manifest.json', manifestBytes));
+  for (final entry in files.entries) {
+    archive.add(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  for (final entry in unexpectedEntries.entries) {
+    archive.add(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  final file = File('${root.path}/pack-$number.razepack');
+  await file.writeAsBytes(ZipEncoder().encode(archive));
+  return file;
+}
+
+List<int> _pngBytes(int marker) => [
+  ..._pngWithDimensions(width: 1, height: 1),
+  marker,
+];
+
+List<int> _pngWithDimensions({required int width, required int height}) => [
+  0x89,
+  0x50,
+  0x4e,
+  0x47,
+  0x0d,
+  0x0a,
+  0x1a,
+  0x0a,
+  0x00,
+  0x00,
+  0x00,
+  0x0d,
+  0x49,
+  0x48,
+  0x44,
+  0x52,
+  (width >> 24) & 0xff,
+  (width >> 16) & 0xff,
+  (width >> 8) & 0xff,
+  width & 0xff,
+  (height >> 24) & 0xff,
+  (height >> 16) & 0xff,
+  (height >> 8) & 0xff,
+  height & 0xff,
+  0x08,
+  0x06,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+];
+
+List<int> _jpegWithDimensions({required int width, required int height}) => [
+  0xff,
+  0xd8,
+  0xff,
+  0xc0,
+  0x00,
+  0x11,
+  0x08,
+  (height >> 8) & 0xff,
+  height & 0xff,
+  (width >> 8) & 0xff,
+  width & 0xff,
+  0x03,
+  0x01,
+  0x11,
+  0x00,
+  0x02,
+  0x11,
+  0x00,
+  0x03,
+  0x11,
+  0x00,
+  0xff,
+  0xd9,
+];
+
+List<int> _webpWithDimensions({required int width, required int height}) {
+  final widthMinusOne = width - 1;
+  final heightMinusOne = height - 1;
+  return [
+    0x52,
+    0x49,
+    0x46,
+    0x46,
+    0x16,
+    0x00,
+    0x00,
+    0x00,
+    0x57,
+    0x45,
+    0x42,
+    0x50,
+    0x56,
+    0x50,
+    0x38,
+    0x58,
+    0x0a,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    widthMinusOne & 0xff,
+    (widthMinusOne >> 8) & 0xff,
+    (widthMinusOne >> 16) & 0xff,
+    heightMinusOne & 0xff,
+    (heightMinusOne >> 8) & 0xff,
+    (heightMinusOne >> 16) & 0xff,
+  ];
+}
+
+final class _DatabaseClosingImageStore extends LocalProductImageStore {
+  _DatabaseClosingImageStore({required super.root, required this.database});
+
+  final AppDatabase database;
+  bool _closed = false;
+
+  @override
+  Future<String> persistFile(File source) async {
+    final path = await super.persistFile(source);
+    if (!_closed) {
+      _closed = true;
+      await database.close();
+    }
+    return path;
+  }
+}

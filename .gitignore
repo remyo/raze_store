@@ -32,6 +32,10 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/outputs/
+
+# The Django API is maintained and pushed as its own Git repository.
+/api/raze_store_api/
 
 # Symbolication related
 app.*.symbols

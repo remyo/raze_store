@@ -42,9 +42,10 @@ final class CatalogBackupService {
            preferencesFactory ?? SharedPreferences.getInstance,
        _uuid = uuid;
 
-  static const archiveVersion = 1;
+  static const archiveVersion = 2;
   static const archiveFormat = 'raze-store-backup';
   static const archiveExtension = 'razestore';
+  static const _oldestSupportedArchiveVersion = 1;
   static const _oldestSupportedSchemaVersion = 2;
   static const _manifestPath = 'manifest.json';
   static const _dataPath = 'data.json';
@@ -86,6 +87,7 @@ final class CatalogBackupService {
         staging: staging,
         stagedFiles: stagedFiles,
       );
+      final photoCount = stagedFiles.length;
 
       final data = <String, Object?>{
         'products': [
@@ -145,7 +147,7 @@ final class CatalogBackupService {
           'counts': <String, Object?>{
             'products': snapshot.products.length,
             'sellingUnits': snapshot.sellingUnits.length,
-            'photos': portablePhotos.length,
+            'photos': photoCount,
           },
         }),
         flush: true,
@@ -168,7 +170,7 @@ final class CatalogBackupService {
         message: 'Backup created successfully.',
         productCount: snapshot.products.length,
         sellingUnitCount: snapshot.sellingUnits.length,
-        photoCount: portablePhotos.length,
+        photoCount: photoCount,
         path: outputPath,
       );
     } on _BackupException catch (error) {
@@ -225,18 +227,31 @@ final class CatalogBackupService {
         staging: staging,
       );
       final oldPhotos = await _existingPhotoPaths();
-      final restoredPhotoPaths = <String, String>{};
+      final restoredLocalPhotoPaths = <String, String>{};
+      final restoredCatalogImagePaths = <String, String>{};
       for (final product in validated.data.products) {
-        final portablePath = product.localPhoto;
-        if (portablePath == null) continue;
-        final stagedFile = _safeStageFile(staging, portablePath);
-        final savedPath = await _imageStore.persistFile(stagedFile);
-        restoredPhotoPaths[product.id] = savedPath;
-        newPhotoPaths.add(savedPath);
+        final localPhoto = product.localPhoto;
+        if (localPhoto != null) {
+          final stagedFile = _safeStageFile(staging, localPhoto);
+          final savedPath = await _imageStore.persistFile(stagedFile);
+          restoredLocalPhotoPaths[product.id] = savedPath;
+          newPhotoPaths.add(savedPath);
+        }
+        final catalogImage = product.catalogImage;
+        if (catalogImage != null) {
+          final stagedFile = _safeStageFile(staging, catalogImage);
+          final savedPath = await _imageStore.persistFile(stagedFile);
+          restoredCatalogImagePaths[product.id] = savedPath;
+          newPhotoPaths.add(savedPath);
+        }
       }
 
       try {
-        await _replaceDatabase(validated.data, restoredPhotoPaths);
+        await _replaceDatabase(
+          validated.data,
+          restoredLocalPhotoPaths,
+          restoredCatalogImagePaths,
+        );
         databaseReplaced = true;
       } catch (_) {
         for (final path in newPhotoPaths) {
@@ -269,7 +284,7 @@ final class CatalogBackupService {
             : 'Catalog, photos, and receipt details were restored, but the app appearance setting could not be restored.',
         productCount: validated.data.products.length,
         sellingUnitCount: validated.data.sellingUnits.length,
-        photoCount: restoredPhotoPaths.length,
+        photoCount: newPhotoPaths.length,
         path: archivePath,
       );
     } on _BackupException catch (error) {
@@ -374,65 +389,107 @@ final class CatalogBackupService {
     }
   }
 
-  Future<Map<String, String>> _stagePhotos({
+  Future<Map<String, _PortableProductPhotos>> _stagePhotos({
     required List<database.StoreProduct> products,
     required Directory staging,
     required Map<String, File> stagedFiles,
   }) async {
     final root = await _imageStore.managedDirectory();
     final canonicalRoot = await root.resolveSymbolicLinks();
-    final portablePaths = <String, String>{};
+    final portablePaths = <String, _PortableProductPhotos>{};
     for (final product in products) {
-      final localPath = product.localImagePath?.trim();
-      if (localPath == null || localPath.isEmpty) continue;
-      final resolved = await _imageStore.resolveManagedPath(localPath);
-      if (resolved == null) {
-        throw _BackupException(
-          CatalogTransferFailureCode.sourceOutsideManagedStorage,
-          'The photo for ${product.name} is outside Raze Store storage.',
+      final localPhoto = await _stageProductImage(
+        product: product,
+        storedPath: product.localImagePath,
+        slot: _ProductImageSlot.local,
+        staging: staging,
+        stagedFiles: stagedFiles,
+        canonicalRoot: canonicalRoot,
+      );
+      final catalogImage = await _stageProductImage(
+        product: product,
+        storedPath: product.catalogImagePath,
+        slot: _ProductImageSlot.catalog,
+        staging: staging,
+        stagedFiles: stagedFiles,
+        canonicalRoot: canonicalRoot,
+      );
+      if (localPhoto != null || catalogImage != null) {
+        portablePaths[product.id] = _PortableProductPhotos(
+          localPhoto: localPhoto,
+          catalogImage: catalogImage,
         );
       }
-      final source = File(resolved);
-      if (!await source.exists()) {
-        throw _BackupException(
-          CatalogTransferFailureCode.sourceMissing,
-          'The photo for ${product.name} is missing. Re-add or remove it before backing up.',
-        );
-      }
-      final canonicalSource = await source.resolveSymbolicLinks();
-      if (!p.isWithin(canonicalRoot, canonicalSource)) {
-        throw _BackupException(
-          CatalogTransferFailureCode.sourceOutsideManagedStorage,
-          'The photo for ${product.name} is outside Raze Store storage.',
-        );
-      }
-      final stat = await File(canonicalSource).stat();
-      if (stat.type != FileSystemEntityType.file ||
-          stat.size > _maximumEntryBytes) {
-        throw _BackupException(
-          CatalogTransferFailureCode.archiveTooLarge,
-          'The photo for ${product.name} is not a supported file size.',
-        );
-      }
-      final portable = _portablePhotoPath(product.id, resolved);
-      final destination = _safeStageFile(staging, portable);
-      await destination.parent.create(recursive: true);
-      await File(canonicalSource).copy(destination.path);
-      final normalizedStored = p.normalize(File(localPath).absolute.path);
-      if (resolved != normalizedStored) {
-        await (_database.update(_database.storeProducts)..where(
-              (table) =>
-                  table.id.equals(product.id) &
-                  table.localImagePath.equals(localPath),
-            ))
-            .write(
-              database.StoreProductsCompanion(localImagePath: Value(resolved)),
-            );
-      }
-      portablePaths[product.id] = portable;
-      stagedFiles[portable] = destination;
     }
     return portablePaths;
+  }
+
+  Future<String?> _stageProductImage({
+    required database.StoreProduct product,
+    required String? storedPath,
+    required _ProductImageSlot slot,
+    required Directory staging,
+    required Map<String, File> stagedFiles,
+    required String canonicalRoot,
+  }) async {
+    final imagePath = storedPath?.trim();
+    if (imagePath == null || imagePath.isEmpty) return null;
+    final imageLabel = slot == _ProductImageSlot.local
+        ? 'photo'
+        : 'catalog image';
+    final resolved = await _imageStore.resolveManagedPath(imagePath);
+    if (resolved == null) {
+      throw _BackupException(
+        CatalogTransferFailureCode.sourceOutsideManagedStorage,
+        'The $imageLabel for ${product.name} is outside Raze Store storage.',
+      );
+    }
+    final source = File(resolved);
+    if (!await source.exists()) {
+      throw _BackupException(
+        CatalogTransferFailureCode.sourceMissing,
+        'The $imageLabel for ${product.name} is missing. Re-add or remove it before backing up.',
+      );
+    }
+    final canonicalSource = await source.resolveSymbolicLinks();
+    if (!p.isWithin(canonicalRoot, canonicalSource)) {
+      throw _BackupException(
+        CatalogTransferFailureCode.sourceOutsideManagedStorage,
+        'The $imageLabel for ${product.name} is outside Raze Store storage.',
+      );
+    }
+    final stat = await File(canonicalSource).stat();
+    if (stat.type != FileSystemEntityType.file ||
+        stat.size > _maximumEntryBytes) {
+      throw _BackupException(
+        CatalogTransferFailureCode.archiveTooLarge,
+        'The $imageLabel for ${product.name} is not a supported file size.',
+      );
+    }
+    final portable = _portablePhotoPath(product.id, resolved, slot);
+    final destination = _safeStageFile(staging, portable);
+    await destination.parent.create(recursive: true);
+    await File(canonicalSource).copy(destination.path);
+    final normalizedStored = p.normalize(File(imagePath).absolute.path);
+    if (resolved != normalizedStored) {
+      final query = _database.update(_database.storeProducts)
+        ..where(
+          (table) =>
+              table.id.equals(product.id) &
+              (slot == _ProductImageSlot.local
+                  ? table.localImagePath.equals(imagePath)
+                  : table.catalogImagePath.equals(imagePath)),
+        );
+      await query.write(
+        slot == _ProductImageSlot.local
+            ? database.StoreProductsCompanion(localImagePath: Value(resolved))
+            : database.StoreProductsCompanion(
+                catalogImagePath: Value(resolved),
+              ),
+      );
+    }
+    stagedFiles[portable] = destination;
+    return portable;
   }
 
   Future<void> _encodeArchive({
@@ -816,7 +873,8 @@ final class CatalogBackupService {
         'This file was not created by Raze Store.',
       );
     }
-    if (manifest.archiveVersion != archiveVersion) {
+    if (manifest.archiveVersion < _oldestSupportedArchiveVersion ||
+        manifest.archiveVersion > archiveVersion) {
       throw const _BackupException(
         CatalogTransferFailureCode.unsupportedVersion,
         'This backup version is not supported by this app version.',
@@ -926,8 +984,8 @@ final class CatalogBackupService {
           'The backup contains duplicate shared catalog products.',
         );
       }
-      final photo = product.localPhoto;
-      if (photo != null) {
+      for (final photo in [product.localPhoto, product.catalogImage]) {
+        if (photo == null) continue;
         _validatePortablePath(photo);
         if (!_portablePhotoPattern.hasMatch(photo) ||
             !referencedPhotos.add(photo)) {
@@ -995,7 +1053,8 @@ final class CatalogBackupService {
 
   Future<void> _replaceDatabase(
     _BackupData data,
-    Map<String, String> photoPaths,
+    Map<String, String> localPhotoPaths,
+    Map<String, String> catalogImagePaths,
   ) async {
     await _database.transaction(() async {
       await _database.delete(_database.draftCartItems).go();
@@ -1016,7 +1075,9 @@ final class CatalogBackupService {
               unitLabel: Value(item.unitLabel),
               category: Value(item.category),
               remoteImageUrl: Value(item.remoteImageUrl),
-              localImagePath: Value(photoPaths[item.id]),
+              localImagePath: Value(localPhotoPaths[item.id]),
+              catalogImagePath: Value(catalogImagePaths[item.id]),
+              sourceUpdatedAt: Value(item.sourceUpdatedAt),
               priceCentavos: item.priceCentavos,
               createdAt: Value(item.createdAt),
               updatedAt: Value(item.updatedAt),
@@ -1091,15 +1152,22 @@ final class CatalogBackupService {
   Future<List<String>> _existingPhotoPaths() async {
     final rows = await _database.select(_database.storeProducts).get();
     return rows
-        .map((row) => row.localImagePath?.trim())
+        .expand(
+          (row) => [row.localImagePath?.trim(), row.catalogImagePath?.trim()],
+        )
         .whereType<String>()
         .where((path) => path.isNotEmpty)
+        .toSet()
         .toList(growable: false);
   }
 
-  String _portablePhotoPath(String productId, String filePath) {
+  String _portablePhotoPath(
+    String productId,
+    String filePath,
+    _ProductImageSlot slot,
+  ) {
     final key = sha256
-        .convert(utf8.encode('$productId\u0000$filePath'))
+        .convert(utf8.encode('$productId\u0000${slot.name}\u0000$filePath'))
         .toString()
         .substring(0, 28);
     var extension = p.extension(filePath).toLowerCase();
@@ -1169,7 +1237,7 @@ final class CatalogBackupService {
 
   Map<String, Object?> _productToJson(
     database.StoreProduct row,
-    String? portablePhoto,
+    _PortableProductPhotos? portablePhotos,
   ) => <String, Object?>{
     'id': row.id,
     'barcode': row.barcode,
@@ -1180,7 +1248,9 @@ final class CatalogBackupService {
     'unitLabel': row.unitLabel,
     'category': row.category,
     'remoteImageUrl': row.remoteImageUrl,
-    'localPhoto': portablePhoto,
+    'localPhoto': portablePhotos?.localPhoto,
+    'catalogImage': portablePhotos?.catalogImage,
+    'sourceUpdatedAt': row.sourceUpdatedAt?.toUtc().toIso8601String(),
     'priceCentavos': row.priceCentavos,
     'createdAt': row.createdAt.toUtc().toIso8601String(),
     'updatedAt': row.updatedAt.toUtc().toIso8601String(),
@@ -1251,6 +1321,15 @@ final class _DatabaseSnapshot {
   final database.StoreProfile? profile;
   final String? themeMode;
   final bool storeSetupComplete;
+}
+
+enum _ProductImageSlot { local, catalog }
+
+final class _PortableProductPhotos {
+  const _PortableProductPhotos({this.localPhoto, this.catalogImage});
+
+  final String? localPhoto;
+  final String? catalogImage;
 }
 
 final class _ValidatedBackup {
@@ -1403,6 +1482,8 @@ final class _BackupProduct {
     required this.category,
     required this.remoteImageUrl,
     required this.localPhoto,
+    required this.catalogImage,
+    required this.sourceUpdatedAt,
     required this.priceCentavos,
     required this.createdAt,
     required this.updatedAt,
@@ -1440,6 +1521,11 @@ final class _BackupProduct {
         'remote image URL',
       ),
       localPhoto: _optionalString(json['localPhoto'], 'local photo'),
+      catalogImage: _optionalString(json['catalogImage'], 'catalog image'),
+      sourceUpdatedAt: _optionalDateTime(
+        json['sourceUpdatedAt'],
+        'source update date',
+      ),
       priceCentavos: price,
       createdAt: _dateTime(json['createdAt'], 'product creation date'),
       updatedAt: _dateTime(json['updatedAt'], 'product update date'),
@@ -1457,6 +1543,8 @@ final class _BackupProduct {
     category: category,
     remoteImageUrl: remoteImageUrl,
     localPhoto: localPhoto,
+    catalogImage: catalogImage,
+    sourceUpdatedAt: sourceUpdatedAt,
     priceCentavos: priceCentavos,
     createdAt: createdAt,
     updatedAt: updatedAt,
@@ -1472,6 +1560,8 @@ final class _BackupProduct {
   final String? category;
   final String? remoteImageUrl;
   final String? localPhoto;
+  final String? catalogImage;
+  final DateTime? sourceUpdatedAt;
   final int priceCentavos;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1709,3 +1799,6 @@ DateTime _dateTime(Object? value, String label) {
   if (parsed == null) throw FormatException('$label is invalid.');
   return parsed.toUtc();
 }
+
+DateTime? _optionalDateTime(Object? value, String label) =>
+    value == null ? null : _dateTime(value, label);

@@ -51,6 +51,20 @@ void main() {
     expect(arguments['copyFileToCacheDir'], isTrue);
   });
 
+  test('catalog pack picker restricts selection to offline packs', () async {
+    final path = await const DeviceCatalogFileGateway().pickCatalogPack();
+
+    expect(path, '/cache/selected-file');
+    final arguments = (calls.single.arguments as Map).cast<String, Object?>();
+    expect(arguments['allowedUtiTypes'], ['com.remyo.razestore.catalog-pack']);
+    expect(arguments['fileExtensionsFilter'], ['razepack']);
+    expect(
+      arguments['mimeTypesFilter'],
+      contains('application/vnd.raze-store.catalog-pack'),
+    );
+    expect(arguments['copyFileToCacheDir'], isTrue);
+  });
+
   test('CSV picker accepts spreadsheet CSV documents', () async {
     final path = await const DeviceCatalogFileGateway().pickCsv();
 

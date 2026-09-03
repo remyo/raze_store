@@ -24,5 +24,10 @@ void main() {
     test('formats Philippine pesos', () {
       expect(const Money.fromCentavos(123450).format(), '₱1,234.50');
     });
+
+    test('formats editable peso input without rounding', () {
+      expect(formatPesoInput(850), '8.50');
+      expect(formatPesoInput(123450), '1234.50');
+    });
   });
 }

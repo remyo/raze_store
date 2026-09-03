@@ -118,6 +118,7 @@ final class LocalCatalogRepository implements CatalogRepository {
       draft: draft,
       createdAt: existing.createdAt,
       updatedAt: _now().toUtc(),
+      existing: existing,
     );
     await _database.transaction(() async {
       await _ensureBarcodeAvailable(draft.barcode, excludingId: normalizedId);
@@ -198,6 +199,7 @@ final class LocalCatalogRepository implements CatalogRepository {
     List<SellingUnit> sellingUnits,
   ) async {
     final imagePath = await _repairRelocatedImagePath(row);
+    final catalogImagePath = await _repairRelocatedCatalogImagePath(row);
     return StoreProduct(
       id: row.id,
       metadata: CatalogMetadata(
@@ -212,6 +214,8 @@ final class LocalCatalogRepository implements CatalogRepository {
       ),
       price: Money.fromCentavos(row.priceCentavos),
       localImagePath: imagePath,
+      catalogImagePath: catalogImagePath,
+      sourceUpdatedAt: row.sourceUpdatedAt?.toUtc(),
       sellingUnits: List<SellingUnit>.unmodifiable(sellingUnits),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -230,6 +234,24 @@ final class LocalCatalogRepository implements CatalogRepository {
         ))
         .write(
           database.StoreProductsCompanion(localImagePath: Value(resolved)),
+        );
+    return resolved;
+  }
+
+  Future<String?> _repairRelocatedCatalogImagePath(
+    database.StoreProduct row,
+  ) async {
+    final stored = row.catalogImagePath?.trim();
+    final imageStore = _imageStore;
+    if (stored == null || stored.isEmpty || imageStore == null) return stored;
+    final resolved = await imageStore.resolveManagedPath(stored);
+    if (resolved == null || resolved == stored) return stored;
+    await (_database.update(_database.storeProducts)..where(
+          (table) =>
+              table.id.equals(row.id) & table.catalogImagePath.equals(stored),
+        ))
+        .write(
+          database.StoreProductsCompanion(catalogImagePath: Value(resolved)),
         );
     return resolved;
   }
@@ -287,6 +309,7 @@ final class LocalCatalogRepository implements CatalogRepository {
     required ProductDraft draft,
     required DateTime createdAt,
     required DateTime updatedAt,
+    StoreProduct? existing,
   }) => database.StoreProductsCompanion.insert(
     id: id,
     barcode: Value(draft.barcode),
@@ -298,6 +321,10 @@ final class LocalCatalogRepository implements CatalogRepository {
     category: Value(draft.category),
     remoteImageUrl: Value(draft.remoteImageUrl),
     localImagePath: Value(draft.localImagePath),
+    catalogImagePath: Value(
+      draft.catalogImagePath ?? existing?.catalogImagePath,
+    ),
+    sourceUpdatedAt: Value(draft.sourceUpdatedAt ?? existing?.sourceUpdatedAt),
     priceCentavos: draft.priceCentavos,
     createdAt: Value(createdAt),
     updatedAt: Value(updatedAt),

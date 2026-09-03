@@ -32,12 +32,16 @@ final class CatalogLookupResult {
   final Object? error;
 }
 
-/// Looks in the priced, offline store catalog before touching the network.
+/// Looks in the priced, offline store catalog.
+///
+/// [remote] is retained only as a dormant compatibility hook for a possible
+/// future connected catalog. The production provider intentionally leaves it
+/// unset so scanning never depends on a server.
 final class CatalogLookupService {
-  const CatalogLookupService({required this.local, required this.remote});
+  const CatalogLookupService({required this.local, this.remote});
 
   final CatalogRepository local;
-  final RemoteCatalogRepository remote;
+  final RemoteCatalogRepository? remote;
 
   Future<CatalogLookupResult> findByBarcode(String rawBarcode) async {
     final barcode = Barcode.tryParse(rawBarcode);
@@ -45,7 +49,10 @@ final class CatalogLookupService {
 
     final localProduct = await local.findByBarcode(barcode.value);
     if (localProduct != null) return CatalogLookupResult.local(localProduct);
-    if (!remote.isConfigured) return const CatalogLookupResult.notFound();
+    final remote = this.remote;
+    if (remote == null || !remote.isConfigured) {
+      return const CatalogLookupResult.notFound();
+    }
 
     try {
       final remoteProduct = await remote.findByBarcode(barcode.value);

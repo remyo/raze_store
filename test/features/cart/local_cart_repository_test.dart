@@ -50,6 +50,19 @@ void main() {
     expect(draft.items.single.barcode, isNull);
   });
 
+  test('snapshots the offline pack image before a legacy remote URL', () async {
+    await repository.addProduct(
+      _product(
+        localImagePath: null,
+        catalogImagePath: '/local/catalog/noodles.jpg',
+        remoteImageUrl: 'https://example.com/noodles.jpg',
+      ),
+    );
+
+    final item = (await repository.getDraft()).items.single;
+    expect(item.imagePathSnapshot, '/local/catalog/noodles.jpg');
+  });
+
   test('keeps main and sub-selling units as distinct cart lines', () async {
     final product = _product(
       priceCentavos: 16000,
@@ -184,12 +197,20 @@ StoreProduct _product({
   String? unitLabel = '1 pack',
   List<SellingUnit> sellingUnits = const [],
   String? localImagePath = '/local/noodles.jpg',
+  String? catalogImagePath,
+  String? remoteImageUrl,
 }) => StoreProduct(
   id: id,
-  metadata: CatalogMetadata(barcode: barcode, name: name, unitLabel: unitLabel),
+  metadata: CatalogMetadata(
+    barcode: barcode,
+    name: name,
+    unitLabel: unitLabel,
+    remoteImageUrl: remoteImageUrl,
+  ),
   price: Money.fromCentavos(priceCentavos),
   sellingUnits: sellingUnits,
   localImagePath: localImagePath,
+  catalogImagePath: catalogImagePath,
   createdAt: DateTime.utc(2026, 9, 1),
   updatedAt: DateTime.utc(2026, 9, 1),
 );

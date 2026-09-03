@@ -1,4 +1,10 @@
-enum CatalogTransferAction { backupExport, backupRestore, csvExport, csvImport }
+enum CatalogTransferAction {
+  backupExport,
+  backupRestore,
+  catalogPackImport,
+  csvExport,
+  csvImport,
+}
 
 enum CatalogTransferFailureCode {
   unavailable,

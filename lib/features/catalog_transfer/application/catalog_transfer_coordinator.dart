@@ -5,12 +5,15 @@ import 'package:path/path.dart' as p;
 import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_csv_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_file_gateway.dart';
+import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 
 abstract interface class CatalogTransferOperations {
   Future<CatalogTransferResult> createBackup();
 
   Future<CatalogTransferResult> restoreBackupReplacing();
+
+  Future<CatalogTransferResult> importCatalogPackMerging();
 
   Future<CatalogTransferResult> exportCsv();
 
@@ -20,11 +23,13 @@ abstract interface class CatalogTransferOperations {
 final class CatalogTransferCoordinator implements CatalogTransferOperations {
   CatalogTransferCoordinator({
     required CatalogBackupService backupService,
+    required CatalogPackService packService,
     required CatalogCsvService csvService,
     required CatalogFileGateway fileGateway,
     DateTime Function()? clock,
     Future<Directory> Function()? temporaryDirectoryFactory,
   }) : _backupService = backupService,
+       _packService = packService,
        _csvService = csvService,
        _fileGateway = fileGateway,
        _clock = clock ?? DateTime.now,
@@ -32,6 +37,7 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
            temporaryDirectoryFactory ?? _createTemporaryDirectory;
 
   final CatalogBackupService _backupService;
+  final CatalogPackService _packService;
   final CatalogCsvService _csvService;
   final CatalogFileGateway _fileGateway;
   final DateTime Function() _clock;
@@ -92,6 +98,42 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
       return _backupService.restoreReplacing(archivePath: path);
     } catch (error) {
       return _fileFailure(error, 'The backup could not be opened from Files.');
+    }
+  }
+
+  @override
+  Future<CatalogTransferResult> importCatalogPackMerging() async {
+    try {
+      final path = await _fileGateway.pickCatalogPack();
+      if (path == null) {
+        return const CatalogTransferCancelled(
+          message: 'Catalog pack import was cancelled.',
+        );
+      }
+      if (p.extension(path).toLowerCase() !=
+          '.${CatalogPackService.packExtension}') {
+        return const CatalogTransferFailure(
+          code: CatalogTransferFailureCode.invalidFile,
+          message: 'Choose a file ending in .razepack.',
+        );
+      }
+
+      final imported = await _packService.importMerging(path);
+      if (!imported.success) {
+        return CatalogTransferFailure(
+          code: _packFailureCode(imported.failureCode),
+          message: imported.message,
+          cause: imported.cause,
+        );
+      }
+      return CatalogTransferSuccess(
+        action: CatalogTransferAction.catalogPackImport,
+        message: imported.message,
+        productCount: imported.productCount,
+        photoCount: imported.imageCount,
+      );
+    } catch (error) {
+      return _fileFailure(error, 'The catalog pack could not be opened.');
     }
   }
 
@@ -172,6 +214,31 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
       cause: error,
     );
   }
+
+  CatalogTransferFailureCode _packFailureCode(CatalogImportFailureCode? code) =>
+      switch (code) {
+        CatalogImportFailureCode.sourceMissing =>
+          CatalogTransferFailureCode.sourceMissing,
+        CatalogImportFailureCode.invalidFile =>
+          CatalogTransferFailureCode.invalidFile,
+        CatalogImportFailureCode.unsupportedVersion =>
+          CatalogTransferFailureCode.unsupportedVersion,
+        CatalogImportFailureCode.unsafeArchive =>
+          CatalogTransferFailureCode.unsafeArchive,
+        CatalogImportFailureCode.archiveTooLarge =>
+          CatalogTransferFailureCode.archiveTooLarge,
+        CatalogImportFailureCode.integrityMismatch =>
+          CatalogTransferFailureCode.integrityMismatch,
+        CatalogImportFailureCode.validationFailed =>
+          CatalogTransferFailureCode.validationFailed,
+        CatalogImportFailureCode.ioFailure =>
+          CatalogTransferFailureCode.ioFailure,
+        CatalogImportFailureCode.databaseFailure =>
+          CatalogTransferFailureCode.databaseFailure,
+        CatalogImportFailureCode.unavailable =>
+          CatalogTransferFailureCode.unavailable,
+        null => CatalogTransferFailureCode.invalidFile,
+      };
 
   static Future<Directory> _createTemporaryDirectory() =>
       Directory.systemTemp.createTemp('raze_store_transfer_');

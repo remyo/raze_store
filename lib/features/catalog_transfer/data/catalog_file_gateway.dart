@@ -9,6 +9,8 @@ abstract interface class CatalogFileGateway {
 
   Future<String?> pickBackup();
 
+  Future<String?> pickCatalogPack();
+
   Future<String?> pickCsv();
 }
 
@@ -39,6 +41,23 @@ class DeviceCatalogFileGateway implements CatalogFileGateway {
         fileExtensionsFilter: ['razestore'],
         mimeTypesFilter: [
           'application/vnd.raze-store.backup',
+          'application/octet-stream',
+          'application/zip',
+        ],
+        copyFileToCacheDir: true,
+      ),
+    );
+  }
+
+  @override
+  Future<String?> pickCatalogPack() {
+    return FlutterFileDialog.pickFile(
+      params: const OpenFileDialogParams(
+        dialogType: OpenFileDialogType.document,
+        allowedUtiTypes: ['com.remyo.razestore.catalog-pack'],
+        fileExtensionsFilter: ['razepack'],
+        mimeTypesFilter: [
+          'application/vnd.raze-store.catalog-pack',
           'application/octet-stream',
           'application/zip',
         ],

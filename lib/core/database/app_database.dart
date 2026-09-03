@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +98,10 @@ class AppDatabase extends _$AppDatabase {
             store_products_source_identity_unique_idx
           ON store_products (source, source_product_id)
         ''');
+      }
+      if (from < 5) {
+        await migrator.addColumn(storeProducts, storeProducts.catalogImagePath);
+        await migrator.addColumn(storeProducts, storeProducts.sourceUpdatedAt);
       }
     },
   );

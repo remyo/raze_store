@@ -29,6 +29,15 @@ class StoreProducts extends Table {
   TextColumn get category => text().nullable()();
   TextColumn get remoteImageUrl => text().nullable()();
 
+  /// App-managed image supplied by an offline shared-catalog pack. A store's
+  /// own [localImagePath] remains the visual override and is never replaced by
+  /// a later catalog pack.
+  TextColumn get catalogImagePath => text().nullable()();
+
+  /// Revision timestamp for the shared metadata currently applied to this
+  /// row. This prevents an older offline pack from rolling metadata backward.
+  DateTimeColumn get sourceUpdatedAt => dateTime().nullable()();
+
   /// A device-local photo selected by this store. This intentionally remains
   /// separate from the future catalog API image URL.
   TextColumn get localImagePath => text().nullable()();

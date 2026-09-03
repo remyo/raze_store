@@ -527,6 +527,11 @@ final class CatalogCsvService {
             product.remoteImageUrl ?? existing?.remoteImageUrl,
           ),
           localImagePath: Value(existing?.localImagePath),
+          // Catalog-pack state is intentionally absent from the spreadsheet
+          // format. A price/name edit must never detach the offline image or
+          // roll back the source revision that supplied it.
+          catalogImagePath: Value(existing?.catalogImagePath),
+          sourceUpdatedAt: Value(existing?.sourceUpdatedAt),
           priceCentavos: product.priceCentavos,
           createdAt: Value(existing?.createdAt ?? now),
           updatedAt: Value(now),

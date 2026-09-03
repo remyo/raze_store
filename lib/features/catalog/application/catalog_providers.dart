@@ -6,7 +6,6 @@ import '../data/local_catalog_repository.dart';
 import '../domain/catalog_categories.dart';
 import '../domain/catalog_product.dart';
 import '../domain/catalog_repository.dart';
-import 'catalog_api_providers.dart';
 
 final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
   return LocalCatalogRepository(
@@ -44,18 +43,6 @@ final catalogStoredCategoriesProvider = StreamProvider<List<String>>((ref) {
       );
 });
 
-final catalogApiCategoriesProvider = FutureProvider<List<String>>((ref) async {
-  final repository = ref.watch(remoteCatalogRepositoryProvider);
-  if (!repository.isConfigured) return const [];
-  try {
-    return await repository.fetchCategories();
-  } on Object {
-    // Category suggestions are optional. Keep the product form fully usable
-    // with its built-in and locally stored categories while offline.
-    return const [];
-  }
-});
-
 final catalogCategorySuggestionsProvider = Provider<List<String>>((ref) {
   final storedCategories = ref
       .watch(catalogStoredCategoriesProvider)
@@ -64,16 +51,7 @@ final catalogCategorySuggestionsProvider = Provider<List<String>>((ref) {
         error: (_, _) => const <String>[],
         loading: () => const <String>[],
       );
-  return mergeCatalogCategories(
-    storedCategories: storedCategories,
-    apiCategories: ref
-        .watch(catalogApiCategoriesProvider)
-        .when(
-          data: (categories) => categories,
-          error: (_, _) => const <String>[],
-          loading: () => const <String>[],
-        ),
-  );
+  return mergeCatalogCategories(storedCategories: storedCategories);
 });
 
 final catalogProductProvider = StreamProvider.family<StoreProduct?, String>((

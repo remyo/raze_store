@@ -73,6 +73,7 @@ class _FirstLaunchSetupScreenState
                               key: const ValueKey('setup-ready'),
                               storeName: _storeNameController.text.trim(),
                               busy: completing || _transferringCatalog,
+                              onCatalogPack: _handleCatalogPackImport,
                               onQuickAdd: () => _finishSetup(
                                 '/products/quick-add?fromSetup=true',
                               ),
@@ -177,29 +178,32 @@ class _FirstLaunchSetupScreenState
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.restore_rounded),
-              title: const Text('Restore complete backup'),
-              subtitle: const Text(
-                'Replace this setup with products, photos, and store details from a .razestore file.',
+        child: SingleChildScrollView(
+          key: const ValueKey('setup-import-restore-sheet-scroll'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.restore_rounded),
+                title: const Text('Restore complete backup'),
+                subtitle: const Text(
+                  'Replace this setup with products, photos, and store details from a .razestore file.',
+                ),
+                onTap: () =>
+                    Navigator.pop(context, _SetupCatalogAction.restoreBackup),
               ),
-              onTap: () =>
-                  Navigator.pop(context, _SetupCatalogAction.restoreBackup),
-            ),
-            ListTile(
-              leading: const Icon(Icons.upload_file_outlined),
-              title: const Text('Import product CSV'),
-              subtitle: const Text(
-                'Add or update product details and prices from a spreadsheet.',
+              ListTile(
+                leading: const Icon(Icons.upload_file_outlined),
+                title: const Text('Import product CSV'),
+                subtitle: const Text(
+                  'Add or update product details and prices from a spreadsheet.',
+                ),
+                onTap: () =>
+                    Navigator.pop(context, _SetupCatalogAction.importCsv),
               ),
-              onTap: () =>
-                  Navigator.pop(context, _SetupCatalogAction.importCsv),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ),
         ),
       ),
     );
@@ -227,9 +231,18 @@ class _FirstLaunchSetupScreenState
       if (confirmed != true || !mounted) return;
     }
 
+    await _runSetupCatalogAction(action);
+  }
+
+  Future<void> _handleCatalogPackImport() =>
+      _runSetupCatalogAction(_SetupCatalogAction.importCatalogPack);
+
+  Future<void> _runSetupCatalogAction(_SetupCatalogAction action) async {
     setState(() => _transferringCatalog = true);
     final operations = ref.read(catalogTransferCoordinatorProvider);
     final result = switch (action) {
+      _SetupCatalogAction.importCatalogPack =>
+        await operations.importCatalogPackMerging(),
       _SetupCatalogAction.restoreBackup =>
         await operations.restoreBackupReplacing(),
       _SetupCatalogAction.importCsv => await operations.importCsvMerging(),
@@ -262,7 +275,7 @@ class _FirstLaunchSetupScreenState
   }
 }
 
-enum _SetupCatalogAction { restoreBackup, importCsv }
+enum _SetupCatalogAction { importCatalogPack, restoreBackup, importCsv }
 
 class _StoreDetailsForm extends StatelessWidget {
   const _StoreDetailsForm({
@@ -394,6 +407,7 @@ class _SetupReady extends StatelessWidget {
     super.key,
     required this.storeName,
     required this.busy,
+    required this.onCatalogPack,
     required this.onQuickAdd,
     required this.onImportOrRestore,
     required this.onContinue,
@@ -402,6 +416,7 @@ class _SetupReady extends StatelessWidget {
 
   final String storeName;
   final bool busy;
+  final VoidCallback onCatalogPack;
   final VoidCallback onQuickAdd;
   final VoidCallback onImportOrRestore;
   final VoidCallback onContinue;
@@ -446,6 +461,21 @@ class _SetupReady extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xl),
         FilledButton.icon(
+          key: const ValueKey('setup-import-catalog-pack'),
+          onPressed: busy ? null : onCatalogPack,
+          icon: const Icon(Icons.inventory_2_outlined),
+          label: const Text('Import offline catalog pack'),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Recommended: add ready-made Filipino products and bundled images from a trusted .razepack file.',
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        OutlinedButton.icon(
           key: const ValueKey('setup-quick-add'),
           onPressed: busy ? null : onQuickAdd,
           icon: const Icon(Icons.add_box_outlined),
@@ -456,7 +486,7 @@ class _SetupReady extends StatelessWidget {
           key: const ValueKey('setup-import-restore'),
           onPressed: busy ? null : onImportOrRestore,
           icon: const Icon(Icons.settings_backup_restore_rounded),
-          label: const Text('Import or restore a catalog'),
+          label: const Text('Restore backup or import CSV'),
         ),
         const SizedBox(height: AppSpacing.sm),
         TextButton(

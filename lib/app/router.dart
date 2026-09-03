@@ -4,8 +4,8 @@ import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/features/cart/presentation/cart_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
+import 'package:raze_store/features/catalog/presentation/quick_sell_screen.dart';
 import 'package:raze_store/features/catalog/presentation/quick_add_product_screen.dart';
-import 'package:raze_store/features/catalog/presentation/remote_catalog_screen.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/onboarding/presentation/app_startup_gate.dart';
 import 'package:raze_store/features/onboarding/presentation/first_launch_setup_screen.dart';
@@ -67,9 +67,9 @@ final appRouter = GoRouter(
       ),
     ),
     GoRoute(
-      path: '/catalog',
+      path: '/quick-sell',
       parentNavigatorKey: rootNavigatorKey,
-      builder: (context, state) => const RemoteCatalogScreen(),
+      builder: (context, state) => const QuickSellScreen(),
     ),
     GoRoute(
       path: '/products/new',

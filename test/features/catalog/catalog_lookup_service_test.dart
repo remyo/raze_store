@@ -8,6 +8,18 @@ import 'package:raze_store/features/catalog/domain/remote_catalog_repository.dar
 
 void main() {
   group('CatalogLookupService', () {
+    test(
+      'returns not found after a local miss when running offline-only',
+      () async {
+        final local = _FakeLocalRepository();
+        final service = CatalogLookupService(local: local);
+
+        final result = await service.findByBarcode('4800012345678');
+
+        expect(result.kind, CatalogLookupKind.notFound);
+      },
+    );
+
     test('returns a local priced product without calling the API', () async {
       final local = _FakeLocalRepository(product: _storeProduct());
       final remote = _FakeRemoteRepository(product: _remoteProduct());

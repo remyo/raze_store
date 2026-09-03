@@ -108,6 +108,29 @@ class $StoreProductsTable extends StoreProducts
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _catalogImagePathMeta = const VerificationMeta(
+    'catalogImagePath',
+  );
+  @override
+  late final GeneratedColumn<String> catalogImagePath = GeneratedColumn<String>(
+    'catalog_image_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceUpdatedAtMeta = const VerificationMeta(
+    'sourceUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> sourceUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'source_updated_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _localImagePathMeta = const VerificationMeta(
     'localImagePath',
   );
@@ -166,6 +189,8 @@ class $StoreProductsTable extends StoreProducts
     unitLabel,
     category,
     remoteImageUrl,
+    catalogImagePath,
+    sourceUpdatedAt,
     localImagePath,
     priceCentavos,
     createdAt,
@@ -241,6 +266,24 @@ class $StoreProductsTable extends StoreProducts
         remoteImageUrl.isAcceptableOrUnknown(
           data['remote_image_url']!,
           _remoteImageUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('catalog_image_path')) {
+      context.handle(
+        _catalogImagePathMeta,
+        catalogImagePath.isAcceptableOrUnknown(
+          data['catalog_image_path']!,
+          _catalogImagePathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('source_updated_at')) {
+      context.handle(
+        _sourceUpdatedAtMeta,
+        sourceUpdatedAt.isAcceptableOrUnknown(
+          data['source_updated_at']!,
+          _sourceUpdatedAtMeta,
         ),
       );
     }
@@ -321,6 +364,14 @@ class $StoreProductsTable extends StoreProducts
         DriftSqlType.string,
         data['${effectivePrefix}remote_image_url'],
       ),
+      catalogImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}catalog_image_path'],
+      ),
+      sourceUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}source_updated_at'],
+      ),
       localImagePath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}local_image_path'],
@@ -363,6 +414,15 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
   final String? category;
   final String? remoteImageUrl;
 
+  /// App-managed image supplied by an offline shared-catalog pack. A store's
+  /// own [localImagePath] remains the visual override and is never replaced by
+  /// a later catalog pack.
+  final String? catalogImagePath;
+
+  /// Revision timestamp for the shared metadata currently applied to this
+  /// row. This prevents an older offline pack from rolling metadata backward.
+  final DateTime? sourceUpdatedAt;
+
   /// A device-local photo selected by this store. This intentionally remains
   /// separate from the future catalog API image URL.
   final String? localImagePath;
@@ -381,6 +441,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
     this.unitLabel,
     this.category,
     this.remoteImageUrl,
+    this.catalogImagePath,
+    this.sourceUpdatedAt,
     this.localImagePath,
     required this.priceCentavos,
     required this.createdAt,
@@ -411,6 +473,12 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
     }
     if (!nullToAbsent || remoteImageUrl != null) {
       map['remote_image_url'] = Variable<String>(remoteImageUrl);
+    }
+    if (!nullToAbsent || catalogImagePath != null) {
+      map['catalog_image_path'] = Variable<String>(catalogImagePath);
+    }
+    if (!nullToAbsent || sourceUpdatedAt != null) {
+      map['source_updated_at'] = Variable<DateTime>(sourceUpdatedAt);
     }
     if (!nullToAbsent || localImagePath != null) {
       map['local_image_path'] = Variable<String>(localImagePath);
@@ -446,6 +514,12 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
       remoteImageUrl: remoteImageUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteImageUrl),
+      catalogImagePath: catalogImagePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(catalogImagePath),
+      sourceUpdatedAt: sourceUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceUpdatedAt),
       localImagePath: localImagePath == null && nullToAbsent
           ? const Value.absent()
           : Value(localImagePath),
@@ -470,6 +544,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
       unitLabel: serializer.fromJson<String?>(json['unitLabel']),
       category: serializer.fromJson<String?>(json['category']),
       remoteImageUrl: serializer.fromJson<String?>(json['remoteImageUrl']),
+      catalogImagePath: serializer.fromJson<String?>(json['catalogImagePath']),
+      sourceUpdatedAt: serializer.fromJson<DateTime?>(json['sourceUpdatedAt']),
       localImagePath: serializer.fromJson<String?>(json['localImagePath']),
       priceCentavos: serializer.fromJson<int>(json['priceCentavos']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -489,6 +565,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
       'unitLabel': serializer.toJson<String?>(unitLabel),
       'category': serializer.toJson<String?>(category),
       'remoteImageUrl': serializer.toJson<String?>(remoteImageUrl),
+      'catalogImagePath': serializer.toJson<String?>(catalogImagePath),
+      'sourceUpdatedAt': serializer.toJson<DateTime?>(sourceUpdatedAt),
       'localImagePath': serializer.toJson<String?>(localImagePath),
       'priceCentavos': serializer.toJson<int>(priceCentavos),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -506,6 +584,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
     Value<String?> unitLabel = const Value.absent(),
     Value<String?> category = const Value.absent(),
     Value<String?> remoteImageUrl = const Value.absent(),
+    Value<String?> catalogImagePath = const Value.absent(),
+    Value<DateTime?> sourceUpdatedAt = const Value.absent(),
     Value<String?> localImagePath = const Value.absent(),
     int? priceCentavos,
     DateTime? createdAt,
@@ -524,6 +604,12 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
     remoteImageUrl: remoteImageUrl.present
         ? remoteImageUrl.value
         : this.remoteImageUrl,
+    catalogImagePath: catalogImagePath.present
+        ? catalogImagePath.value
+        : this.catalogImagePath,
+    sourceUpdatedAt: sourceUpdatedAt.present
+        ? sourceUpdatedAt.value
+        : this.sourceUpdatedAt,
     localImagePath: localImagePath.present
         ? localImagePath.value
         : this.localImagePath,
@@ -546,6 +632,12 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
       remoteImageUrl: data.remoteImageUrl.present
           ? data.remoteImageUrl.value
           : this.remoteImageUrl,
+      catalogImagePath: data.catalogImagePath.present
+          ? data.catalogImagePath.value
+          : this.catalogImagePath,
+      sourceUpdatedAt: data.sourceUpdatedAt.present
+          ? data.sourceUpdatedAt.value
+          : this.sourceUpdatedAt,
       localImagePath: data.localImagePath.present
           ? data.localImagePath.value
           : this.localImagePath,
@@ -569,6 +661,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
           ..write('unitLabel: $unitLabel, ')
           ..write('category: $category, ')
           ..write('remoteImageUrl: $remoteImageUrl, ')
+          ..write('catalogImagePath: $catalogImagePath, ')
+          ..write('sourceUpdatedAt: $sourceUpdatedAt, ')
           ..write('localImagePath: $localImagePath, ')
           ..write('priceCentavos: $priceCentavos, ')
           ..write('createdAt: $createdAt, ')
@@ -588,6 +682,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
     unitLabel,
     category,
     remoteImageUrl,
+    catalogImagePath,
+    sourceUpdatedAt,
     localImagePath,
     priceCentavos,
     createdAt,
@@ -606,6 +702,8 @@ class StoreProduct extends DataClass implements Insertable<StoreProduct> {
           other.unitLabel == this.unitLabel &&
           other.category == this.category &&
           other.remoteImageUrl == this.remoteImageUrl &&
+          other.catalogImagePath == this.catalogImagePath &&
+          other.sourceUpdatedAt == this.sourceUpdatedAt &&
           other.localImagePath == this.localImagePath &&
           other.priceCentavos == this.priceCentavos &&
           other.createdAt == this.createdAt &&
@@ -622,6 +720,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
   final Value<String?> unitLabel;
   final Value<String?> category;
   final Value<String?> remoteImageUrl;
+  final Value<String?> catalogImagePath;
+  final Value<DateTime?> sourceUpdatedAt;
   final Value<String?> localImagePath;
   final Value<int> priceCentavos;
   final Value<DateTime> createdAt;
@@ -637,6 +737,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
     this.unitLabel = const Value.absent(),
     this.category = const Value.absent(),
     this.remoteImageUrl = const Value.absent(),
+    this.catalogImagePath = const Value.absent(),
+    this.sourceUpdatedAt = const Value.absent(),
     this.localImagePath = const Value.absent(),
     this.priceCentavos = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -653,6 +755,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
     this.unitLabel = const Value.absent(),
     this.category = const Value.absent(),
     this.remoteImageUrl = const Value.absent(),
+    this.catalogImagePath = const Value.absent(),
+    this.sourceUpdatedAt = const Value.absent(),
     this.localImagePath = const Value.absent(),
     required int priceCentavos,
     this.createdAt = const Value.absent(),
@@ -671,6 +775,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
     Expression<String>? unitLabel,
     Expression<String>? category,
     Expression<String>? remoteImageUrl,
+    Expression<String>? catalogImagePath,
+    Expression<DateTime>? sourceUpdatedAt,
     Expression<String>? localImagePath,
     Expression<int>? priceCentavos,
     Expression<DateTime>? createdAt,
@@ -687,6 +793,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
       if (unitLabel != null) 'unit_label': unitLabel,
       if (category != null) 'category': category,
       if (remoteImageUrl != null) 'remote_image_url': remoteImageUrl,
+      if (catalogImagePath != null) 'catalog_image_path': catalogImagePath,
+      if (sourceUpdatedAt != null) 'source_updated_at': sourceUpdatedAt,
       if (localImagePath != null) 'local_image_path': localImagePath,
       if (priceCentavos != null) 'price_centavos': priceCentavos,
       if (createdAt != null) 'created_at': createdAt,
@@ -705,6 +813,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
     Value<String?>? unitLabel,
     Value<String?>? category,
     Value<String?>? remoteImageUrl,
+    Value<String?>? catalogImagePath,
+    Value<DateTime?>? sourceUpdatedAt,
     Value<String?>? localImagePath,
     Value<int>? priceCentavos,
     Value<DateTime>? createdAt,
@@ -721,6 +831,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
       unitLabel: unitLabel ?? this.unitLabel,
       category: category ?? this.category,
       remoteImageUrl: remoteImageUrl ?? this.remoteImageUrl,
+      catalogImagePath: catalogImagePath ?? this.catalogImagePath,
+      sourceUpdatedAt: sourceUpdatedAt ?? this.sourceUpdatedAt,
       localImagePath: localImagePath ?? this.localImagePath,
       priceCentavos: priceCentavos ?? this.priceCentavos,
       createdAt: createdAt ?? this.createdAt,
@@ -759,6 +871,12 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
     if (remoteImageUrl.present) {
       map['remote_image_url'] = Variable<String>(remoteImageUrl.value);
     }
+    if (catalogImagePath.present) {
+      map['catalog_image_path'] = Variable<String>(catalogImagePath.value);
+    }
+    if (sourceUpdatedAt.present) {
+      map['source_updated_at'] = Variable<DateTime>(sourceUpdatedAt.value);
+    }
     if (localImagePath.present) {
       map['local_image_path'] = Variable<String>(localImagePath.value);
     }
@@ -789,6 +907,8 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
           ..write('unitLabel: $unitLabel, ')
           ..write('category: $category, ')
           ..write('remoteImageUrl: $remoteImageUrl, ')
+          ..write('catalogImagePath: $catalogImagePath, ')
+          ..write('sourceUpdatedAt: $sourceUpdatedAt, ')
           ..write('localImagePath: $localImagePath, ')
           ..write('priceCentavos: $priceCentavos, ')
           ..write('createdAt: $createdAt, ')
@@ -2482,6 +2602,8 @@ typedef $$StoreProductsTableCreateCompanionBuilder =
       Value<String?> unitLabel,
       Value<String?> category,
       Value<String?> remoteImageUrl,
+      Value<String?> catalogImagePath,
+      Value<DateTime?> sourceUpdatedAt,
       Value<String?> localImagePath,
       required int priceCentavos,
       Value<DateTime> createdAt,
@@ -2499,6 +2621,8 @@ typedef $$StoreProductsTableUpdateCompanionBuilder =
       Value<String?> unitLabel,
       Value<String?> category,
       Value<String?> remoteImageUrl,
+      Value<String?> catalogImagePath,
+      Value<DateTime?> sourceUpdatedAt,
       Value<String?> localImagePath,
       Value<int> priceCentavos,
       Value<DateTime> createdAt,
@@ -2593,6 +2717,16 @@ class $$StoreProductsTableFilterComposer
 
   ColumnFilters<String> get remoteImageUrl => $composableBuilder(
     column: $table.remoteImageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get catalogImagePath => $composableBuilder(
+    column: $table.catalogImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get sourceUpdatedAt => $composableBuilder(
+    column: $table.sourceUpdatedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2696,6 +2830,16 @@ class $$StoreProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get catalogImagePath => $composableBuilder(
+    column: $table.catalogImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get sourceUpdatedAt => $composableBuilder(
+    column: $table.sourceUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get localImagePath => $composableBuilder(
     column: $table.localImagePath,
     builder: (column) => ColumnOrderings(column),
@@ -2754,6 +2898,16 @@ class $$StoreProductsTableAnnotationComposer
 
   GeneratedColumn<String> get remoteImageUrl => $composableBuilder(
     column: $table.remoteImageUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get catalogImagePath => $composableBuilder(
+    column: $table.catalogImagePath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get sourceUpdatedAt => $composableBuilder(
+    column: $table.sourceUpdatedAt,
     builder: (column) => column,
   );
 
@@ -2837,6 +2991,8 @@ class $$StoreProductsTableTableManager
                 Value<String?> unitLabel = const Value.absent(),
                 Value<String?> category = const Value.absent(),
                 Value<String?> remoteImageUrl = const Value.absent(),
+                Value<String?> catalogImagePath = const Value.absent(),
+                Value<DateTime?> sourceUpdatedAt = const Value.absent(),
                 Value<String?> localImagePath = const Value.absent(),
                 Value<int> priceCentavos = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -2852,6 +3008,8 @@ class $$StoreProductsTableTableManager
                 unitLabel: unitLabel,
                 category: category,
                 remoteImageUrl: remoteImageUrl,
+                catalogImagePath: catalogImagePath,
+                sourceUpdatedAt: sourceUpdatedAt,
                 localImagePath: localImagePath,
                 priceCentavos: priceCentavos,
                 createdAt: createdAt,
@@ -2869,6 +3027,8 @@ class $$StoreProductsTableTableManager
                 Value<String?> unitLabel = const Value.absent(),
                 Value<String?> category = const Value.absent(),
                 Value<String?> remoteImageUrl = const Value.absent(),
+                Value<String?> catalogImagePath = const Value.absent(),
+                Value<DateTime?> sourceUpdatedAt = const Value.absent(),
                 Value<String?> localImagePath = const Value.absent(),
                 required int priceCentavos,
                 Value<DateTime> createdAt = const Value.absent(),
@@ -2884,6 +3044,8 @@ class $$StoreProductsTableTableManager
                 unitLabel: unitLabel,
                 category: category,
                 remoteImageUrl: remoteImageUrl,
+                catalogImagePath: catalogImagePath,
+                sourceUpdatedAt: sourceUpdatedAt,
                 localImagePath: localImagePath,
                 priceCentavos: priceCentavos,
                 createdAt: createdAt,

@@ -31,6 +31,12 @@ android {
 
     buildTypes {
         release {
+            // ONNX Runtime uses JNI reflection. Keep its Java API names intact
+            // when Flutter/R8 shrinks the release build.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")

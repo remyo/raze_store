@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -107,10 +108,15 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   late final TextEditingController _priceController;
   late final List<_SellingUnitFields> _sellingUnits;
   XFile? _pendingPhoto;
+  XFile? _temporaryBackgroundPhoto;
+  ProductBackgroundRemover? _temporaryBackgroundOwner;
   bool _removeExistingPhoto = false;
   bool _busy = false;
+  bool _removingBackground = false;
+  bool _backgroundRemoved = false;
 
   bool get _editing => widget.product != null;
+  bool get _blocked => _busy || _removingBackground;
 
   @override
   void initState() {
@@ -140,9 +146,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
           widget.initialMetadata?.barcode ??
           '',
     );
+    final suggestedPrice = widget.initialMetadata?.suggestedPriceCentavos;
     _priceController = TextEditingController(
       text: product == null
-          ? widget.initialPrice ?? ''
+          ? widget.initialPrice ??
+                (suggestedPrice == null ? '' : formatPesoInput(suggestedPrice))
           : (product.priceCentavos / 100).toStringAsFixed(2),
     );
     _sellingUnits = [
@@ -153,6 +161,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
 
   @override
   void dispose() {
+    unawaited(_discardTemporaryBackgroundPhoto());
     _nameController.dispose();
     _brandController.dispose();
     _unitController.dispose();
@@ -171,9 +180,9 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final categorySuggestions = ref.watch(catalogCategorySuggestionsProvider);
     return PopScope(
-      canPop: !_busy && !widget.goToProductsAfterSave,
+      canPop: !_blocked && !widget.goToProductsAfterSave,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && widget.goToProductsAfterSave && !_busy) {
+        if (!didPop && widget.goToProductsAfterSave && !_blocked) {
           context.go('/products');
         }
       },
@@ -181,12 +190,12 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
         title: _editing ? 'Edit product' : 'Add product',
         leading: widget.goToProductsAfterSave
             ? IconButton(
-                onPressed: _busy ? null : () => context.go('/products'),
+                onPressed: _blocked ? null : () => context.go('/products'),
                 tooltip: 'Close product form',
                 icon: const Icon(Icons.close_rounded),
               )
             : IconButton(
-                onPressed: _busy ? null : () => context.pop(),
+                onPressed: _blocked ? null : () => context.pop(),
                 tooltip: 'Back',
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
@@ -201,14 +210,20 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
               AppSpacing.sm,
             ),
             child: FilledButton.icon(
-              onPressed: _busy ? null : _save,
-              icon: _busy
+              onPressed: _blocked ? null : _save,
+              icon: _blocked
                   ? const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.check_rounded),
-              label: Text(_busy ? 'Saving…' : 'Save product'),
+              label: Text(
+                _removingBackground
+                    ? 'Removing background…'
+                    : _busy
+                    ? 'Saving…'
+                    : 'Save product',
+              ),
             ),
           ),
         ),
@@ -232,7 +247,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                             SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
-                                'Product details were prefilled from the shared Raze catalog. Your selling price and selling units remain local.',
+                                'Product details came from an offline Raze catalog pack. Your selling price, photo, and selling units remain yours.',
                               ),
                             ),
                           ],
@@ -250,14 +265,12 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                     product: widget.product,
                     pendingPhoto: _pendingPhoto,
                     removeExisting: _removeExistingPhoto,
-                    busy: _busy,
+                    busy: _blocked,
+                    removingBackground: _removingBackground,
+                    backgroundRemoved: _backgroundRemoved,
                     onChoose: _choosePhotoSource,
-                    onRemove: () {
-                      setState(() {
-                        _pendingPhoto = null;
-                        _removeExistingPhoto = true;
-                      });
-                    },
+                    onRemoveBackground: _removePhotoBackground,
+                    onRemove: _removePhoto,
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   const AppSectionHeader(
@@ -362,7 +375,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'You can type a new category. Future API categories can be added to these suggestions.',
+                    'You can type a new category. Imported catalog packs can add more suggestions.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -448,14 +461,14 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                       key: ObjectKey(_sellingUnits[index]),
                       index: index,
                       fields: _sellingUnits[index],
-                      enabled: !_busy,
+                      enabled: !_blocked,
                       isDuplicateLabel: _isDuplicateSellingUnitLabel,
                       onRemove: () => _removeSellingUnit(index),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                   ],
                   OutlinedButton.icon(
-                    onPressed: _busy ? null : _addSellingUnit,
+                    onPressed: _blocked ? null : _addSellingUnit,
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Add another selling unit'),
                   ),
@@ -464,7 +477,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                     const Divider(),
                     const SizedBox(height: AppSpacing.md),
                     OutlinedButton.icon(
-                      onPressed: _busy ? null : _delete,
+                      onPressed: _blocked ? null : _delete,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Theme.of(context).colorScheme.error,
                       ),
@@ -512,15 +525,65 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
           ? await picker.takePhoto()
           : await picker.pickFromGallery();
       if (!mounted || picked == null) return;
+      await _discardTemporaryBackgroundPhoto();
+      if (!mounted) return;
       setState(() {
         _pendingPhoto = picked;
         _removeExistingPhoto = false;
+        _backgroundRemoved = false;
       });
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the product photo.')),
       );
+    }
+  }
+
+  Future<void> _removePhotoBackground() async {
+    final existingPath = _removeExistingPhoto
+        ? null
+        : widget.product?.localImagePath;
+    final source =
+        _pendingPhoto ?? (existingPath == null ? null : XFile(existingPath));
+    if (source == null || _blocked || _backgroundRemoved) return;
+
+    setState(() => _removingBackground = true);
+    final remover = ref.read(productBackgroundRemoverProvider);
+    try {
+      final processed = await remover.removeBackground(source);
+      if (!mounted) {
+        try {
+          await remover.deleteTemporary(processed);
+        } catch (_) {
+          // Best-effort cleanup after the form closes during processing.
+        }
+        return;
+      }
+      setState(() {
+        _pendingPhoto = processed;
+        _temporaryBackgroundPhoto = processed;
+        _temporaryBackgroundOwner = remover;
+        _removeExistingPhoto = false;
+        _backgroundRemoved = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The photo background was removed on this device.'),
+        ),
+      );
+    } on ProductBackgroundRemovalException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not remove the photo background.')),
+      );
+    } finally {
+      if (mounted) setState(() => _removingBackground = false);
     }
   }
 
@@ -583,6 +646,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
           // preferable to reporting that the product failed to save.
         }
       }
+      await _discardTemporaryBackgroundPhoto();
       if (!mounted) return;
       if (widget.goToProductsAfterSave) {
         context.go('/products');
@@ -628,6 +692,31 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not save this product.')),
       );
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    final cleanup = _discardTemporaryBackgroundPhoto();
+    if (mounted) {
+      setState(() {
+        _pendingPhoto = null;
+        _removeExistingPhoto = true;
+        _backgroundRemoved = false;
+      });
+    }
+    await cleanup;
+  }
+
+  Future<void> _discardTemporaryBackgroundPhoto() async {
+    final photo = _temporaryBackgroundPhoto;
+    final owner = _temporaryBackgroundOwner;
+    _temporaryBackgroundPhoto = null;
+    _temporaryBackgroundOwner = null;
+    if (photo == null || owner == null) return;
+    try {
+      await owner.deleteTemporary(photo);
+    } catch (_) {
+      // Temporary media cleanup is best effort and must not block the form.
     }
   }
 
@@ -681,9 +770,13 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
     try {
       await ref.read(catalogRepositoryProvider).deleteProduct(product.id);
       try {
-        await ref
-            .read(localProductImageStoreProvider)
-            .deleteIfManaged(product.localImagePath);
+        final imageStore = ref.read(localProductImageStoreProvider);
+        for (final imagePath in {
+          product.localImagePath,
+          product.catalogImagePath,
+        }) {
+          await imageStore.deleteIfManaged(imagePath);
+        }
       } catch (_) {
         // Product deletion succeeded; media cleanup is best effort.
       }
@@ -831,7 +924,10 @@ class _PhotoEditor extends StatelessWidget {
     required this.pendingPhoto,
     required this.removeExisting,
     required this.busy,
+    required this.removingBackground,
+    required this.backgroundRemoved,
     required this.onChoose,
+    required this.onRemoveBackground,
     required this.onRemove,
   });
 
@@ -839,7 +935,10 @@ class _PhotoEditor extends StatelessWidget {
   final XFile? pendingPhoto;
   final bool removeExisting;
   final bool busy;
+  final bool removingBackground;
+  final bool backgroundRemoved;
   final VoidCallback onChoose;
+  final VoidCallback onRemoveBackground;
   final VoidCallback onRemove;
 
   @override
@@ -889,7 +988,31 @@ class _PhotoEditor extends StatelessWidget {
                     icon: const Icon(Icons.add_a_photo_outlined),
                     label: Text(hasPhoto ? 'Change photo' : 'Add photo'),
                   ),
-                  if (hasPhoto)
+                  if (hasPhoto) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton.icon(
+                      key: const ValueKey('remove-photo-background'),
+                      onPressed: busy || backgroundRemoved
+                          ? null
+                          : onRemoveBackground,
+                      icon: removingBackground
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              backgroundRemoved
+                                  ? Icons.check_rounded
+                                  : Icons.auto_fix_high_rounded,
+                            ),
+                      label: Text(
+                        removingBackground
+                            ? 'Removing…'
+                            : backgroundRemoved
+                            ? 'Background removed'
+                            : 'Remove background',
+                      ),
+                    ),
                     TextButton.icon(
                       onPressed: busy ? null : onRemove,
                       style: TextButton.styleFrom(
@@ -898,6 +1021,7 @@ class _PhotoEditor extends StatelessWidget {
                       icon: const Icon(Icons.delete_outline_rounded),
                       label: const Text('Remove'),
                     ),
+                  ],
                 ],
               ),
             ),

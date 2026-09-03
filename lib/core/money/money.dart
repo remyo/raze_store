@@ -65,3 +65,13 @@ int? tryParsePesoCentavos(String input) {
   };
   return pesos * 100 + centavos;
 }
+
+/// Formats non-negative centavos for an editable peso input field.
+String formatPesoInput(int centavos) {
+  if (centavos < 0) {
+    throw ArgumentError.value(centavos, 'centavos', 'Must not be negative.');
+  }
+  final pesos = centavos ~/ 100;
+  final remainder = (centavos % 100).toString().padLeft(2, '0');
+  return '$pesos.$remainder';
+}

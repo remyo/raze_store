@@ -2,6 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 
 void main() {
+  test('requires a positive suggested catalog price', () {
+    expect(
+      () => CatalogMetadata(name: 'API product', suggestedPriceCentavos: 0),
+      throwsArgumentError,
+    );
+  });
+
   test('requires a complete shared catalog identity', () {
     expect(
       () => ProductDraft(

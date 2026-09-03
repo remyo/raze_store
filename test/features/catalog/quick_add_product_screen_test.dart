@@ -85,7 +85,7 @@ void main() {
     );
   });
 
-  testWidgets('prefills API metadata but still requires a local price', (
+  testWidgets('prefills API metadata and keeps the suggested price editable', (
     tester,
   ) async {
     final repository = _RecordingCatalogRepository();
@@ -98,6 +98,7 @@ void main() {
       remoteImageUrl: 'https://catalog.example/product.jpg',
       source: 'raze_store_api',
       sourceProductId: 'api-product-id',
+      suggestedPriceCentavos: 1550,
     );
     await tester.pumpWidget(
       ProviderScope(
@@ -147,7 +148,7 @@ void main() {
           .widget<TextFormField>(find.byKey(const ValueKey('quick-add-price')))
           .controller
           ?.text,
-      isEmpty,
+      '15.50',
     );
 
     await tester.enterText(

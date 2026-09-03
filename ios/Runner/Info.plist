@@ -44,18 +44,31 @@
 				<string>application/vnd.raze-store.backup</string>
 			</dict>
 		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.remyo.razestore.catalog-pack</string>
+			<key>UTTypeDescription</key>
+			<string>Raze Store Offline Catalog Pack</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.archive</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>razepack</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/vnd.raze-store.catalog-pack</string>
+			</dict>
+		</dict>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Raze Store uses the camera to scan product barcodes and take product photos.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Raze Store connects to a Raze product catalog running on your local network during setup and development.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Raze Store saves receipt images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

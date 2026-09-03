@@ -30,6 +30,7 @@ final class RemoteCatalogProduct {
       remoteImageUrl: metadata.remoteImageUrl,
       source: metadata.source,
       sourceProductId: metadata.sourceProductId,
+      suggestedPriceCentavos: metadata.suggestedPriceCentavos,
     ),
     updatedAt: updatedAt,
   );

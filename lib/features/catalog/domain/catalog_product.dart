@@ -5,7 +5,8 @@ const String fallbackMainSellingUnitLabel = 'Main item';
 
 /// Product facts that may later be supplied by `raze_store_api`.
 ///
-/// These values deliberately do not include this sari-sari store's price.
+/// These values deliberately do not include this sari-sari store's saved
+/// price. An API SRP may be carried temporarily as an editable suggestion.
 final class CatalogMetadata {
   CatalogMetadata({
     String? barcode,
@@ -16,6 +17,7 @@ final class CatalogMetadata {
     String? remoteImageUrl,
     String? source,
     String? sourceProductId,
+    this.suggestedPriceCentavos,
   }) : barcode = _optionalBarcode(barcode),
        name = _requiredText(name, 'name'),
        brand = _optionalText(brand),
@@ -23,7 +25,16 @@ final class CatalogMetadata {
        category = _optionalText(category),
        remoteImageUrl = _optionalText(remoteImageUrl),
        source = _optionalText(source),
-       sourceProductId = _optionalText(sourceProductId);
+       sourceProductId = _optionalText(sourceProductId) {
+    final suggestedPrice = suggestedPriceCentavos;
+    if (suggestedPrice != null && suggestedPrice <= 0) {
+      throw ArgumentError.value(
+        suggestedPrice,
+        'suggestedPriceCentavos',
+        'Must be greater than zero when provided.',
+      );
+    }
+  }
 
   final String? barcode;
   final String name;
@@ -33,6 +44,7 @@ final class CatalogMetadata {
   final String? remoteImageUrl;
   final String? source;
   final String? sourceProductId;
+  final int? suggestedPriceCentavos;
 }
 
 /// A catalog product carried by this store, including its local selling price.
@@ -44,6 +56,8 @@ final class StoreProduct {
     required this.createdAt,
     required this.updatedAt,
     this.localImagePath,
+    this.catalogImagePath,
+    this.sourceUpdatedAt,
     this.sellingUnits = const [],
   });
 
@@ -51,6 +65,8 @@ final class StoreProduct {
   final CatalogMetadata metadata;
   final Money price;
   final String? localImagePath;
+  final String? catalogImagePath;
+  final DateTime? sourceUpdatedAt;
   final List<SellingUnit> sellingUnits;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -158,6 +174,8 @@ final class ProductDraft {
     String? source,
     String? sourceProductId,
     String? localImagePath,
+    String? catalogImagePath,
+    DateTime? sourceUpdatedAt,
     required this.priceCentavos,
     Iterable<SellingUnitDraft> sellingUnits = const [],
   }) : barcode = _optionalBarcode(barcode),
@@ -169,6 +187,8 @@ final class ProductDraft {
        source = _optionalText(source),
        sourceProductId = _optionalText(sourceProductId),
        localImagePath = _optionalText(localImagePath),
+       catalogImagePath = _optionalText(catalogImagePath),
+       sourceUpdatedAt = sourceUpdatedAt?.toUtc(),
        sellingUnits = List<SellingUnitDraft>.unmodifiable(sellingUnits) {
     if (priceCentavos < 0) {
       throw ArgumentError.value(
@@ -223,6 +243,8 @@ final class ProductDraft {
     source: product.metadata.source,
     sourceProductId: product.metadata.sourceProductId,
     localImagePath: product.localImagePath,
+    catalogImagePath: product.catalogImagePath,
+    sourceUpdatedAt: product.sourceUpdatedAt,
     priceCentavos: product.priceCentavos,
     sellingUnits: product.sellingUnits.map(SellingUnitDraft.fromUnit),
   );
@@ -237,6 +259,8 @@ final class ProductDraft {
   final String? source;
   final String? sourceProductId;
   final String? localImagePath;
+  final String? catalogImagePath;
+  final DateTime? sourceUpdatedAt;
   final int priceCentavos;
   final List<SellingUnitDraft> sellingUnits;
 

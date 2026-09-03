@@ -48,8 +48,9 @@ void main() {
     expect(settings.profile.storeName, 'Aling Nena Store');
     expect(settings.profile.address, 'Quezon City');
     expect(find.text('Aling Nena Store is ready'), findsOneWidget);
+    expect(find.text('Import offline catalog pack'), findsOneWidget);
     expect(find.text('Quick add first product'), findsOneWidget);
-    expect(find.text('Import or restore a catalog'), findsOneWidget);
+    expect(find.text('Restore backup or import CSV'), findsOneWidget);
     expect(find.text('Continue to product list'), findsOneWidget);
   });
 
@@ -93,6 +94,60 @@ void main() {
     expect(onboarding.complete, isFalse);
     expect(find.text('Aling Nena Store is ready'), findsOneWidget);
     expect(find.text('CSV import was cancelled.'), findsOneWidget);
+  });
+
+  testWidgets('catalog pack import completes setup and opens products', (
+    tester,
+  ) async {
+    final settings = _MemorySettingsRepository();
+    final onboarding = _MemoryOnboardingRepository();
+    final transfers = _FakeCatalogTransferOperations(
+      importResult: const CatalogTransferCancelled(message: 'Not used.'),
+      packImportResult: const CatalogTransferSuccess(
+        action: CatalogTransferAction.catalogPackImport,
+        message: 'Added 250 offline products.',
+        productCount: 250,
+        photoCount: 240,
+      ),
+    );
+    final router = GoRouter(
+      initialLocation: '/setup',
+      routes: [
+        GoRoute(
+          path: '/setup',
+          builder: (_, _) => const FirstLaunchSetupScreen(),
+        ),
+        GoRoute(
+          path: '/products',
+          builder: (_, _) => const Scaffold(body: Text('Product list')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(settings),
+          onboardingRepositoryProvider.overrideWithValue(onboarding),
+          catalogTransferCoordinatorProvider.overrideWithValue(transfers),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('setup-store-name')),
+      'Aling Nena Store',
+    );
+    await tester.tap(find.byKey(const ValueKey('save-store-setup')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('setup-import-catalog-pack')));
+    await tester.pumpAndSettle();
+
+    expect(transfers.packImportCalls, 1);
+    expect(onboarding.complete, isTrue);
+    expect(find.text('Product list'), findsOneWidget);
   });
 
   testWidgets('successful catalog import completes setup and opens products', (
@@ -148,6 +203,69 @@ void main() {
     expect(onboarding.complete, isTrue);
     expect(find.text('Product list'), findsOneWidget);
   });
+
+  testWidgets('restore and CSV choices scroll at large text sizes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settings = _MemorySettingsRepository();
+    final transfers = _FakeCatalogTransferOperations(
+      importResult: const CatalogTransferCancelled(
+        message: 'CSV import was cancelled.',
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(settings),
+          catalogTransferCoordinatorProvider.overrideWithValue(transfers),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(3)),
+            child: child!,
+          ),
+          home: const FirstLaunchSetupScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('setup-store-name')),
+      'Aling Nena Store',
+    );
+    final saveSetup = find.byKey(const ValueKey('save-store-setup'));
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(saveSetup);
+    await tester.pumpAndSettle();
+
+    final openChoices = find.byKey(const ValueKey('setup-import-restore'));
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
+    await tester.tap(openChoices);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('setup-import-restore-sheet-scroll')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    final csvChoice = find.text('Import product CSV');
+    await tester.ensureVisible(csvChoice);
+    await tester.tap(csvChoice);
+    await tester.pumpAndSettle();
+
+    expect(transfers.importCalls, 1);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 final class _MemorySettingsRepository implements SettingsRepository {
@@ -184,10 +302,23 @@ final class _MemoryOnboardingRepository implements OnboardingRepository {
 
 final class _FakeCatalogTransferOperations
     implements CatalogTransferOperations {
-  _FakeCatalogTransferOperations({required this.importResult});
+  _FakeCatalogTransferOperations({
+    required this.importResult,
+    this.packImportResult = const CatalogTransferCancelled(
+      message: 'Catalog pack import was cancelled.',
+    ),
+  });
 
   final CatalogTransferResult importResult;
+  final CatalogTransferResult packImportResult;
   int importCalls = 0;
+  int packImportCalls = 0;
+
+  @override
+  Future<CatalogTransferResult> importCatalogPackMerging() async {
+    packImportCalls++;
+    return packImportResult;
+  }
 
   @override
   Future<CatalogTransferResult> importCsvMerging() async {

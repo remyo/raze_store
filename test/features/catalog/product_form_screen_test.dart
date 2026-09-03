@@ -1,15 +1,109 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/money/money.dart';
+import 'package:raze_store/core/storage/product_photo_services.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
+  testWidgets('uses the API suggested retail price as an editable default', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: ProductFormScreen(
+            initialMetadata: CatalogMetadata(
+              name: 'API product',
+              suggestedPriceCentavos: 850,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-main-price-field')),
+          )
+          .controller
+          ?.text,
+      '8.50',
+    );
+  });
+
+  testWidgets('offers offline background removal for a chosen photo', (
+    tester,
+  ) async {
+    final directory = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('raze_store_background_test_'),
+    ))!;
+    addTearDown(() => directory.delete(recursive: true));
+    final source = File('${directory.path}/source.png');
+    final processed = File('${directory.path}/background-removed.png');
+    await tester.runAsync(() async {
+      final bytes = base64Decode(_onePixelPng);
+      await source.writeAsBytes(bytes);
+      await processed.writeAsBytes(bytes);
+    });
+    final remover = _FakeBackgroundRemover(XFile(processed.path));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productPhotoPickerProvider.overrideWithValue(
+            _FakePhotoPicker(XFile(source.path)),
+          ),
+          productBackgroundRemoverProvider.overrideWithValue(remover),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add photo'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final removeBackground = find.byKey(
+      const ValueKey('remove-photo-background'),
+    );
+    expect(removeBackground, findsOneWidget);
+    await tester.tap(removeBackground);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(remover.calls, 1);
+    expect(find.text('Background removed'), findsOneWidget);
+
+    final processedPath = remover.lastOutputPath!;
+    expect(File(processedPath).existsSync(), isTrue);
+    await tester.tap(find.text('Remove'));
+    await tester.pump();
+    expect(File(processedPath).existsSync(), isFalse);
+    expect(remover.deletedPaths, [processedPath]);
+  });
+
   testWidgets('rejects the fallback main label for a sub-unit', (tester) async {
     await _pumpForm(tester);
 
@@ -250,3 +344,42 @@ final class _RecordingCatalogRepository implements CatalogRepository {
   Stream<List<StoreProduct>> watchProducts({String query = ''}) =>
       const Stream.empty();
 }
+
+final class _FakePhotoPicker implements ProductPhotoPicker {
+  const _FakePhotoPicker(this.file);
+
+  final XFile file;
+
+  @override
+  Future<XFile?> pickFromGallery() async => file;
+
+  @override
+  Future<XFile?> takePhoto() async => file;
+}
+
+final class _FakeBackgroundRemover implements ProductBackgroundRemover {
+  _FakeBackgroundRemover(this.output);
+
+  final XFile output;
+  int calls = 0;
+  String? lastOutputPath;
+  final List<String> deletedPaths = [];
+
+  @override
+  Future<XFile> removeBackground(XFile source) async {
+    calls++;
+    lastOutputPath = output.path;
+    return output;
+  }
+
+  @override
+  Future<void> deleteTemporary(XFile output) {
+    deletedPaths.add(output.path);
+    final file = File(output.path);
+    if (file.existsSync()) file.deleteSync();
+    return Future<void>.value();
+  }
+}
+
+const _onePixelPng =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

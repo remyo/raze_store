@@ -41,7 +41,10 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
       text: widget.initialBarcode ?? widget.initialMetadata?.barcode,
     );
     _nameController = TextEditingController(text: widget.initialMetadata?.name);
-    _priceController = TextEditingController();
+    final suggestedPrice = widget.initialMetadata?.suggestedPriceCentavos;
+    _priceController = TextEditingController(
+      text: suggestedPrice == null ? '' : formatPesoInput(suggestedPrice),
+    );
   }
 
   @override
@@ -105,7 +108,9 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (widget.initialMetadata != null) ...[
-                        _ApiProductNotice(metadata: widget.initialMetadata!),
+                        _CatalogProductNotice(
+                          metadata: widget.initialMetadata!,
+                        ),
                         const SizedBox(height: AppSpacing.lg),
                       ],
                       Text(
@@ -118,7 +123,10 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
                       Text(
                         widget.initialMetadata == null
                             ? 'Enter a name and selling price. A barcode is optional for loose or repacked items.'
-                            : 'Product details came from the shared catalog. Confirm the name and enter the price charged by this store.',
+                            : widget.initialMetadata?.suggestedPriceCentavos ==
+                                  null
+                            ? 'Product details came from the catalog. Confirm the name and enter the price charged by this store.'
+                            : 'The catalog SRP/reference price is prefilled as a starting point. Confirm it now or change it later.',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -300,6 +308,7 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
             remoteImageUrl: original.remoteImageUrl,
             source: original.source,
             sourceProductId: original.sourceProductId,
+            suggestedPriceCentavos: original.suggestedPriceCentavos,
           );
     final result = await context.push<Object?>(
       Uri(
@@ -321,8 +330,8 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
   }
 }
 
-class _ApiProductNotice extends StatelessWidget {
-  const _ApiProductNotice({required this.metadata});
+class _CatalogProductNotice extends StatelessWidget {
+  const _CatalogProductNotice({required this.metadata});
 
   final CatalogMetadata metadata;
 
@@ -341,7 +350,10 @@ class _ApiProductNotice extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.cloud_done_outlined, color: scheme.onSecondaryContainer),
+            Icon(
+              Icons.inventory_2_outlined,
+              color: scheme.onSecondaryContainer,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -360,6 +372,15 @@ class _ApiProductNotice extends StatelessWidget {
                         color: scheme.onSecondaryContainer,
                       ),
                     ),
+                  if (metadata.suggestedPriceCentavos case final price?) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'SRP/reference price: ${Money.fromCentavos(price).format()}',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: scheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

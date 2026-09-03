@@ -8,6 +8,7 @@ import 'package:raze_store/features/catalog_transfer/application/catalog_transfe
 import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_csv_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_file_gateway.dart';
+import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
 import 'package:raze_store/features/onboarding/application/onboarding_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 
@@ -33,9 +34,21 @@ final catalogCsvServiceProvider = Provider<CatalogCsvService>((ref) {
   return CatalogCsvService(ref.watch(appDatabaseProvider));
 });
 
+final catalogPackServiceProvider = Provider<CatalogPackService>((ref) {
+  return CatalogPackService(
+    database: ref.watch(appDatabaseProvider),
+    imageStore: ref.watch(localProductImageStoreProvider),
+    onImportCompleted: () async {
+      ref.invalidate(catalogProductsProvider);
+      ref.invalidate(catalogStoredCategoriesProvider);
+    },
+  );
+});
+
 final catalogTransferCoordinatorProvider = Provider<CatalogTransferOperations>(
   (ref) => CatalogTransferCoordinator(
     backupService: ref.watch(catalogBackupServiceProvider),
+    packService: ref.watch(catalogPackServiceProvider),
     csvService: ref.watch(catalogCsvServiceProvider),
     fileGateway: ref.watch(catalogFileGatewayProvider),
   ),

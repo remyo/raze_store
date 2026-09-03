@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/core/database/app_database.dart' show AppDatabase;
@@ -44,6 +45,10 @@ void main() {
       final pickedPhoto = File('${testRoot.path}/coffee.jpg');
       await pickedPhoto.writeAsBytes([1, 2, 3, 4, 5]);
       final savedPhoto = await sourceImages.persistFile(pickedPhoto);
+      final catalogPhoto = File('${testRoot.path}/catalog-coffee.webp');
+      await catalogPhoto.writeAsBytes([5, 4, 3, 2, 1]);
+      final savedCatalogPhoto = await sourceImages.persistFile(catalogPhoto);
+      final sourceUpdatedAt = DateTime.utc(2026, 8, 31, 4, 30);
       final sourceCatalog = LocalCatalogRepository(sourceDatabase);
       final product = await sourceCatalog.createProduct(
         ProductDraft(
@@ -54,6 +59,10 @@ void main() {
           unitLabel: 'Pack',
           category: 'Coffee & Beverages',
           localImagePath: savedPhoto,
+          catalogImagePath: savedCatalogPhoto,
+          sourceUpdatedAt: sourceUpdatedAt,
+          source: 'open_food_facts',
+          sourceProductId: '4800012345678',
           priceCentavos: 7200,
           sellingUnits: [
             SellingUnitDraft(
@@ -92,6 +101,7 @@ void main() {
       ).createArchive(outputPath: archivePath);
 
       expect(exported, isA<CatalogTransferSuccess>());
+      expect((exported as CatalogTransferSuccess).photoCount, 2);
       expect(await File(archivePath).exists(), isTrue);
 
       final targetImages = LocalProductImageStore(
@@ -138,6 +148,15 @@ void main() {
         4,
         5,
       ]);
+      expect(restoredProduct.catalogImagePath, isNot(savedCatalogPhoto));
+      expect(await File(restoredProduct.catalogImagePath!).readAsBytes(), [
+        5,
+        4,
+        3,
+        2,
+        1,
+      ]);
+      expect(restoredProduct.sourceUpdatedAt?.toUtc(), sourceUpdatedAt);
       expect(await File(oldPhoto).exists(), isFalse);
       expect(
         (await LocalCartRepository(targetDatabase).getDraft()).isEmpty,
@@ -155,6 +174,42 @@ void main() {
       );
     },
   );
+
+  test('restores version 1 backups without pack-owned fields', () async {
+    await LocalCatalogRepository(sourceDatabase).createProduct(
+      ProductDraft(
+        id: 'legacy-product',
+        barcode: '4800012345678',
+        name: 'Legacy product',
+        source: 'open_food_facts',
+        sourceProductId: '4800012345678',
+        priceCentavos: 1250,
+      ),
+    );
+    final archiveFile = File('${testRoot.path}/legacy-v1.razestore');
+    await CatalogBackupService(
+      database: sourceDatabase,
+      imageStore: LocalProductImageStore(
+        root: Directory('${testRoot.path}/legacy-source'),
+      ),
+    ).createArchive(outputPath: archiveFile.path);
+    await _rewriteAsVersion1(archiveFile);
+
+    final result = await CatalogBackupService(
+      database: targetDatabase,
+      imageStore: LocalProductImageStore(
+        root: Directory('${testRoot.path}/legacy-target'),
+      ),
+    ).restoreReplacing(archivePath: archiveFile.path);
+
+    expect(result, isA<CatalogTransferSuccess>());
+    final product = (await LocalCatalogRepository(
+      targetDatabase,
+    ).searchProducts('')).single;
+    expect(product.id, 'legacy-product');
+    expect(product.catalogImagePath, isNull);
+    expect(product.sourceUpdatedAt, isNull);
+  });
 
   test(
     'missing managed photo fails export without creating a backup',
@@ -411,6 +466,41 @@ void main() {
     );
     expect((await currentCatalog.searchProducts('')).single.id, 'keep-me');
   });
+}
+
+Future<void> _rewriteAsVersion1(File file) async {
+  final archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+  final entries = <String, List<int>>{
+    for (final entry in archive.files) entry.name: entry.readBytes()!,
+  };
+  final data = (jsonDecode(utf8.decode(entries['data.json']!)) as Map)
+      .cast<String, Object?>();
+  for (final value in (data['products'] as List).cast<Object?>()) {
+    final product = (value as Map).cast<String, Object?>();
+    product.remove('catalogImage');
+    product.remove('sourceUpdatedAt');
+  }
+  final dataBytes = utf8.encode(jsonEncode(data));
+  entries['data.json'] = dataBytes;
+
+  final manifest = (jsonDecode(utf8.decode(entries['manifest.json']!)) as Map)
+      .cast<String, Object?>();
+  manifest['archiveVersion'] = 1;
+  manifest['databaseSchemaVersion'] = 4;
+  for (final value in (manifest['files'] as List).cast<Object?>()) {
+    final descriptor = (value as Map).cast<String, Object?>();
+    if (descriptor['path'] == 'data.json') {
+      descriptor['size'] = dataBytes.length;
+      descriptor['sha256'] = sha256.convert(dataBytes).toString();
+    }
+  }
+  entries['manifest.json'] = utf8.encode(jsonEncode(manifest));
+
+  final rewritten = Archive();
+  for (final entry in entries.entries) {
+    rewritten.add(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  await file.writeAsBytes(ZipEncoder().encode(rewritten));
 }
 
 void _writeZipUncompressedSize(

@@ -38,6 +38,9 @@ void main() {
           brand: 'Kape Brand',
           unitLabel: 'Pack',
           category: 'Coffee & Beverages',
+          localImagePath: '/source/private-local-photo.jpg',
+          catalogImagePath: '/source/private-catalog-image.webp',
+          sourceUpdatedAt: DateTime.utc(2026, 8, 1),
           priceCentavos: 7500,
           sellingUnits: [
             SellingUnitDraft(
@@ -49,16 +52,27 @@ void main() {
         ),
       );
       final document = await CatalogCsvService(sourceDatabase).buildDocument();
+      expect(
+        document.contents,
+        isNot(contains('/source/private-local-photo.jpg')),
+      );
+      expect(
+        document.contents,
+        isNot(contains('/source/private-catalog-image.webp')),
+      );
       final csvFile = File('${testRoot.path}/products.csv');
       await csvFile.writeAsString(document.contents);
 
       final targetCatalog = LocalCatalogRepository(targetDatabase);
+      final targetSourceUpdatedAt = DateTime.utc(2026, 8, 20, 10, 15);
       await targetCatalog.createProduct(
         ProductDraft(
           id: 'target-coffee',
           barcode: '4800012345678',
           name: 'Old Coffee',
           localImagePath: '/managed/photo.jpg',
+          catalogImagePath: '/managed/catalog.webp',
+          sourceUpdatedAt: targetSourceUpdatedAt,
           priceCentavos: 5000,
         ),
       );
@@ -82,6 +96,8 @@ void main() {
       expect(coffee!.id, 'target-coffee');
       expect(coffee.name, 'Updated Coffee');
       expect(coffee.localImagePath, '/managed/photo.jpg');
+      expect(coffee.catalogImagePath, '/managed/catalog.webp');
+      expect(coffee.sourceUpdatedAt?.toUtc(), targetSourceUpdatedAt);
       expect(coffee.priceCentavos, 7500);
       expect(coffee.sellingUnits.single.label, 'Stick');
       expect(coffee.sellingUnits.single.priceCentavos, 850);

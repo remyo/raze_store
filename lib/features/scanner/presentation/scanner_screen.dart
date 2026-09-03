@@ -8,6 +8,7 @@ import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/barcode/barcode.dart' as store_barcode;
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/catalog/application/catalog_lookup_providers.dart';
 import 'package:raze_store/features/catalog/application/catalog_lookup_service.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
@@ -22,9 +23,13 @@ class ScannerScreen extends ConsumerStatefulWidget {
 
 class _ScannerScreenState extends ConsumerState<ScannerScreen>
     with WidgetsBindingObserver {
+  static const _cameraRepeatGuardDuration = Duration(milliseconds: 900);
+
   late final MobileScannerController _scannerController;
   late final TextEditingController _manualController;
   late final FocusNode _manualFocusNode;
+  Timer? _cameraRepeatGuardTimer;
+  String? _guardedCameraBarcode;
   bool _handling = false;
   bool? _branchVisible;
   bool? _routeForeground;
@@ -112,6 +117,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _cameraRepeatGuardTimer?.cancel();
     _scannerController.dispose();
     _manualController.dispose();
     _manualFocusNode.dispose();
@@ -247,10 +253,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         .map((barcode) => barcode.rawValue)
         .whereType<String>()
         .firstOrNull;
-    if (value != null) unawaited(_handleBarcode(value));
+    if (value != null) unawaited(_handleBarcode(value, fromCamera: true));
   }
 
-  Future<void> _handleBarcode(String rawValue) async {
+  Future<void> _handleBarcode(
+    String rawValue, {
+    bool fromCamera = false,
+  }) async {
     final barcode = store_barcode.Barcode.tryParse(rawValue);
     if (_branchVisible == false ||
         _routeForeground == false ||
@@ -262,6 +271,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           const SnackBar(content: Text('Enter a barcode to look it up.')),
         );
       }
+      return;
+    }
+    if (fromCamera && _guardedCameraBarcode == barcode.value) {
+      // The camera reports the same label every few frames. Keep extending the
+      // guard while it remains visible, then allow a deliberate re-scan after
+      // it has left the frame.
+      _guardCameraRepeat(barcode.value);
       return;
     }
 
@@ -282,13 +298,49 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
       if (result.kind == CatalogLookupKind.local) {
         final product = result.localProduct!;
-        final added = await showProductQuickView(
-          context,
-          product: product,
-          allowEdit: false,
-        );
-        if (added == true &&
-            mounted &&
+        if (product.priceCentavos <= 0) {
+          if (fromCamera) {
+            _guardCameraRepeat(barcode.value);
+          } else {
+            _manualController.clear();
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Set a selling price for ${product.name} before adding it to the cart.',
+              ),
+              action: SnackBarAction(
+                label: 'Set price',
+                onPressed: () => context.push(
+                  '/products/${Uri.encodeComponent(product.id)}/edit',
+                ),
+              ),
+            ),
+          );
+          return;
+        }
+        try {
+          await ref.read(cartRepositoryProvider).addProduct(product);
+        } catch (_) {
+          if (mounted &&
+              generation == _lookupGeneration &&
+              _branchVisible == true &&
+              _routeForeground == true &&
+              _appActive) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Could not add this product to the cart.'),
+              ),
+            );
+          }
+          return;
+        }
+        if (fromCamera) {
+          _guardCameraRepeat(barcode.value);
+        } else {
+          _manualController.clear();
+        }
+        if (mounted &&
             generation == _lookupGeneration &&
             _branchVisible == true &&
             _routeForeground == true &&
@@ -367,6 +419,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         }
       }
     }
+  }
+
+  void _guardCameraRepeat(String barcode) {
+    _cameraRepeatGuardTimer?.cancel();
+    _guardedCameraBarcode = barcode;
+    _cameraRepeatGuardTimer = Timer(_cameraRepeatGuardDuration, () {
+      if (_guardedCameraBarcode == barcode) {
+        _guardedCameraBarcode = null;
+      }
+    });
   }
 
   Future<bool?> _showUnknownBarcode(

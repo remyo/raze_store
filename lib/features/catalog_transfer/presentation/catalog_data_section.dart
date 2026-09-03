@@ -5,7 +5,7 @@ import 'package:raze_store/features/catalog_transfer/application/catalog_transfe
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 
-enum _TransferAction { backup, restore, exportCsv, importCsv }
+enum _TransferAction { catalogPack, backup, restore, exportCsv, importCsv }
 
 final class CatalogDataSection extends ConsumerStatefulWidget {
   const CatalogDataSection({super.key});
@@ -50,12 +50,12 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Backup & spreadsheet tools',
+                        'Catalog, backup & spreadsheet tools',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        'Keep a complete .razestore backup, or move product prices with CSV.',
+                        'Start from an offline product pack, keep a complete backup, or move prices with CSV.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -65,7 +65,62 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
                 ),
               ],
             ),
+            if (_busy) ...[
+              const SizedBox(height: AppSpacing.md),
+              Semantics(
+                liveRegion: true,
+                label: 'Catalog file operation in progress',
+                child: const LinearProgressIndicator(minHeight: 3),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
+            Text(
+              'Offline catalog pack',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Import a .razepack file to add ready-made Filipino products and bundled images. Your product details, selling prices, selling units, store photos, receipt settings, and cart are preserved.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Raze starter-pack data is credited to Open Food Facts contributors (ODbL/DbCL; images CC BY-SA 3.0). Each official pack includes its full attribution and dated price sources.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            FilledButton.icon(
+              key: const ValueKey('import-catalog-pack'),
+              onPressed: _busy ? null : _confirmCatalogPackImport,
+              icon: _actionIcon(
+                _TransferAction.catalogPack,
+                Icons.inventory_2_outlined,
+              ),
+              label: Text(
+                _busyAction == _TransferAction.catalogPack
+                    ? 'Importing…'
+                    : 'Import catalog pack',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const Divider(),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Complete backup',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Includes products, main and sub-unit prices, photos, receipt details, and appearance.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Container(
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
@@ -91,26 +146,6 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
                   ),
                 ],
               ),
-            ),
-            if (_busy) ...[
-              const SizedBox(height: AppSpacing.md),
-              Semantics(
-                liveRegion: true,
-                label: 'Catalog file operation in progress',
-                child: const LinearProgressIndicator(minHeight: 3),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Complete backup',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Includes products, main and sub-unit prices, photos, receipt details, and appearance.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.sm),
             _ResponsiveButtons(
@@ -200,10 +235,39 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
   Future<void> _exportCsv() =>
       _run(_TransferAction.exportCsv, (operations) => operations.exportCsv());
 
+  Future<void> _confirmCatalogPackImport() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: const Text('Import offline catalog pack?'),
+        content: const Text(
+          'New products and their bundled images will be added to this phone. Matching products keep their details, selling prices, selling units, and store photos; a missing bundled catalog image may be installed. Store details and the unfinished cart are also kept.\n\nOnly import a .razepack from a source you trust.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Choose pack and import'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _run(
+      _TransferAction.catalogPack,
+      (operations) => operations.importCatalogPackMerging(),
+    );
+  }
+
   Future<void> _confirmRestore() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: const Text('Replace this catalog?'),
         content: const Text(
           'Restore replaces all products, prices, sub-units, product photos, and store receipt details on this phone. It also clears the unfinished cart.\n\nCreate a current backup first if you may need to undo this.',
@@ -231,6 +295,7 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: const Text('Import product CSV?'),
         content: const Text(
           'Products are matched by product ID, then barcode. Matching products and their sub-unit prices are updated; new products are added. Products missing from the CSV are kept.\n\nThe whole file is validated first, so an invalid row changes nothing.',

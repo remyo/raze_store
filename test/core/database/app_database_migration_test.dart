@@ -63,7 +63,7 @@ void main() {
     addTearDown(database.close);
     final draft = await LocalCartRepository(database).getDraft();
 
-    expect(database.schemaVersion, 4);
+    expect(database.schemaVersion, 5);
     expect(draft.items, hasLength(1));
     expect(draft.items.single.lineId, 'main:coffee');
     expect(draft.items.single.productId, 'coffee');
@@ -185,7 +185,7 @@ void main() {
           .where((product) => product.sourceProductId == 'remote-id')
           .toList();
 
-      expect(database.schemaVersion, 4);
+      expect(database.schemaVersion, 5);
       expect(products, hasLength(3));
       expect(linked, hasLength(1));
       expect(linked.single.id, 'first');
@@ -193,6 +193,62 @@ void main() {
         products.singleWhere((product) => product.id == 'partial').source,
         isNull,
       );
+    },
+  );
+
+  test(
+    'v4 migration adds catalog provenance without changing products',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('raze_store_v4_');
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/migration.sqlite');
+      final database = AppDatabase.forTesting(
+        NativeDatabase(
+          file,
+          setup: (sqlite) {
+            sqlite.execute('''
+            CREATE TABLE store_products (
+              id TEXT NOT NULL PRIMARY KEY,
+              barcode TEXT,
+              source TEXT,
+              source_product_id TEXT,
+              name TEXT NOT NULL,
+              brand TEXT,
+              unit_label TEXT,
+              category TEXT,
+              remote_image_url TEXT,
+              local_image_path TEXT,
+              price_centavos INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            );
+            CREATE UNIQUE INDEX store_products_barcode_unique_idx
+              ON store_products (barcode);
+            CREATE INDEX store_products_name_idx ON store_products (name);
+            CREATE UNIQUE INDEX store_products_source_identity_unique_idx
+              ON store_products (source, source_product_id);
+            INSERT INTO store_products VALUES (
+              'kept', '4800012345678', 'raze_store_api', 'shared-id',
+              'Kept Product', 'Kept Brand', 'Pack', 'Coffee',
+              'https://example.test/image.png', '/managed/owner.png',
+              4321, 1, 2
+            );
+            PRAGMA user_version = 4;
+          ''');
+          },
+        ),
+      );
+      addTearDown(database.close);
+
+      final product = await database.select(database.storeProducts).getSingle();
+
+      expect(database.schemaVersion, 5);
+      expect(product.id, 'kept');
+      expect(product.name, 'Kept Product');
+      expect(product.priceCentavos, 4321);
+      expect(product.localImagePath, '/managed/owner.png');
+      expect(product.catalogImagePath, isNull);
+      expect(product.sourceUpdatedAt, isNull);
     },
   );
 }

@@ -24,6 +24,7 @@ class ProductImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localPath = product.localImagePath?.trim();
+    final catalogPath = product.catalogImagePath?.trim();
     final remoteUrl = product.remoteImageUrl?.trim();
     final logicalCacheSize = width ?? height;
     final cacheSize =
@@ -41,6 +42,36 @@ class ProductImage extends StatelessWidget {
       borderRadius: borderRadius,
     );
 
+    Widget remoteOrPlaceholder() {
+      if (remoteUrl == null || remoteUrl.isEmpty) return fallback;
+      return BoundedNetworkImage(
+        url: remoteUrl,
+        fallback: fallback,
+        width: width,
+        height: height,
+        fit: fit,
+        cacheWidth: cacheSize,
+        cacheHeight: cacheSize,
+        semanticLabel: product.name,
+      );
+    }
+
+    Widget catalogOrRemote() {
+      if (catalogPath == null || catalogPath.isEmpty) {
+        return remoteOrPlaceholder();
+      }
+      return Image.file(
+        File(catalogPath),
+        width: width,
+        height: height,
+        fit: fit,
+        cacheWidth: cacheSize,
+        cacheHeight: cacheSize,
+        errorBuilder: (_, _, _) => remoteOrPlaceholder(),
+        semanticLabel: product.name,
+      );
+    }
+
     if (localPath != null && localPath.isNotEmpty) {
       return ClipRRect(
         borderRadius: borderRadius,
@@ -49,26 +80,11 @@ class ProductImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
-          errorBuilder: (_, _, _) => fallback,
+          errorBuilder: (_, _, _) => catalogOrRemote(),
           semanticLabel: product.name,
         ),
       );
     }
-    if (remoteUrl != null && remoteUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: borderRadius,
-        child: BoundedNetworkImage(
-          url: remoteUrl,
-          fallback: fallback,
-          width: width,
-          height: height,
-          fit: fit,
-          cacheWidth: cacheSize,
-          cacheHeight: cacheSize,
-          semanticLabel: product.name,
-        ),
-      );
-    }
-    return fallback;
+    return ClipRRect(borderRadius: borderRadius, child: catalogOrRemote());
   }
 }

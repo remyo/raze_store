@@ -35,6 +35,7 @@ void main() {
         expect(product?.category, 'Instant noodles');
         expect(product?.metadata.source, 'raze_store_api');
         expect(product?.metadata.sourceProductId, _productId);
+        expect(product?.metadata.suggestedPriceCentavos, 1650);
       },
     );
 
@@ -46,7 +47,7 @@ void main() {
       expect(await client.findByBarcode('4800012345678'), isNull);
     });
 
-    test('parses DRF pagination without accepting an API price', () async {
+    test('parses DRF pagination without accepting a store price', () async {
       final client = _apiClient(
         MockClient((request) async {
           expect(request.url.queryParameters, {'q': 'coffee', 'page': '2'});
@@ -251,6 +252,7 @@ Map<String, Object?> _product({String barcode = '4800012345678'}) => {
   'remoteImageUrl': 'https://catalog.example.com/images/product.jpg',
   'source': 'raze_store_api',
   'sourceProductId': _productId,
+  'suggestedPriceCentavos': 1650,
   'updatedAt': '2026-09-03T00:00:00Z',
 };
 

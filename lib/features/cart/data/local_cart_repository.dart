@@ -65,7 +65,9 @@ final class LocalCartRepository implements CartRepository {
                       : option.label,
                 ),
                 imagePathSnapshot: Value(
-                  product.localImagePath ?? product.remoteImageUrl,
+                  product.localImagePath ??
+                      product.catalogImagePath ??
+                      product.remoteImageUrl,
                 ),
                 unitPriceCentavos: option.priceCentavos,
                 quantity: quantity,

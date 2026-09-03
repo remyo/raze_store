@@ -179,6 +179,39 @@ void main() {
     );
   });
 
+  test('preserves catalog image provenance during an owner edit', () async {
+    final sourceUpdatedAt = DateTime.utc(2026, 9, 1);
+    final created = await repository.createProduct(
+      ProductDraft(
+        id: 'pack-product',
+        barcode: '4800012345678',
+        name: 'Pack Product',
+        source: 'raze_store_api',
+        sourceProductId: 'shared-product',
+        catalogImagePath: '/managed/catalog.webp',
+        sourceUpdatedAt: sourceUpdatedAt,
+        priceCentavos: 1000,
+      ),
+    );
+
+    final updated = await repository.updateProduct(
+      created.id,
+      ProductDraft(
+        id: created.id,
+        barcode: created.barcode,
+        name: 'Owner-edited name',
+        source: created.metadata.source,
+        sourceProductId: created.metadata.sourceProductId,
+        priceCentavos: 1200,
+      ),
+    );
+
+    expect(updated.name, 'Owner-edited name');
+    expect(updated.priceCentavos, 1200);
+    expect(updated.catalogImagePath, '/managed/catalog.webp');
+    expect(updated.sourceUpdatedAt, sourceUpdatedAt);
+  });
+
   test('repairs a relocated managed product photo path on read', () async {
     const fileName = '123e4567-e89b-12d3-a456-426614174000.jpg';
     final root = await Directory.systemTemp.createTemp('raze_store_photos_');
@@ -228,6 +261,8 @@ extension on ProductDraft {
         source: source,
         sourceProductId: sourceProductId,
         localImagePath: localImagePath,
+        catalogImagePath: catalogImagePath,
+        sourceUpdatedAt: sourceUpdatedAt,
         priceCentavos: priceCentavos,
         sellingUnits: units,
       );
