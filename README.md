@@ -77,16 +77,55 @@ A `.razepack` is a distributable starter/update catalog. It is a validated,
 checksummed ZIP containing product records and optional optimized images.
 Importing one is non-destructive and does not touch store settings or the cart.
 
-Build the reviewed starter pack with:
+### Import the included starter catalog
+
+The repository includes a ready-to-import catalog containing 20 reviewed
+Filipino products and 20 optimized offline images:
+
+**[Download `filipino-sari-sari-starter-v1.razepack`](outputs/filipino-sari-sari-starter-v1.razepack?raw=1)**
+
+- File size: 353,732 bytes (about 0.34 MiB)
+- SHA-256: `9becf47835c78c485869bf25edc9ec223b1d4652307e936b29422210d3e75ff8`
+- Three products have dated reference SRPs. The other products intentionally
+  start at ₱0 until the store owner confirms a selling price.
+
+To import it on a phone:
+
+1. Download the `.razepack` and keep it in **Files** on iOS or **Downloads** on
+   Android. AirDrop can also place the file on an iPhone.
+2. For a new store, enter the store details, press **Save and continue**, then
+   choose **Import offline catalog pack**.
+3. For an existing store, open **Settings → Catalog files → Import catalog
+   pack**.
+4. Confirm the safe merge, choose the downloaded file, and wait for the import
+   confirmation.
+5. Open **Products** and set the selling price of any ₱0 item before scanning
+   it into the cart.
+
+Importing the same pack again does not duplicate its products. It also does
+not overwrite locally edited prices, selling units, names, photos, receipt
+settings, or the unfinished cart. A `.razepack` is shared starter data; use a
+private `.razestore` backup when moving one store's complete data to another
+phone.
+
+### Build or update the starter catalog
+
+Edit `catalog_packs/filipino-sari-sari-starter-v1/source.json` and its reviewed
+images, increment the pack revision and timestamps, preserve barcode/source
+identities, and retain the required attribution. Then rebuild the downloadable
+file from the repository root:
 
 ```sh
 python3 tool/build_catalog_pack.py \
   catalog_packs/filipino-sari-sari-starter-v1/source.json \
-  outputs/filipino-sari-sari-starter-v1.razepack
+  outputs/filipino-sari-sari-starter-v1.razepack \
+  --overwrite
 ```
 
-The editable source, image provenance, release rules, and larger-pack sizing
-guidance are documented in `docs/catalog-pack-format.md`.
+Before publishing, import the rebuilt pack on a clean test installation and
+update the file size and SHA-256 shown above. The complete source schema, image
+limits, provenance rules, safety contract, and larger-pack sizing guidance are
+documented in [`docs/catalog-pack-format.md`](docs/catalog-pack-format.md).
 
 A `.razestore` file is the private, lossless backup. It contains products, main and
 sub-unit prices, managed product photos, receipt/store details, and the saved
