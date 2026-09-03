@@ -5,6 +5,7 @@ import '../../../core/barcode/barcode.dart';
 import '../../../core/database/app_database.dart' as database;
 import '../../../core/database/tables.dart' as tables;
 import '../../../core/money/money.dart';
+import '../../../core/storage/local_product_image_store.dart';
 import '../domain/catalog_product.dart';
 import '../domain/catalog_repository.dart';
 
@@ -13,17 +14,20 @@ final class LocalCatalogRepository implements CatalogRepository {
     this._database, {
     Uuid uuid = const Uuid(),
     DateTime Function()? now,
+    LocalProductImageStore? imageStore,
   }) : _uuid = uuid,
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now,
+       _imageStore = imageStore;
 
   final database.AppDatabase _database;
   final Uuid _uuid;
   final DateTime Function() _now;
+  final LocalProductImageStore? _imageStore;
 
   @override
   Stream<List<StoreProduct>> watchProducts({String query = ''}) {
     final statement = _productQuery(query);
-    return statement.watch().map(_mapRows);
+    return statement.watch().asyncMap(_mapRows);
   }
 
   @override
@@ -36,9 +40,10 @@ final class LocalCatalogRepository implements CatalogRepository {
     final normalizedId = _requiredId(id);
     final statement = _database.select(_database.storeProducts)
       ..where((table) => table.id.equals(normalizedId));
-    return statement.watchSingleOrNull().map(
-      (row) => row == null ? null : _mapRow(row),
-    );
+    return statement.watchSingleOrNull().asyncMap((row) async {
+      if (row == null) return null;
+      return _mapRow(row, await _unitsFor(row.id));
+    });
   }
 
   @override
@@ -47,7 +52,8 @@ final class LocalCatalogRepository implements CatalogRepository {
     final row = await (_database.select(
       _database.storeProducts,
     )..where((table) => table.id.equals(normalizedId))).getSingleOrNull();
-    return row == null ? null : _mapRow(row);
+    if (row == null) return null;
+    return _mapRow(row, await _unitsFor(row.id));
   }
 
   @override
@@ -58,7 +64,8 @@ final class LocalCatalogRepository implements CatalogRepository {
     final row = await (_database.select(
       _database.storeProducts,
     )..where((table) => table.barcode.equals(barcode))).getSingleOrNull();
-    return row == null ? null : _mapRow(row);
+    if (row == null) return null;
+    return _mapRow(row, await _unitsFor(row.id));
   }
 
   @override
@@ -72,7 +79,10 @@ final class LocalCatalogRepository implements CatalogRepository {
       createdAt: now,
       updatedAt: now,
     );
-    await _database.into(_database.storeProducts).insert(companion);
+    await _database.transaction(() async {
+      await _database.into(_database.storeProducts).insert(companion);
+      await _replaceSellingUnits(id, draft.sellingUnits, now);
+    });
     return (await getProduct(id))!;
   }
 
@@ -89,18 +99,30 @@ final class LocalCatalogRepository implements CatalogRepository {
       createdAt: existing.createdAt,
       updatedAt: _now().toUtc(),
     );
-    await (_database.update(
-      _database.storeProducts,
-    )..where((table) => table.id.equals(normalizedId))).write(companion);
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.storeProducts,
+      )..where((table) => table.id.equals(normalizedId))).write(companion);
+      await _replaceSellingUnits(
+        normalizedId,
+        draft.sellingUnits,
+        _now().toUtc(),
+      );
+    });
     return (await getProduct(normalizedId))!;
   }
 
   @override
   Future<void> deleteProduct(String id) async {
     final normalizedId = _requiredId(id);
-    await (_database.delete(
-      _database.storeProducts,
-    )..where((table) => table.id.equals(normalizedId))).go();
+    await _database.transaction(() async {
+      await (_database.delete(
+        _database.productSellingUnits,
+      )..where((table) => table.productId.equals(normalizedId))).go();
+      await (_database.delete(
+        _database.storeProducts,
+      )..where((table) => table.id.equals(normalizedId))).go();
+    });
   }
 
   SimpleSelectStatement<tables.StoreProducts, database.StoreProduct>
@@ -124,26 +146,115 @@ final class LocalCatalogRepository implements CatalogRepository {
     return statement;
   }
 
-  List<StoreProduct> _mapRows(List<database.StoreProduct> rows) =>
-      rows.map(_mapRow).toList(growable: false);
+  Future<List<StoreProduct>> _mapRows(List<database.StoreProduct> rows) async {
+    if (rows.isEmpty) return const [];
+    final ids = rows.map((row) => row.id).toList(growable: false);
+    final unitRows =
+        await (_database.select(_database.productSellingUnits)
+              ..where((table) => table.productId.isIn(ids))
+              ..orderBy([
+                (table) => OrderingTerm.asc(table.productId),
+                (table) => OrderingTerm.asc(table.position),
+                (table) => OrderingTerm.asc(table.id),
+              ]))
+            .get();
+    final unitsByProduct = <String, List<SellingUnit>>{};
+    for (final row in unitRows) {
+      (unitsByProduct[row.productId] ??= []).add(_mapUnit(row));
+    }
+    return Future.wait([
+      for (final row in rows) _mapRow(row, unitsByProduct[row.id] ?? const []),
+    ]);
+  }
 
-  StoreProduct _mapRow(database.StoreProduct row) => StoreProduct(
+  Future<StoreProduct> _mapRow(
+    database.StoreProduct row,
+    List<SellingUnit> sellingUnits,
+  ) async {
+    final imagePath = await _repairRelocatedImagePath(row);
+    return StoreProduct(
+      id: row.id,
+      metadata: CatalogMetadata(
+        barcode: row.barcode,
+        name: row.name,
+        brand: row.brand,
+        unitLabel: row.unitLabel,
+        category: row.category,
+        remoteImageUrl: row.remoteImageUrl,
+        source: row.source,
+        sourceProductId: row.sourceProductId,
+      ),
+      price: Money.fromCentavos(row.priceCentavos),
+      localImagePath: imagePath,
+      sellingUnits: List<SellingUnit>.unmodifiable(sellingUnits),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    );
+  }
+
+  Future<String?> _repairRelocatedImagePath(database.StoreProduct row) async {
+    final stored = row.localImagePath?.trim();
+    final imageStore = _imageStore;
+    if (stored == null || stored.isEmpty || imageStore == null) return stored;
+    final resolved = await imageStore.resolveManagedPath(stored);
+    if (resolved == null || resolved == stored) return stored;
+    await (_database.update(_database.storeProducts)..where(
+          (table) =>
+              table.id.equals(row.id) & table.localImagePath.equals(stored),
+        ))
+        .write(
+          database.StoreProductsCompanion(localImagePath: Value(resolved)),
+        );
+    return resolved;
+  }
+
+  SellingUnit _mapUnit(database.ProductSellingUnit row) => SellingUnit(
     id: row.id,
-    metadata: CatalogMetadata(
-      barcode: row.barcode,
-      name: row.name,
-      brand: row.brand,
-      unitLabel: row.unitLabel,
-      category: row.category,
-      remoteImageUrl: row.remoteImageUrl,
-      source: row.source,
-      sourceProductId: row.sourceProductId,
-    ),
+    label: row.label,
     price: Money.fromCentavos(row.priceCentavos),
-    localImagePath: row.localImagePath,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
   );
+
+  Future<List<SellingUnit>> _unitsFor(String productId) async {
+    final rows =
+        await (_database.select(_database.productSellingUnits)
+              ..where((table) => table.productId.equals(productId))
+              ..orderBy([
+                (table) => OrderingTerm.asc(table.position),
+                (table) => OrderingTerm.asc(table.id),
+              ]))
+            .get();
+    return rows.map(_mapUnit).toList(growable: false);
+  }
+
+  Future<void> _replaceSellingUnits(
+    String productId,
+    List<SellingUnitDraft> units,
+    DateTime now,
+  ) async {
+    await (_database.delete(
+      _database.productSellingUnits,
+    )..where((table) => table.productId.equals(productId))).go();
+    for (var position = 0; position < units.length; position++) {
+      final unit = units[position];
+      final requestedId = unit.id?.trim();
+      final id = requestedId == null || requestedId.isEmpty
+          ? _uuid.v4()
+          : requestedId;
+      await _database
+          .into(_database.productSellingUnits)
+          .insert(
+            database.ProductSellingUnitsCompanion.insert(
+              id: id,
+              productId: productId,
+              label: unit.label,
+              priceCentavos: unit.priceCentavos,
+              position: position,
+              createdAt: Value(now),
+              updatedAt: Value(now),
+            ),
+          );
+    }
+  }
 
   database.StoreProductsCompanion _companion({
     required String id,

@@ -1,12 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_provider.dart';
+import '../../../core/storage/product_photo_services.dart';
 import '../data/local_catalog_repository.dart';
+import '../domain/catalog_categories.dart';
 import '../domain/catalog_product.dart';
 import '../domain/catalog_repository.dart';
 
 final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
-  return LocalCatalogRepository(ref.watch(appDatabaseProvider));
+  return LocalCatalogRepository(
+    ref.watch(appDatabaseProvider),
+    imageStore: ref.watch(localProductImageStoreProvider),
+  );
 });
 
 final catalogSearchQueryProvider = NotifierProvider<CatalogSearchQuery, String>(
@@ -25,6 +30,34 @@ final class CatalogSearchQuery extends Notifier<String> {
 final catalogProductsProvider = StreamProvider<List<StoreProduct>>((ref) {
   final query = ref.watch(catalogSearchQueryProvider);
   return ref.watch(catalogRepositoryProvider).watchProducts(query: query);
+});
+
+final catalogStoredCategoriesProvider = StreamProvider<List<String>>((ref) {
+  return ref
+      .watch(catalogRepositoryProvider)
+      .watchProducts()
+      .map(
+        (products) => distinctCatalogCategories(
+          products.map((product) => product.category),
+        ),
+      );
+});
+
+/// Extension point for categories supplied by the future product catalog API.
+final catalogApiCategoriesProvider = Provider<List<String>>((ref) => const []);
+
+final catalogCategorySuggestionsProvider = Provider<List<String>>((ref) {
+  final storedCategories = ref
+      .watch(catalogStoredCategoriesProvider)
+      .when(
+        data: (categories) => categories,
+        error: (_, _) => const <String>[],
+        loading: () => const <String>[],
+      );
+  return mergeCatalogCategories(
+    storedCategories: storedCategories,
+    apiCategories: ref.watch(catalogApiCategoriesProvider),
+  );
 });
 
 final catalogProductProvider = StreamProvider.family<StoreProduct?, String>((

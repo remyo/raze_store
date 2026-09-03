@@ -175,7 +175,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextButton.icon(
-                    onPressed: () => context.push('/products/new'),
+                    onPressed: () => context.push('/products/quick-add'),
                     icon: const Icon(Icons.add_box_outlined),
                     label: const Text('Add a product without a barcode'),
                   ),
@@ -231,7 +231,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         if (shouldCreate == true && mounted) {
           await context.push(
             Uri(
-              path: '/products/new',
+              path: '/products/quick-add',
               queryParameters: {'barcode': barcode.value},
             ).toString(),
           );

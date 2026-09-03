@@ -4,6 +4,9 @@ import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/features/cart/presentation/cart_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
+import 'package:raze_store/features/catalog/presentation/quick_add_product_screen.dart';
+import 'package:raze_store/features/onboarding/presentation/app_startup_gate.dart';
+import 'package:raze_store/features/onboarding/presentation/first_launch_setup_screen.dart';
 import 'package:raze_store/features/scanner/presentation/scanner_screen.dart';
 import 'package:raze_store/features/receipt/receipt.dart';
 import 'package:raze_store/features/settings/presentation/settings_screen.dart';
@@ -12,9 +15,13 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/products',
+  initialLocation: '/',
   routes: [
-    GoRoute(path: '/', redirect: (_, _) => '/products'),
+    GoRoute(path: '/', builder: (context, state) => const AppStartupGate()),
+    GoRoute(
+      path: '/setup',
+      builder: (context, state) => const FirstLaunchSetupScreen(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return AppShell(navigationShell: navigationShell);
@@ -47,10 +54,21 @@ final appRouter = GoRouter(
       ],
     ),
     GoRoute(
+      path: '/products/quick-add',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => QuickAddProductScreen(
+        initialBarcode: state.uri.queryParameters['barcode'],
+        goToProductsAfterSave: state.uri.queryParameters['fromSetup'] == 'true',
+      ),
+    ),
+    GoRoute(
       path: '/products/new',
       parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => ProductFormScreen(
         initialBarcode: state.uri.queryParameters['barcode'],
+        initialName: state.uri.queryParameters['name'],
+        initialPrice: state.uri.queryParameters['price'],
+        goToProductsAfterSave: state.uri.queryParameters['fromSetup'] == 'true',
       ),
     ),
     GoRoute(

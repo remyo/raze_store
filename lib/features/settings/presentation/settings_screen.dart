@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/app/theme_mode_controller.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
 
@@ -16,12 +18,12 @@ class SettingsScreen extends ConsumerWidget {
         .when(
           loading: () => const AppPageScaffold(
             title: 'Store settings',
-            leading: BackButton(),
+            leading: _SettingsBackButton(),
             body: AppLoadingState(message: 'Loading store details…'),
           ),
           error: (error, _) => AppPageScaffold(
             title: 'Store settings',
-            leading: const BackButton(),
+            leading: const _SettingsBackButton(),
             body: AppErrorState(
               message: 'The store details could not be loaded.',
               onRetry: () => ref.invalidate(storeProfileProvider),
@@ -81,7 +83,7 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
 
     return AppPageScaffold(
       title: 'Store settings',
-      leading: const BackButton(),
+      leading: const _SettingsBackButton(),
       padBody: false,
       body: ListView(
         padding: AppSpacing.pageInsetsFor(MediaQuery.sizeOf(context).width),
@@ -211,6 +213,14 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const AppSectionHeader(
+                      title: 'Catalog files',
+                      subtitle:
+                          'Protect your local prices or edit products in a spreadsheet.',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    const CatalogDataSection(),
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppSectionHeader(
                       title: 'Catalog connection',
                       subtitle: 'Prepared for the future raze_store_api.',
                     ),
@@ -277,5 +287,23 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
         const SnackBar(content: Text('Could not save the store details.')),
       );
     }
+  }
+}
+
+class _SettingsBackButton extends StatelessWidget {
+  const _SettingsBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return BackButton(
+      onPressed: () {
+        final navigator = Navigator.of(context);
+        if (navigator.canPop()) {
+          navigator.pop();
+        } else {
+          context.go('/products');
+        }
+      },
+    );
   }
 }

@@ -39,10 +39,39 @@ class StoreProducts extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Additional ways a store can sell a product whose package owns the barcode.
+///
+/// For example, a scanned cigarette pack can keep its package price on
+/// [StoreProducts], while this table stores a `Stick` price. Sub-units do not
+/// have their own barcode because scanning always resolves the parent product.
+@TableIndex(
+  name: 'product_selling_units_product_position_idx',
+  columns: {#productId, #position},
+)
+class ProductSellingUnits extends Table {
+  TextColumn get id => text()();
+  TextColumn get productId =>
+      text().references(StoreProducts, #id, onDelete: KeyAction.cascade)();
+  TextColumn get label => text().withLength(min: 1, max: 80)();
+  IntColumn get priceCentavos =>
+      integer().check(const CustomExpression<bool>('price_centavos >= 0'))();
+  IntColumn get position =>
+      integer().check(const CustomExpression<bool>('position >= 0'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// The single unfinished cart draft. A catalog item can be deleted without
 /// altering the draft because every receipt-relevant value is snapshotted.
 class DraftCartItems extends Table {
+  /// Stable identity for a particular product + selling-unit selection.
+  /// Existing version-1 rows migrate with a `main:`-prefixed product ID.
+  TextColumn get lineId => text()();
   TextColumn get productId => text()();
+  TextColumn get sellingUnitId => text().nullable()();
   TextColumn get barcode => text().nullable()();
   TextColumn get nameSnapshot => text()();
   TextColumn get brandSnapshot => text().nullable()();
@@ -57,7 +86,7 @@ class DraftCartItems extends Table {
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
   @override
-  Set<Column<Object>> get primaryKey => {productId};
+  Set<Column<Object>> get primaryKey => {lineId};
 }
 
 /// Receipt identity for this device/store. There is exactly one row (id = 1).

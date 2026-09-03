@@ -309,6 +309,16 @@ class _ReceiptLineRow extends StatelessWidget {
                     height: 1.2,
                   ),
                 ),
+                if (line.unitLabel case final unit?) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Sold as $unit',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF6F6A61),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 4),
                 Text(
                   '${formatReceiptMoney(line.unitPriceCentavos)} × ${line.quantity}',

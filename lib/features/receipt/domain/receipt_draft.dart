@@ -12,8 +12,10 @@ final class ReceiptLine {
     required this.quantity,
     required this.unitPriceCentavos,
     String? barcode,
+    String? unitLabel,
   }) : productName = productName.trim(),
-       barcode = _trimToNull(barcode) {
+       barcode = _trimToNull(barcode),
+       unitLabel = _trimToNull(unitLabel) {
     if (this.productName.isEmpty) {
       throw ArgumentError.value(
         productName,
@@ -39,6 +41,7 @@ final class ReceiptLine {
 
   final String productName;
   final String? barcode;
+  final String? unitLabel;
   final int quantity;
   final int unitPriceCentavos;
 
@@ -50,13 +53,14 @@ final class ReceiptLine {
         other is ReceiptLine &&
             productName == other.productName &&
             barcode == other.barcode &&
+            unitLabel == other.unitLabel &&
             quantity == other.quantity &&
             unitPriceCentavos == other.unitPriceCentavos;
   }
 
   @override
   int get hashCode =>
-      Object.hash(productName, barcode, quantity, unitPriceCentavos);
+      Object.hash(productName, barcode, unitLabel, quantity, unitPriceCentavos);
 }
 
 /// A snapshot of the current cart suitable for previewing or sharing.

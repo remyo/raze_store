@@ -1,18 +1,21 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'cart_line_id.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [StoreProducts, DraftCartItems, StoreProfiles])
+@DriftDatabase(
+  tables: [StoreProducts, ProductSellingUnits, DraftCartItems, StoreProfiles],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase({String name = 'raze_store'}) : super(driftDatabase(name: name));
 
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -23,5 +26,79 @@ class AppDatabase extends _$AppDatabase {
         mode: InsertMode.insertOrIgnore,
       );
     },
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(productSellingUnits);
+
+        // Version 1 keyed a draft row by product only. Version 2 needs one row
+        // per selected selling unit, so recreate the table with a line key and
+        // carry every unfinished main-unit cart snapshot forward unchanged.
+        await customStatement(
+          'ALTER TABLE draft_cart_items RENAME TO draft_cart_items_v1',
+        );
+        await migrator.createTable(draftCartItems);
+        await customStatement('''
+          INSERT INTO draft_cart_items (
+            line_id,
+            product_id,
+            selling_unit_id,
+            barcode,
+            name_snapshot,
+            brand_snapshot,
+            unit_label_snapshot,
+            image_path_snapshot,
+            unit_price_centavos,
+            quantity,
+            added_at,
+            updated_at
+          )
+          SELECT
+            'main:' || product_id,
+            product_id,
+            NULL,
+            barcode,
+            name_snapshot,
+            brand_snapshot,
+            unit_label_snapshot,
+            image_path_snapshot,
+            unit_price_centavos,
+            quantity,
+            added_at,
+            updated_at
+          FROM draft_cart_items_v1
+        ''');
+        await customStatement('DROP TABLE draft_cart_items_v1');
+      } else if (from < 3) {
+        await _upgradeVersion2CartLineIds(migrator);
+      }
+    },
   );
+
+  Future<void> _upgradeVersion2CartLineIds(Migrator migrator) async {
+    final oldRows = await select(draftCartItems).get();
+    await customStatement(
+      'ALTER TABLE draft_cart_items RENAME TO draft_cart_items_v2',
+    );
+    await migrator.createTable(draftCartItems);
+    await batch((batch) {
+      batch.insertAll(draftCartItems, [
+        for (final row in oldRows)
+          DraftCartItemsCompanion.insert(
+            lineId: buildCartLineId(row.productId, row.sellingUnitId),
+            productId: row.productId,
+            sellingUnitId: Value(row.sellingUnitId),
+            barcode: Value(row.barcode),
+            nameSnapshot: row.nameSnapshot,
+            brandSnapshot: Value(row.brandSnapshot),
+            unitLabelSnapshot: Value(row.unitLabelSnapshot),
+            imagePathSnapshot: Value(row.imagePathSnapshot),
+            unitPriceCentavos: row.unitPriceCentavos,
+            quantity: row.quantity,
+            addedAt: Value(row.addedAt),
+            updatedAt: Value(row.updatedAt),
+          ),
+      ]);
+    });
+    await customStatement('DROP TABLE draft_cart_items_v2');
+  }
 }

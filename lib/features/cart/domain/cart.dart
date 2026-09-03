@@ -8,7 +8,9 @@ const int maximumCartQuantity = 999;
 /// deleted. Re-adding the same product increments this row's quantity.
 final class CartItem {
   const CartItem({
+    required this.lineId,
     required this.productId,
+    required this.sellingUnitId,
     required this.barcode,
     required this.nameSnapshot,
     required this.unitPrice,
@@ -20,7 +22,9 @@ final class CartItem {
     this.imagePathSnapshot,
   });
 
+  final String lineId;
   final String productId;
+  final String? sellingUnitId;
   final String? barcode;
   final String nameSnapshot;
   final String? brandSnapshot;
@@ -35,6 +39,8 @@ final class CartItem {
   int get unitPriceCentavos => unitPrice.centavos;
   Money get lineTotal => unitPrice.times(quantity);
   int get lineTotalCentavos => lineTotal.centavos;
+
+  bool get usesDefaultSellingUnit => sellingUnitId == null;
 }
 
 final class CartDraft {
@@ -46,7 +52,8 @@ final class CartDraft {
   bool get isEmpty => items.isEmpty;
   bool get isNotEmpty => items.isNotEmpty;
 
-  int get distinctProductCount => items.length;
+  int get distinctProductCount =>
+      items.map((item) => item.productId).toSet().length;
 
   int get totalQuantity =>
       items.fold(0, (total, item) => total + item.quantity);

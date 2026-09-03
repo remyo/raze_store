@@ -6,22 +6,29 @@ abstract interface class CartRepository {
 
   Future<CartDraft> getDraft();
 
-  /// Adds a new snapshot or increments the existing product's quantity.
-  Future<void> addProduct(StoreProduct product, {int quantity = 1});
+  /// Adds a new snapshot or increments the same product + unit selection.
+  ///
+  /// Omitting [saleOption] preserves the original behavior and adds the
+  /// product's barcode/default selling unit.
+  Future<void> addProduct(
+    StoreProduct product, {
+    ProductSaleOption? saleOption,
+    int quantity = 1,
+  });
 
   /// A quantity of zero removes the row. Negative quantities are rejected.
-  Future<void> updateQuantity(String productId, int quantity);
+  Future<void> updateQuantity(String lineId, int quantity);
 
-  Future<void> removeProduct(String productId);
+  Future<void> removeProduct(String lineId);
 
   Future<void> clear();
 }
 
 final class CartProductNotFoundException implements Exception {
-  const CartProductNotFoundException(this.productId);
+  const CartProductNotFoundException(this.lineId);
 
-  final String productId;
+  final String lineId;
 
   @override
-  String toString() => 'Cart product $productId was not found.';
+  String toString() => 'Cart line $lineId was not found.';
 }

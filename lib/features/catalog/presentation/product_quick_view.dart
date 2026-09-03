@@ -38,11 +38,14 @@ class ProductQuickView extends ConsumerStatefulWidget {
 
 class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
   int _quantity = 1;
+  int _selectedOptionIndex = 0;
   bool _adding = false;
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
+    final saleOptions = product.saleOptions;
+    final selectedOption = saleOptions[_selectedOptionIndex];
     final scheme = Theme.of(context).colorScheme;
     final details = [
       product.brand,
@@ -99,9 +102,15 @@ class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
                         ],
                         const SizedBox(height: AppSpacing.sm),
                         PriceText(
-                          centavos: product.priceCentavos,
+                          centavos: selectedOption.priceCentavos,
                           size: PriceTextSize.large,
                         ),
+                        if (product.sellingUnits.isNotEmpty)
+                          Text(
+                            'per ${selectedOption.label}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
                       ],
                     ),
                   ),
@@ -129,6 +138,26 @@ class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
                   ],
                 ),
               ],
+              if (product.sellingUnits.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.lg),
+                const AppSectionHeader(
+                  title: 'Choose how it is sold',
+                  subtitle:
+                      'The barcode belongs to the main product. Pick the pack or a loose unit before adding.',
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (var index = 0; index < saleOptions.length; index++) ...[
+                  _SaleOptionTile(
+                    option: saleOptions[index],
+                    selected: _selectedOptionIndex == index,
+                    onTap: _adding
+                        ? null
+                        : () => setState(() => _selectedOptionIndex = index),
+                  ),
+                  if (index < saleOptions.length - 1)
+                    const SizedBox(height: AppSpacing.xs),
+                ],
+              ],
               const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
@@ -140,7 +169,7 @@ class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: _adding || product.priceCentavos <= 0
+                      onPressed: _adding || selectedOption.priceCentavos <= 0
                           ? null
                           : _add,
                       icon: _adding
@@ -150,9 +179,11 @@ class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
                             )
                           : const Icon(Icons.add_shopping_cart_rounded),
                       label: Text(
-                        product.priceCentavos <= 0
+                        selectedOption.priceCentavos <= 0
                             ? 'Set a price first'
-                            : 'Add $_quantity to cart',
+                            : product.sellingUnits.isEmpty
+                            ? 'Add $_quantity to cart'
+                            : 'Add $_quantity ${selectedOption.label}',
                       ),
                     ),
                   ),
@@ -181,7 +212,11 @@ class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
     try {
       await ref
           .read(cartRepositoryProvider)
-          .addProduct(widget.product, quantity: _quantity);
+          .addProduct(
+            widget.product,
+            saleOption: widget.product.saleOptions[_selectedOptionIndex],
+            quantity: _quantity,
+          );
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (_) {
@@ -193,5 +228,64 @@ class _ProductQuickViewState extends ConsumerState<ProductQuickView> {
         ),
       );
     }
+  }
+}
+
+class _SaleOptionTile extends StatelessWidget {
+  const _SaleOptionTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ProductSaleOption option;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? scheme.primaryContainer : scheme.surfaceContainerLow,
+      borderRadius: AppRadius.control,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.control,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      option.label,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (option.isDefault)
+                      Text(
+                        'Main barcode unit',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              PriceText(centavos: option.priceCentavos),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

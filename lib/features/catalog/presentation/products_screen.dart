@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
+import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog/presentation/product_quick_view.dart';
@@ -42,8 +43,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       title: 'Products',
       actions: [
         IconButton(
-          onPressed: () => context.push('/products/new'),
-          tooltip: 'Add product',
+          onPressed: () => context.push('/products/quick-add'),
+          tooltip: 'Quick add product',
           icon: const Icon(Icons.add_rounded),
         ),
         IconButton(
@@ -64,7 +65,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           query: query,
           selectedCategory: _selectedCategory,
           searchController: _searchController,
-          onSearch: ref.read(catalogSearchQueryProvider.notifier).update,
+          onSearch: (value) {
+            ref.read(catalogSearchQueryProvider.notifier).update(value);
+            if (_selectedCategory != null) {
+              setState(() => _selectedCategory = null);
+            }
+          },
           onCategorySelected: (category) {
             setState(() => _selectedCategory = category);
           },
@@ -76,7 +82,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
               );
             }
           },
-          onAddFirst: () => context.push('/products/new'),
+          onAddFirst: () => context.push('/products/quick-add'),
           onScan: () => context.go('/scan'),
         ),
       ),
@@ -109,18 +115,23 @@ class _ProductsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categories =
-        products
-            .map((product) => product.category?.trim())
-            .whereType<String>()
-            .where((category) => category.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-    final visible = selectedCategory == null
+    final categories = distinctCatalogCategories(
+      products.map((product) => product.category),
+    );
+    final selectedKey = selectedCategory?.trim().toLowerCase();
+    final activeCategory = selectedKey == null
+        ? null
+        : categories.cast<String?>().firstWhere(
+            (category) => category?.toLowerCase() == selectedKey,
+            orElse: () => null,
+          );
+    final visible = activeCategory == null
         ? products
         : products
-              .where((product) => product.category == selectedCategory)
+              .where(
+                (product) =>
+                    product.category?.trim().toLowerCase() == selectedKey,
+              )
               .toList(growable: false);
 
     return CustomScrollView(
@@ -145,14 +156,14 @@ class _ProductsBody extends StatelessWidget {
                       children: [
                         ChoiceChip(
                           label: const Text('All'),
-                          selected: selectedCategory == null,
+                          selected: activeCategory == null,
                           onSelected: (_) => onCategorySelected(null),
                         ),
                         for (final category in categories) ...[
                           const SizedBox(width: AppSpacing.xs),
                           ChoiceChip(
                             label: Text(category),
-                            selected: selectedCategory == category,
+                            selected: activeCategory == category,
                             onSelected: (_) => onCategorySelected(category),
                           ),
                         ],
@@ -174,15 +185,21 @@ class _ProductsBody extends StatelessWidget {
           SliverFillRemaining(
             hasScrollBody: false,
             child: AppEmptyState(
-              icon: query.isEmpty ? Icons.shelves : Icons.search_off_rounded,
-              title: query.isEmpty
+              icon: products.isEmpty && query.isEmpty
+                  ? Icons.shelves
+                  : Icons.search_off_rounded,
+              title: products.isEmpty && query.isEmpty
                   ? 'Your store list is empty'
                   : 'No matching products',
-              message: query.isEmpty
+              message: products.isEmpty && query.isEmpty
                   ? 'Add the products your family sells. They stay available even when the phone is offline.'
+                  : activeCategory != null
+                  ? 'There are no products left in this category.'
                   : 'Try a different name, brand, barcode, or category.',
-              actionLabel: query.isEmpty ? 'Add first product' : null,
-              onAction: query.isEmpty ? onAddFirst : null,
+              actionLabel: products.isEmpty && query.isEmpty
+                  ? 'Add first product'
+                  : null,
+              onAction: products.isEmpty && query.isEmpty ? onAddFirst : null,
             ),
           )
         else
@@ -335,6 +352,16 @@ class _ProductCard extends StatelessWidget {
                     centavos: product.priceCentavos,
                     size: PriceTextSize.regular,
                   ),
+                  if (product.sellingUnits.isNotEmpty)
+                    Text(
+                      '+${product.sellingUnits.length} other ${product.sellingUnits.length == 1 ? 'unit price' : 'unit prices'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                 ],
               ),
             ),

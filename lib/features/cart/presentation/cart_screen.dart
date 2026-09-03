@@ -11,7 +11,6 @@ import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/cart/domain/cart.dart';
 import 'package:raze_store/features/receipt/receipt.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
-import 'package:raze_store/features/settings/domain/store_profile.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key});
@@ -22,8 +21,9 @@ class CartScreen extends ConsumerStatefulWidget {
 
 class _CartScreenState extends ConsumerState<CartScreen> {
   late final TextEditingController _cashController;
-  final Set<String> _busyProducts = {};
+  final Set<String> _busyLines = {};
   bool _clearing = false;
+  bool _preparingReceipt = false;
 
   @override
   void initState() {
@@ -44,8 +44,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartDraftProvider);
-    final profile =
-        ref.watch(storeProfileProvider).value ?? StoreProfile.defaults;
 
     return AppPageScaffold(
       title: 'Cart',
@@ -76,11 +74,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             : _CartBody(
                 draft: draft,
                 cashController: _cashController,
-                busyProducts: _busyProducts,
+                busyLines: _busyLines,
                 clearing: _clearing,
+                preparingReceipt: _preparingReceipt,
                 onQuantityChanged: _changeQuantity,
                 onRemove: _remove,
-                onPreviewReceipt: () => _previewReceipt(draft, profile),
+                onPreviewReceipt: () => _previewReceipt(draft),
                 onClear: _confirmClear,
               ),
       ),
@@ -88,12 +87,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _changeQuantity(CartItem item, int quantity) async {
-    if (_busyProducts.contains(item.productId)) return;
-    setState(() => _busyProducts.add(item.productId));
+    if (_busyLines.contains(item.lineId)) return;
+    setState(() => _busyLines.add(item.lineId));
     try {
       await ref
           .read(cartRepositoryProvider)
-          .updateQuantity(item.productId, quantity);
+          .updateQuantity(item.lineId, quantity);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,15 +100,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busyProducts.remove(item.productId));
+      if (mounted) setState(() => _busyLines.remove(item.lineId));
     }
   }
 
   Future<void> _remove(CartItem item) async {
-    if (_busyProducts.contains(item.productId)) return;
-    setState(() => _busyProducts.add(item.productId));
+    if (_busyLines.contains(item.lineId)) return;
+    setState(() => _busyLines.add(item.lineId));
     try {
-      await ref.read(cartRepositoryProvider).removeProduct(item.productId);
+      await ref.read(cartRepositoryProvider).removeProduct(item.lineId);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -117,7 +116,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busyProducts.remove(item.productId));
+      if (mounted) setState(() => _busyLines.remove(item.lineId));
     }
   }
 
@@ -157,7 +156,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  Future<void> _previewReceipt(CartDraft cart, StoreProfile profile) async {
+  Future<void> _previewReceipt(CartDraft cart) async {
     final cashText = _cashController.text.trim();
     final cashReceived = cashText.isEmpty
         ? null
@@ -168,25 +167,43 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
       return;
     }
-
-    final draft = ReceiptDraft(
-      storeName: profile.storeName,
-      storeAddress: profile.address,
-      storeContact: profile.contact,
-      footerMessage: profile.receiptFooter,
-      createdAt: DateTime.now(),
-      cashReceivedCentavos: cashReceived,
-      lines: [
-        for (final item in cart.items)
-          ReceiptLine(
-            productName: item.nameSnapshot,
-            barcode: item.barcode,
-            quantity: item.quantity,
-            unitPriceCentavos: item.unitPriceCentavos,
+    if (_preparingReceipt) return;
+    setState(() => _preparingReceipt = true);
+    try {
+      final profile = await ref
+          .read(settingsRepositoryProvider)
+          .getStoreProfile();
+      if (!mounted) return;
+      final draft = ReceiptDraft(
+        storeName: profile.storeName,
+        storeAddress: profile.address,
+        storeContact: profile.contact,
+        footerMessage: profile.receiptFooter,
+        createdAt: DateTime.now(),
+        cashReceivedCentavos: cashReceived,
+        lines: [
+          for (final item in cart.items)
+            ReceiptLine(
+              productName: item.nameSnapshot,
+              unitLabel: item.unitLabelSnapshot,
+              barcode: item.barcode,
+              quantity: item.quantity,
+              unitPriceCentavos: item.unitPriceCentavos,
+            ),
+        ],
+      );
+      await context.push<void>('/receipt', extra: draft);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not load the store details for this receipt.'),
           ),
-      ],
-    );
-    await context.push<void>('/receipt', extra: draft);
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _preparingReceipt = false);
+    }
   }
 }
 
@@ -194,8 +211,9 @@ class _CartBody extends StatelessWidget {
   const _CartBody({
     required this.draft,
     required this.cashController,
-    required this.busyProducts,
+    required this.busyLines,
     required this.clearing,
+    required this.preparingReceipt,
     required this.onQuantityChanged,
     required this.onRemove,
     required this.onPreviewReceipt,
@@ -204,8 +222,9 @@ class _CartBody extends StatelessWidget {
 
   final CartDraft draft;
   final TextEditingController cashController;
-  final Set<String> busyProducts;
+  final Set<String> busyLines;
   final bool clearing;
+  final bool preparingReceipt;
   final void Function(CartItem item, int quantity) onQuantityChanged;
   final ValueChanged<CartItem> onRemove;
   final VoidCallback onPreviewReceipt;
@@ -245,9 +264,7 @@ class _CartBody extends StatelessWidget {
                       ) ...[
                         _CartLineTile(
                           item: draft.items[index],
-                          busy: busyProducts.contains(
-                            draft.items[index].productId,
-                          ),
+                          busy: busyLines.contains(draft.items[index].lineId),
                           onQuantityChanged: (quantity) =>
                               onQuantityChanged(draft.items[index], quantity),
                           onRemove: () => onRemove(draft.items[index]),
@@ -332,9 +349,16 @@ class _CartBody extends StatelessWidget {
                 ],
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton.icon(
-                  onPressed: onPreviewReceipt,
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text('Preview receipt'),
+                  onPressed: preparingReceipt ? null : onPreviewReceipt,
+                  icon: preparingReceipt
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.receipt_long_outlined),
+                  label: Text(
+                    preparingReceipt ? 'Preparing receipt…' : 'Preview receipt',
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -378,7 +402,7 @@ class _CartLineTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final detail = [
       item.brandSnapshot,
-      item.unitLabelSnapshot,
+      if (item.unitLabelSnapshot case final unit?) 'Sold as $unit',
     ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' · ');
     final imagePath = item.imagePathSnapshot?.trim();
     final imageUri = imagePath == null ? null : Uri.tryParse(imagePath);

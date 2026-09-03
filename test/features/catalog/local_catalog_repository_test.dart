@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/core/database/app_database.dart';
+import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/features/catalog/data/local_catalog_repository.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
@@ -52,6 +55,50 @@ void main() {
     expect(await repository.findByBarcode(''), isNull);
   });
 
+  test(
+    'creates, orders, and updates sub-selling units under one barcode',
+    () async {
+      final created = await repository.createProduct(
+        ProductDraft(
+          id: 'cigarettes',
+          barcode: '4801234567890',
+          name: 'Cigarettes',
+          unitLabel: 'Pack',
+          priceCentavos: 16000,
+          sellingUnits: [
+            SellingUnitDraft(id: 'stick', label: 'Stick', priceCentavos: 1000),
+            SellingUnitDraft(
+              id: 'half-pack',
+              label: 'Half pack',
+              priceCentavos: 8500,
+            ),
+          ],
+        ),
+      );
+
+      expect(created.saleOptions.map((option) => option.label), [
+        'Pack',
+        'Stick',
+        'Half pack',
+      ]);
+      expect(created.sellingUnits.first.priceCentavos, 1000);
+      expect(
+        (await repository.findByBarcode('4801234567890'))!.sellingUnits,
+        hasLength(2),
+      );
+
+      final updated = await repository.updateProduct(
+        created.id,
+        ProductDraft.fromProduct(created).copyWithSellingUnits([
+          SellingUnitDraft.fromUnit(created.sellingUnits.first),
+        ]),
+      );
+
+      expect(updated.sellingUnits, hasLength(1));
+      expect(updated.sellingUnits.single.id, 'stick');
+    },
+  );
+
   test('searches metadata and publishes CRUD changes', () async {
     await repository.createProduct(
       ProductDraft(
@@ -100,4 +147,57 @@ void main() {
       throwsA(isA<DuplicateBarcodeException>()),
     );
   });
+
+  test('repairs a relocated managed product photo path on read', () async {
+    const fileName = '123e4567-e89b-12d3-a456-426614174000.jpg';
+    final root = await Directory.systemTemp.createTemp('raze_store_photos_');
+    addTearDown(() => root.delete(recursive: true));
+    final managed = Directory('${root.path}/product_images');
+    await managed.create(recursive: true);
+    final relocatedPath = '${managed.path}/$fileName';
+    await File(relocatedPath).writeAsBytes([1, 2, 3]);
+    const stalePath = '/old/ios/container/product_images/$fileName';
+
+    await repository.createProduct(
+      ProductDraft(
+        id: 'with-photo',
+        name: 'Photo item',
+        localImagePath: stalePath,
+        priceCentavos: 100,
+      ),
+    );
+    final repairingRepository = LocalCatalogRepository(
+      database,
+      imageStore: LocalProductImageStore(root: root),
+    );
+
+    expect(
+      (await repairingRepository.getProduct('with-photo'))?.localImagePath,
+      relocatedPath,
+    );
+    expect(
+      (await LocalCatalogRepository(
+        database,
+      ).getProduct('with-photo'))?.localImagePath,
+      relocatedPath,
+    );
+  });
+}
+
+extension on ProductDraft {
+  ProductDraft copyWithSellingUnits(List<SellingUnitDraft> units) =>
+      ProductDraft(
+        id: id,
+        barcode: barcode,
+        name: name,
+        brand: brand,
+        unitLabel: unitLabel,
+        category: category,
+        remoteImageUrl: remoteImageUrl,
+        source: source,
+        sourceProductId: sourceProductId,
+        localImagePath: localImagePath,
+        priceCentavos: priceCentavos,
+        sellingUnits: units,
+      );
 }

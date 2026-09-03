@@ -47,6 +47,9 @@ dependencies:
   gal: ^2.3.3
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3
+  archive: ^4.0.9
+  crypto: ^3.0.7
+  flutter_file_dialog: 3.0.3
 
 dev_dependencies:
   flutter_test:

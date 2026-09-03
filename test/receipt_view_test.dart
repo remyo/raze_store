@@ -16,6 +16,7 @@ void main() {
       lines: [
         ReceiptLine(
           productName: 'Canned sardines',
+          unitLabel: 'Can',
           barcode: '4801234567890',
           quantity: 2,
           unitPriceCentavos: 2350,
@@ -46,6 +47,7 @@ void main() {
     expect(find.text('123 Mabini Street, Quezon City'), findsOneWidget);
     expect(find.text('0912 345 6789'), findsOneWidget);
     expect(find.text('Canned sardines'), findsOneWidget);
+    expect(find.text('Sold as Can'), findsOneWidget);
     expect(find.text('4801234567890'), findsOneWidget);
     expect(find.text('₱23.50 × 2'), findsOneWidget);
     expect(find.text('₱84.50'), findsOneWidget);
