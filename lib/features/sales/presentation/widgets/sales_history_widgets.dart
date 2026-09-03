@@ -231,16 +231,27 @@ class SalesHistorySliver extends StatelessWidget {
     required this.sales,
     required this.now,
     required this.onOpenSale,
+    this.selectionMode = false,
+    this.selectedSaleIds = const <String>{},
+    this.onToggleSelection,
+    this.enabled = true,
   });
 
   final List<CompletedSale> sales;
   final DateTime now;
   final ValueChanged<CompletedSale> onOpenSale;
+  final bool selectionMode;
+  final Set<String> selectedSaleIds;
+  final ValueChanged<CompletedSale>? onToggleSelection;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final sorted = [...sales]
-      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+      ..sort((a, b) {
+        final byTime = b.completedAt.compareTo(a.completedAt);
+        return byTime != 0 ? byTime : b.id.compareTo(a.id);
+      });
     final rows = _buildRows(sorted);
     return SliverList(
       key: const ValueKey('sales-history-list'),
@@ -265,12 +276,25 @@ class SalesHistorySliver extends StatelessWidget {
           }
 
           final sale = row.sale!;
+          final selected = selectedSaleIds.contains(sale.id);
           return Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: _SalesHistoryTile(
               key: ValueKey('sales-history-${sale.id}'),
               sale: sale,
-              onTap: () => onOpenSale(sale),
+              selectionMode: selectionMode,
+              selected: selected,
+              enabled: enabled,
+              onTap: () {
+                if (selectionMode) {
+                  onToggleSelection?.call(sale);
+                } else {
+                  onOpenSale(sale);
+                }
+              },
+              onLongPress: selectionMode || onToggleSelection == null
+                  ? null
+                  : () => onToggleSelection!(sale),
             ),
           );
         },
@@ -282,10 +306,22 @@ class SalesHistorySliver extends StatelessWidget {
 }
 
 class _SalesHistoryTile extends StatelessWidget {
-  const _SalesHistoryTile({super.key, required this.sale, required this.onTap});
+  const _SalesHistoryTile({
+    super.key,
+    required this.sale,
+    required this.selectionMode,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final CompletedSale sale;
+  final bool selectionMode;
+  final bool selected;
+  final bool enabled;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -301,11 +337,19 @@ class _SalesHistoryTile extends StatelessWidget {
 
     return Semantics(
       button: true,
+      enabled: enabled,
+      selected: selectionMode ? selected : null,
+      onTap: enabled ? onTap : null,
+      onLongPress: enabled ? onLongPress : null,
+      excludeSemantics: true,
       label:
+          '${selectionMode ? (selected ? 'Selected, ' : 'Not selected, ') : ''}'
           '$title, $quantityLabel, ${PriceText.format(sale.totalCentavos)}, completed $timeLabel',
       child: Card(
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
+          onLongPress: enabled ? onLongPress : null,
+          excludeFromSemantics: true,
           borderRadius: AppRadius.card,
           child: ConstrainedBox(
             constraints: const BoxConstraints(
@@ -315,20 +359,31 @@ class _SalesHistoryTile extends StatelessWidget {
               padding: const EdgeInsets.all(AppSpacing.sm),
               child: Row(
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: scheme.secondaryContainer,
-                      borderRadius: AppRadius.control,
+                  if (selectionMode)
+                    ExcludeSemantics(
+                      child: IgnorePointer(
+                        child: Checkbox(
+                          key: ValueKey('sales-select-${sale.id}'),
+                          value: selected,
+                          onChanged: enabled ? (_) {} : null,
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: scheme.secondaryContainer,
+                        borderRadius: AppRadius.control,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.receipt_long_rounded,
+                        color: scheme.onSecondaryContainer,
+                        size: 21,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.receipt_long_rounded,
-                      color: scheme.onSecondaryContainer,
-                      size: 21,
-                    ),
-                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
@@ -366,11 +421,12 @@ class _SalesHistoryTile extends StatelessWidget {
                               ],
                             ),
                       ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: scheme.onSurfaceVariant,
-                        size: 20,
-                      ),
+                      if (!selectionMode)
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: scheme.onSurfaceVariant,
+                          size: 20,
+                        ),
                     ],
                   ),
                 ],

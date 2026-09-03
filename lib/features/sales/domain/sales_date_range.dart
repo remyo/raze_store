@@ -47,6 +47,30 @@ final class SalesDateRange {
     );
   }
 
+  /// Includes the current local calendar month and the preceding months.
+  ///
+  /// For example, three months on September 3 covers July 1 through the end
+  /// of September. Sales cannot normally exist in the future portion of the
+  /// current month, while calendar boundaries keep this filter predictable.
+  factory SalesDateRange.lastMonths(int months, {required DateTime now}) {
+    if (months <= 0) {
+      throw ArgumentError.value(months, 'months', 'Must be greater than zero.');
+    }
+    final local = now.toLocal();
+    return SalesDateRange(
+      startInclusive: DateTime(local.year, local.month - months + 1),
+      endExclusive: DateTime(local.year, local.month + 1),
+    );
+  }
+
+  factory SalesDateRange.thisYear(DateTime now) {
+    final local = now.toLocal();
+    return SalesDateRange(
+      startInclusive: DateTime(local.year),
+      endExclusive: DateTime(local.year + 1),
+    );
+  }
+
   /// Creates a range that includes both selected local calendar days.
   factory SalesDateRange.custom({
     required DateTime startDay,

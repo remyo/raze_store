@@ -29,4 +29,29 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('lastMonths uses complete local calendar month boundaries', () {
+    final range = SalesDateRange.lastMonths(
+      3,
+      now: DateTime(2026, 1, 15, 23, 59),
+    );
+
+    expect(range.includes(DateTime(2025, 11, 1)), isTrue);
+    expect(range.includes(DateTime(2026, 1, 31, 23, 59, 59)), isTrue);
+    expect(range.includes(DateTime(2025, 10, 31, 23, 59, 59)), isFalse);
+    expect(range.includes(DateTime(2026, 2, 1)), isFalse);
+    expect(
+      () => SalesDateRange.lastMonths(0, now: DateTime(2026)),
+      throwsArgumentError,
+    );
+  });
+
+  test('thisYear includes January through December only', () {
+    final range = SalesDateRange.thisYear(DateTime(2026, 9, 3));
+
+    expect(range.includes(DateTime(2026)), isTrue);
+    expect(range.includes(DateTime(2026, 12, 31, 23, 59, 59)), isTrue);
+    expect(range.includes(DateTime(2025, 12, 31, 23, 59, 59)), isFalse);
+    expect(range.includes(DateTime(2027)), isFalse);
+  });
 }

@@ -171,14 +171,27 @@ final class LocalSalesRepository implements SalesRepository {
     final normalizedIds = ids.map(_requiredId).toSet().toList(growable: false);
     if (normalizedIds.isEmpty) return;
     await _database.transaction(() async {
-      // Delete children explicitly as well as relying on ON DELETE CASCADE so
-      // this remains deterministic for custom test executors.
-      await (_database.delete(
-        _database.saleLines,
-      )..where((table) => table.saleId.isIn(normalizedIds))).go();
-      await (_database.delete(
-        _database.sales,
-      )..where((table) => table.id.isIn(normalizedIds))).go();
+      // Keep each `IN` expression below SQLite parameter limits. Select-all on
+      // a wide range can include thousands of transactions.
+      for (
+        var start = 0;
+        start < normalizedIds.length;
+        start += _hydrationChunkSize
+      ) {
+        final end = (start + _hydrationChunkSize).clamp(
+          0,
+          normalizedIds.length,
+        );
+        final chunk = normalizedIds.sublist(start, end);
+        // Delete children explicitly as well as relying on ON DELETE CASCADE
+        // so this remains deterministic for custom test executors.
+        await (_database.delete(
+          _database.saleLines,
+        )..where((table) => table.saleId.isIn(chunk))).go();
+        await (_database.delete(
+          _database.sales,
+        )..where((table) => table.id.isIn(chunk))).go();
+      }
     });
   }
 

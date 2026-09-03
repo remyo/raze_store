@@ -126,6 +126,109 @@ void main() {
     // Header + the first 30 matching rows + the next-page loader.
     expect(_listItemCount(tester), 32);
   });
+
+  testWidgets('categories share one horizontal two-row scroll position', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(390, 900);
+    addTearDown(tester.view.reset);
+    final products = [
+      for (var index = 0; index < 12; index++)
+        _product(index, category: 'Category $index'),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const ProductsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final browser = find.byKey(const ValueKey('product-category-browser'));
+    final gridFinder = find.byKey(const ValueKey('product-category-grid'));
+    final grid = tester.widget<GridView>(gridFinder);
+    final delegate =
+        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(grid.scrollDirection, Axis.horizontal);
+    expect(delegate.crossAxisCount, 2);
+    expect(
+      find.descendant(of: browser, matching: find.byType(Scrollable)),
+      findsOneWidget,
+    );
+
+    final all = find.byKey(const ValueKey('product-category-all'));
+    final firstCategory = find.byKey(
+      const ValueKey('product-category-Category 0'),
+    );
+    final allBefore = tester.getTopLeft(all);
+    final firstBefore = tester.getTopLeft(firstCategory);
+    expect(allBefore.dx, closeTo(firstBefore.dx, 0.1));
+    expect(allBefore.dy, isNot(closeTo(firstBefore.dy, 0.1)));
+
+    await tester.drag(gridFinder, const Offset(-60, 0));
+    await tester.pump();
+
+    final allDelta = tester.getTopLeft(all).dx - allBefore.dx;
+    final firstDelta = tester.getTopLeft(firstCategory).dx - firstBefore.dx;
+    expect(allDelta, lessThan(-1));
+    expect(allDelta, closeTo(firstDelta, 0.1));
+  });
+
+  testWidgets('category rows grow for three-times accessibility text', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(390, 900);
+    addTearDown(tester.view.reset);
+    final products = [
+      _product(0, category: 'Household cleaning and laundry supplies'),
+      _product(1, category: 'Snacks'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(3)),
+            child: child!,
+          ),
+          home: const ProductsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final browser = tester.getRect(
+      find.byKey(const ValueKey('product-category-browser')),
+    );
+    final all = tester.getRect(
+      find.byKey(const ValueKey('product-category-all')),
+    );
+    final longCategory = tester.getRect(
+      find.byKey(
+        const ValueKey(
+          'product-category-Household cleaning and laundry supplies',
+        ),
+      ),
+    );
+    expect(browser.height, greaterThan(140));
+    expect(all.height, greaterThan(54));
+    expect(all.bottom, lessThan(longCategory.top));
+    expect(browser.contains(all.topLeft), isTrue);
+    expect(browser.contains(longCategory.bottomRight), isTrue);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 int? _listItemCount(WidgetTester tester) {

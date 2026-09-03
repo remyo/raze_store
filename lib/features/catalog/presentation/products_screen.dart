@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -230,25 +231,10 @@ class _ProductsBody extends StatelessWidget {
                 ),
                 if (categories.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        ChoiceChip(
-                          label: const Text('All'),
-                          selected: activeCategory == null,
-                          onSelected: (_) => onCategorySelected(null),
-                        ),
-                        for (final category in categories) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          ChoiceChip(
-                            label: Text(category),
-                            selected: activeCategory == category,
-                            onSelected: (_) => onCategorySelected(category),
-                          ),
-                        ],
-                      ],
-                    ),
+                  _ProductCategoryBrowser(
+                    categories: categories,
+                    selectedCategory: activeCategory,
+                    onSelected: onCategorySelected,
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
@@ -310,6 +296,81 @@ class _ProductsBody extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// A single horizontal viewport with two category rows.
+///
+/// The grid owns one scroll position, so dragging either row moves the entire
+/// category browser instead of leaving the other row behind.
+class _ProductCategoryBrowser extends StatelessWidget {
+  const _ProductCategoryBrowser({
+    required this.categories,
+    required this.selectedCategory,
+    required this.onSelected,
+  });
+
+  final List<String> categories;
+  final String? selectedCategory;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final choices = <String?>[null, ...categories];
+    final textScaler = MediaQuery.textScalerOf(context);
+    final scaledLabelHeight = textScaler.scale(14);
+    final textScale = scaledLabelHeight / 14;
+    // ChoiceChip labels stay on one line, but their row must follow the real
+    // accessibility scale instead of clipping it at an arbitrary ceiling.
+    final rowHeight = math.max(48.0, scaledLabelHeight + 30);
+    final columnWidth = 152.0 + math.max(0.0, textScale - 1) * 32;
+
+    return Semantics(
+      container: true,
+      label: 'Product categories',
+      child: SizedBox(
+        key: const ValueKey('product-category-browser'),
+        height: rowHeight * 2 + AppSpacing.xxs,
+        child: GridView.builder(
+          key: const ValueKey('product-category-grid'),
+          scrollDirection: Axis.horizontal,
+          primary: false,
+          padding: EdgeInsets.zero,
+          itemCount: choices.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisExtent: columnWidth,
+            mainAxisSpacing: AppSpacing.xs,
+            crossAxisSpacing: AppSpacing.xxs,
+          ),
+          itemBuilder: (context, index) {
+            final category = choices[index];
+            final label = category ?? 'All';
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: ChoiceChip(
+                key: ValueKey(
+                  category == null
+                      ? 'product-category-all'
+                      : 'product-category-$category',
+                ),
+                label: SizedBox(
+                  width: columnWidth - 34,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                tooltip: label,
+                selected: selectedCategory == category,
+                onSelected: (_) => onSelected(category),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

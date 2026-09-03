@@ -167,10 +167,16 @@ spreadsheet. Export an app-generated CSV first to get the supported columns and
 ## Sales and storage
 
 Use the **Sales** tab to review completed checkouts newest first. **Today** is
-the default; **7D**, **This month**, and **Custom** recalculate the revenue,
-transaction, and item totals for the same date range. Open a transaction to see
-its saved lines and payment, recreate its receipt, or delete it after an
-explicit confirmation.
+the default; **7D**, **This month**, **3 months**, **This year**, and **Custom**
+recalculate the revenue, transaction, and item totals for the same date range.
+Open a transaction to see its saved lines and payment, recreate its receipt, or
+delete it after an explicit confirmation.
+
+To remove several transactions, tap **Select**, choose individual rows or use
+**Select all** for every transaction in the active date range, then tap **Delete**.
+The confirmation shows the number of selected sales and the active period before
+anything is removed. Deleting sales also removes their saved receipt lines, but
+never deletes products from the catalog.
 
 Open **Settings → Storage manager** to measure the local database, managed
 product images, temporary receipt copies, background-removal files, and other

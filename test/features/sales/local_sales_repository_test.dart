@@ -225,6 +225,69 @@ void main() {
       await repository.deleteSales([second.id, second.id]);
       expect(await repository.getSales(), isEmpty);
       expect(await database.select(database.saleLines).get(), isEmpty);
+      expect(
+        await LocalCatalogRepository(database).getProduct(product.id),
+        isNotNull,
+      );
+    },
+  );
+
+  test(
+    'bulk deletion chunks wide selections and preserves other data',
+    () async {
+      const deletedCount = 1205;
+      final start = DateTime.utc(2026, 1, 1);
+      await database.batch((batch) {
+        batch.insertAll(database.sales, [
+          for (var index = 0; index < deletedCount; index++)
+            SalesCompanion.insert(
+              id: 'delete-$index',
+              completedAt: start.add(Duration(minutes: index)),
+              storeNameSnapshot: 'Test Store',
+            ),
+          SalesCompanion.insert(
+            id: 'keep',
+            completedAt: start.subtract(const Duration(minutes: 1)),
+            storeNameSnapshot: 'Test Store',
+          ),
+        ]);
+        batch.insertAll(database.saleLines, [
+          for (var index = 0; index < deletedCount; index++)
+            SaleLinesCompanion.insert(
+              saleId: 'delete-$index',
+              position: 0,
+              nameSnapshot: 'Product $index',
+              unitPriceCentavos: 100,
+              quantity: 1,
+            ),
+          SaleLinesCompanion.insert(
+            saleId: 'keep',
+            position: 0,
+            nameSnapshot: 'Kept product snapshot',
+            unitPriceCentavos: 200,
+            quantity: 1,
+          ),
+        ]);
+      });
+      final ids = [
+        for (var index = 0; index < deletedCount; index++) 'delete-$index',
+        'delete-0',
+        'delete-400',
+      ];
+
+      await LocalSalesRepository(database).deleteSales(ids);
+
+      final remaining = await LocalSalesRepository(database).getSales();
+      expect(remaining, hasLength(1));
+      expect(remaining.single.id, 'keep');
+      expect(
+        remaining.single.lines.single.nameSnapshot,
+        'Kept product snapshot',
+      );
+      expect(
+        await LocalCatalogRepository(database).getProduct(product.id),
+        isNotNull,
+      );
     },
   );
 

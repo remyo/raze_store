@@ -9,13 +9,22 @@ import 'package:raze_store/features/sales/domain/completed_sale.dart';
 import 'package:raze_store/features/sales/domain/sales_date_range.dart';
 import 'package:raze_store/features/sales/presentation/widgets/sales_history_widgets.dart';
 
-enum SalesPeriodPreset { today, sevenDays, thisMonth, custom }
+enum SalesPeriodPreset {
+  today,
+  sevenDays,
+  thisMonth,
+  threeMonths,
+  thisYear,
+  custom,
+}
 
 extension SalesPeriodPresetLabel on SalesPeriodPreset {
   String get label => switch (this) {
     SalesPeriodPreset.today => 'Today',
     SalesPeriodPreset.sevenDays => '7D',
     SalesPeriodPreset.thisMonth => 'This month',
+    SalesPeriodPreset.threeMonths => '3 months',
+    SalesPeriodPreset.thisYear => 'This year',
     SalesPeriodPreset.custom => 'Custom',
   };
 }
@@ -43,6 +52,13 @@ class SalesScreen extends ConsumerStatefulWidget {
 class _SalesScreenState extends ConsumerState<SalesScreen> {
   late SalesPeriodPreset _period;
   DateTimeRange? _customRange;
+  final Set<String> _selectedSaleIds = <String>{};
+  bool _selectionMode = false;
+  bool _pickingCustomRange = false;
+  bool _confirmingDelete = false;
+  bool _deletingSelected = false;
+
+  bool get _bulkActionLocked => _confirmingDelete || _deletingSelected;
 
   @override
   void initState() {
@@ -61,6 +77,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     final range = _dateRange(now);
     final history = ref.watch(salesHistoryForRangeProvider(range));
     final oldestSaleDate = ref.watch(oldestSaleDateProvider);
+    final hasLoadedSales = switch (history) {
+      AsyncData(:final value) => value.isNotEmpty,
+      _ => false,
+    };
     final width = MediaQuery.sizeOf(context).width;
     final pageInsets = AppSpacing.pageInsetsFor(width);
     final sideInset = ((width - AppBreakpoints.readingMaxWidth) / 2).clamp(
@@ -70,6 +90,20 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
     return AppPageScaffold(
       title: 'Sales',
+      actions: [
+        if (_selectionMode)
+          TextButton(
+            key: const ValueKey('sales-cancel-selection'),
+            onPressed: _bulkActionLocked ? null : _cancelSelection,
+            child: const Text('Cancel'),
+          )
+        else if (hasLoadedSales)
+          TextButton(
+            key: const ValueKey('sales-start-selection'),
+            onPressed: _startSelection,
+            child: const Text('Select'),
+          ),
+      ],
       padBody: false,
       body: CustomScrollView(
         key: const ValueKey('sales-scroll-view'),
@@ -94,6 +128,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                   customLabel: _customRange == null
                       ? null
                       : _formatPickerRange(_customRange!),
+                  enabled:
+                      !_selectionMode &&
+                      !_pickingCustomRange &&
+                      !_bulkActionLocked,
                   onSelected: (period) => _selectPeriod(
                     period,
                     now: now,
@@ -147,6 +185,12 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 ];
               }
 
+              final visibleIds = sales.map((sale) => sale.id).toSet();
+              final selectedCount = _selectedSaleIds
+                  .where(visibleIds.contains)
+                  .length;
+              final allSelected = selectedCount == sales.length;
+
               return [
                 SliverPadding(
                   padding: EdgeInsets.symmetric(horizontal: sideInset),
@@ -167,11 +211,33 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                   sliver: SliverToBoxAdapter(
                     child: AppSectionHeader(
                       title: 'Transactions',
-                      subtitle:
-                          '${sales.length} ${sales.length == 1 ? 'sale' : 'sales'} · newest first',
+                      subtitle: _selectionMode
+                          ? '$selectedCount of ${sales.length} selected'
+                          : '${sales.length} ${sales.length == 1 ? 'sale' : 'sales'} · newest first',
                     ),
                   ),
                 ),
+                if (_selectionMode)
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      sideInset,
+                      0,
+                      sideInset,
+                      AppSpacing.sm,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _SalesSelectionToolbar(
+                        selectedCount: selectedCount,
+                        allSelected: allSelected,
+                        locked: _bulkActionLocked,
+                        deleting: _deletingSelected,
+                        onToggleAll: () => _toggleSelectAll(sales),
+                        onDelete: selectedCount == 0
+                            ? null
+                            : () => _confirmDeleteSelected(sales, now: now),
+                      ),
+                    ),
+                  ),
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(
                     sideInset,
@@ -183,6 +249,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                     sales: sales,
                     now: now,
                     onOpenSale: _openSale,
+                    selectionMode: _selectionMode,
+                    selectedSaleIds: _selectedSaleIds,
+                    onToggleSelection: _toggleSelection,
+                    enabled: !_bulkActionLocked,
                   ),
                 ),
               ];
@@ -198,6 +268,8 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       SalesPeriodPreset.today => SalesDateRange.today(now),
       SalesPeriodPreset.sevenDays => SalesDateRange.lastDays(7, now: now),
       SalesPeriodPreset.thisMonth => SalesDateRange.thisMonth(now),
+      SalesPeriodPreset.threeMonths => SalesDateRange.lastMonths(3, now: now),
+      SalesPeriodPreset.thisYear => SalesDateRange.thisYear(now),
       SalesPeriodPreset.custom => SalesDateRange.custom(
         startDay: _customRange!.start,
         endDay: _customRange!.end,
@@ -212,6 +284,8 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
         'Today · ${DateFormat.yMMMd().format(localNow)}',
       SalesPeriodPreset.sevenDays => 'Last 7 days',
       SalesPeriodPreset.thisMonth => DateFormat.yMMMM().format(localNow),
+      SalesPeriodPreset.threeMonths => 'Last 3 calendar months',
+      SalesPeriodPreset.thisYear => DateFormat.y().format(localNow),
       SalesPeriodPreset.custom => _formatPickerRange(_customRange!),
     };
   }
@@ -221,8 +295,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     required DateTime now,
     required DateTime? oldestSaleDate,
   }) async {
+    if (_bulkActionLocked || _pickingCustomRange) return;
     if (period != SalesPeriodPreset.custom) {
-      if (_period != period) setState(() => _period = period);
+      if (_period != period) {
+        setState(() {
+          _period = period;
+          _selectionMode = false;
+          _selectedSaleIds.clear();
+        });
+      }
       return;
     }
 
@@ -235,23 +316,143 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
       if (day.isBefore(firstDate)) firstDate = day;
     }
     final initial = _customRange ?? DateTimeRange(start: today, end: today);
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: firstDate,
-      lastDate: today,
-      currentDate: today,
-      initialDateRange: DateTimeRange(
-        start: initial.start.isBefore(firstDate) ? firstDate : initial.start,
-        end: initial.end.isAfter(today) ? today : initial.end,
-      ),
-      helpText: 'Choose sales dates',
-      saveText: 'Apply',
-    );
+    setState(() => _pickingCustomRange = true);
+    DateTimeRange? picked;
+    try {
+      picked = await showDateRangePicker(
+        context: context,
+        firstDate: firstDate,
+        lastDate: today,
+        currentDate: today,
+        initialDateRange: DateTimeRange(
+          start: initial.start.isBefore(firstDate) ? firstDate : initial.start,
+          end: initial.end.isAfter(today) ? today : initial.end,
+        ),
+        helpText: 'Choose sales dates',
+        saveText: 'Apply',
+      );
+    } finally {
+      if (mounted) setState(() => _pickingCustomRange = false);
+    }
     if (picked == null || !mounted) return;
     setState(() {
       _customRange = picked;
       _period = SalesPeriodPreset.custom;
+      _selectionMode = false;
+      _selectedSaleIds.clear();
     });
+  }
+
+  void _startSelection() {
+    if (_bulkActionLocked || _pickingCustomRange || _selectionMode) return;
+    setState(() => _selectionMode = true);
+  }
+
+  void _cancelSelection() {
+    if (_bulkActionLocked || !_selectionMode) return;
+    setState(() {
+      _selectionMode = false;
+      _selectedSaleIds.clear();
+    });
+  }
+
+  void _toggleSelection(CompletedSale sale) {
+    if (_bulkActionLocked) return;
+    setState(() {
+      _selectionMode = true;
+      if (!_selectedSaleIds.add(sale.id)) {
+        _selectedSaleIds.remove(sale.id);
+      }
+    });
+  }
+
+  void _toggleSelectAll(List<CompletedSale> sales) {
+    if (_bulkActionLocked || sales.isEmpty) return;
+    final visibleIds = sales.map((sale) => sale.id).toSet();
+    final allSelected = visibleIds.every(_selectedSaleIds.contains);
+    setState(() {
+      if (allSelected) {
+        _selectedSaleIds.removeAll(visibleIds);
+      } else {
+        _selectedSaleIds.addAll(visibleIds);
+      }
+    });
+  }
+
+  Future<void> _confirmDeleteSelected(
+    List<CompletedSale> sales, {
+    required DateTime now,
+  }) async {
+    if (_bulkActionLocked) return;
+    final visibleIds = sales.map((sale) => sale.id).toSet();
+    final ids = List<String>.unmodifiable(
+      _selectedSaleIds.where(visibleIds.contains).toSet(),
+    );
+    if (ids.isEmpty) return;
+
+    final count = ids.length;
+    final saleWord = count == 1 ? 'sale' : 'sales';
+    final periodLabel = _periodDescription(now);
+    setState(() => _confirmingDelete = true);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete $count $saleWord?'),
+        content: Text(
+          'This permanently deletes $count $saleWord from "$periodLabel", '
+          'including the saved receipt details. Products in your catalog will '
+          'not be deleted. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('sales-delete-cancel'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Keep sales'),
+          ),
+          FilledButton(
+            key: const ValueKey('sales-delete-confirm'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            child: Text('Delete $count $saleWord'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (confirmed != true) {
+      setState(() => _confirmingDelete = false);
+      return;
+    }
+
+    setState(() {
+      _confirmingDelete = false;
+      _deletingSelected = true;
+    });
+    try {
+      await ref.read(salesRepositoryProvider).deleteSales(ids);
+      if (!mounted) return;
+      setState(() {
+        _deletingSelected = false;
+        _selectionMode = false;
+        _selectedSaleIds.clear();
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$count $saleWord deleted.')));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _deletingSelected = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not delete the selected sales. Please try again.',
+          ),
+        ),
+      );
+    }
   }
 
   void _openSale(CompletedSale sale) {
@@ -268,11 +469,13 @@ class _SalesPeriodSelector extends StatelessWidget {
   const _SalesPeriodSelector({
     required this.selected,
     required this.customLabel,
+    required this.enabled,
     required this.onSelected,
   });
 
   final SalesPeriodPreset selected;
   final String? customLabel;
+  final bool enabled;
   final ValueChanged<SalesPeriodPreset> onSelected;
 
   @override
@@ -296,9 +499,11 @@ class _SalesPeriodSelector extends StatelessWidget {
                   final textScale = MediaQuery.textScalerOf(
                     context,
                   ).scale(1).clamp(1.0, 2.0);
-                  final columns = constraints.maxWidth < 340 || textScale >= 1.5
+                  final columns = constraints.maxWidth >= 620 && textScale < 1.3
+                      ? 6
+                      : constraints.maxWidth < 340 || textScale >= 1.5
                       ? 2
-                      : 4;
+                      : 3;
                   const spacing = AppSpacing.xxs;
                   final width =
                       (constraints.maxWidth - spacing * (columns - 1)) /
@@ -313,7 +518,9 @@ class _SalesPeriodSelector extends StatelessWidget {
                           child: _SalesPeriodButton(
                             period: period,
                             selected: selected == period,
-                            onPressed: () => onSelected(period),
+                            onPressed: enabled
+                                ? () => onSelected(period)
+                                : null,
                           ),
                         ),
                     ],
@@ -355,7 +562,7 @@ class _SalesPeriodButton extends StatelessWidget {
 
   final SalesPeriodPreset period;
   final bool selected;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -363,6 +570,7 @@ class _SalesPeriodButton extends StatelessWidget {
     return Semantics(
       key: ValueKey('sales-period-${period.name}'),
       button: true,
+      enabled: onPressed != null,
       selected: selected,
       label: '${period.label} sales period',
       excludeSemantics: true,
@@ -401,6 +609,94 @@ class _SalesPeriodButton extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SalesSelectionToolbar extends StatelessWidget {
+  const _SalesSelectionToolbar({
+    required this.selectedCount,
+    required this.allSelected,
+    required this.locked,
+    required this.deleting,
+    required this.onToggleAll,
+    required this.onDelete,
+  });
+
+  final int selectedCount;
+  final bool allSelected;
+  final bool locked;
+  final bool deleting;
+  final VoidCallback onToggleAll;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final actions = Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xxs,
+      children: [
+        TextButton.icon(
+          key: const ValueKey('sales-select-all'),
+          onPressed: locked ? null : onToggleAll,
+          icon: Icon(
+            allSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
+            size: 18,
+          ),
+          label: Text(allSelected ? 'Clear all' : 'Select all'),
+        ),
+        FilledButton.tonalIcon(
+          key: const ValueKey('sales-delete-selected'),
+          onPressed: locked ? null : onDelete,
+          style: FilledButton.styleFrom(foregroundColor: scheme.error),
+          icon: deleting
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.delete_outline_rounded, size: 18),
+          label: Text(deleting ? 'Deleting…' : 'Delete selected'),
+        ),
+      ],
+    );
+
+    return Card(
+      key: const ValueKey('sales-selection-toolbar'),
+      color: scheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final count = Text(
+              '$selectedCount selected',
+              key: const ValueKey('sales-selected-count'),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            );
+            if (constraints.maxWidth < 420) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  count,
+                  const SizedBox(height: AppSpacing.xxs),
+                  actions,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: count),
+                actions,
+              ],
+            );
+          },
         ),
       ),
     );
