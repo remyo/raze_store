@@ -81,14 +81,14 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Import a .razepack file to add ready-made Filipino products and bundled images. Choose whether matching catalog details and main prices stay or update; your photos, sub-unit prices, receipt settings, and cart are preserved.',
+              'Import a .razepack file to add ready-made Filipino products and bundled images. Choose whether matching catalog details stay or update. Existing non-zero main prices always stay; a pack suggestion can fill a ₱0 price. Your photos, sub-unit prices, receipt settings, and cart are preserved.',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Raze starter-pack data is credited to Open Food Facts contributors (ODbL/DbCL; images CC BY-SA 3.0). Each official pack includes its full attribution and dated price sources.',
+              'Each official starter pack includes full attribution for its DTI, Open Food Facts, and dated retailer price sources.',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
@@ -266,7 +266,7 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
                       contentPadding: EdgeInsets.zero,
                       title: Text('Keep existing (recommended)'),
                       subtitle: Text(
-                        'Add new products. Matching products keep their details and main price.',
+                        'Add new products and preserve matching details. A pack suggestion fills only a ₱0 main price.',
                       ),
                     ),
                     RadioListTile<CatalogPackImportMode>(
@@ -275,7 +275,7 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
                       contentPadding: EdgeInsets.zero,
                       title: Text('Update matching and add new'),
                       subtitle: Text(
-                        'Replace matching catalog details and use the pack SRP when provided. Your own photo and sub-unit prices stay.',
+                        'Replace matching catalog details. Non-zero main prices, your own photo, and sub-unit prices stay.',
                       ),
                     ),
                   ],

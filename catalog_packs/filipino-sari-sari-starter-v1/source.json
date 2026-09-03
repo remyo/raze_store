@@ -1,20 +1,20 @@
 {
   "packId": "filipino-sari-sari-starter",
-  "revision": 2,
-  "createdAt": "2026-09-03T00:00:00Z",
+  "revision": 3,
+  "createdAt": "2026-09-03T04:30:00Z",
   "title": "Filipino Sari-sari Starter Catalog",
-  "description": "A small, reviewed proof pack of packaged food and drink products commonly found in Philippine stores. Prices are included only when exactly matched to a dated DTI reference.",
-  "sourceSnapshotAt": "2026-09-03T00:00:00Z",
-  "dataLicense": "Open Food Facts database: ODbL-1.0; contents: DbCL-1.0",
+  "description": "208 common Philippine basic-necessity and sari-sari products with broad categories and positive suggested starting prices. Prices are dated DTI SRPs or exact-product Philippine retailer observations and remain editable by the store owner.",
+  "sourceSnapshotAt": "2026-09-03T04:30:00Z",
+  "dataLicense": "Mixed-source factual data; see ATTRIBUTION.md for provenance",
   "imageLicense": "Open Food Facts product images: CC-BY-SA-3.0",
-  "attribution": "Product data and images are from Open Food Facts contributors. Original product and image URLs are retained per product. Package artwork may be subject to additional rights.",
+  "attribution": "The pack combines factual name, unit, and historical SRP records from the Philippine DTI with 20 Open Food Facts product records and images. Exact-product retailer observations fill prices not covered by the DTI bulletin. Every price retains its source and date.",
   "attributionFile": "ATTRIBUTION.md",
   "products": [
     {
       "catalogProductId": "99566e6a-8111-58dc-a958-f2e39b6f5810",
       "source": "raze_store_api",
       "sourceProductId": "99566e6a-8111-58dc-a958-f2e39b6f5810",
-      "updatedAt": "2026-09-03T03:57:25.069186+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485200040",
       "name": "555 Spanish Style Sardines",
       "brand": "555",
@@ -24,13 +24,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0748485200040",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/074/848/520/0040/front_en.35.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/99566e6a-8111-58dc-a958-f2e39b6f5810.jpg"
+      "imageFile": "images/99566e6a-8111-58dc-a958-f2e39b6f5810.jpg",
+      "suggestedPriceCentavos": 4000,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "AtHome Online Store",
+        "sourceUrl": "https://www.athomeonlinestore.com/product-detail?Product=555-spanish-style-sardines-155g",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "55d61f76-441d-5b8f-9a1c-0113a607fc63",
       "source": "raze_store_api",
       "sourceProductId": "55d61f76-441d-5b8f-9a1c-0113a607fc63",
-      "updatedAt": "2026-09-03T03:57:25.071853+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485700021",
       "name": "555 Tuna Afritada",
       "brand": "555",
@@ -40,13 +48,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0748485700021",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/074/848/570/0021/front_en.45.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/55d61f76-441d-5b8f-9a1c-0113a607fc63.jpg"
+      "imageFile": "images/55d61f76-441d-5b8f-9a1c-0113a607fc63.jpg",
+      "suggestedPriceCentavos": 2975,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Citimart",
+        "sourceUrl": "https://www.citimartdelivery.com.ph/products/1000482",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "304f75b2-a474-56ec-9ada-d076a82cde28",
       "source": "raze_store_api",
       "sourceProductId": "304f75b2-a474-56ec-9ada-d076a82cde28",
-      "updatedAt": "2026-09-03T03:57:25.079554+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485800011",
       "name": "Argentina Corned Beef",
       "brand": "Argentina",
@@ -70,7 +86,7 @@
       "catalogProductId": "126b8b4c-f447-50b5-a8e7-1be030212d04",
       "source": "raze_store_api",
       "sourceProductId": "126b8b4c-f447-50b5-a8e7-1be030212d04",
-      "updatedAt": "2026-09-03T03:57:25.140606+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485800035",
       "name": "Argentina Corned Beef",
       "brand": "Argentina",
@@ -80,13 +96,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0748485800035",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/074/848/580/0035/front_en.19.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/126b8b4c-f447-50b5-a8e7-1be030212d04.jpg"
+      "imageFile": "images/126b8b4c-f447-50b5-a8e7-1be030212d04.jpg",
+      "suggestedPriceCentavos": 6575,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Sta. Lucia Grocers",
+        "sourceUrl": "https://staluciagrocers.com/products/argentina-corned-beef-260g",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "301907aa-0501-57b7-8433-cf439a1a0327",
       "source": "raze_store_api",
       "sourceProductId": "301907aa-0501-57b7-8433-cf439a1a0327",
-      "updatedAt": "2026-09-03T03:57:25.074263+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485800431",
       "name": "Argentina Corned Beef",
       "brand": "Argentina",
@@ -110,7 +134,7 @@
       "catalogProductId": "423e57b4-7421-5663-960b-1de161fb2a62",
       "source": "raze_store_api",
       "sourceProductId": "423e57b4-7421-5663-960b-1de161fb2a62",
-      "updatedAt": "2026-09-03T03:57:25.083024+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485800233",
       "name": "Argentina Meat Loaf",
       "brand": "Argentina",
@@ -134,7 +158,7 @@
       "catalogProductId": "67043fed-03ce-5ca2-8f32-595cec22c867",
       "source": "raze_store_api",
       "sourceProductId": "67043fed-03ce-5ca2-8f32-595cec22c867",
-      "updatedAt": "2026-09-03T03:57:25.090597+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485100081",
       "name": "Century Tuna Flakes in Oil",
       "brand": "Century Tuna",
@@ -144,13 +168,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0748485100081",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/074/848/510/0081/front_en.41.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/67043fed-03ce-5ca2-8f32-595cec22c867.jpg"
+      "imageFile": "images/67043fed-03ce-5ca2-8f32-595cec22c867.jpg",
+      "suggestedPriceCentavos": 4825,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Iloilo Supermart",
+        "sourceUrl": "https://store.iloilosupermart.com/product/century-tuna-flakes-in-vegetable-oil-180g/",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "638348fe-3dc5-57b1-85fd-4f1572078f93",
       "source": "raze_store_api",
       "sourceProductId": "638348fe-3dc5-57b1-85fd-4f1572078f93",
-      "updatedAt": "2026-09-03T03:57:25.093265+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485100036",
       "name": "Century Tuna Premium Red Chunks in Water",
       "brand": "Century Tuna",
@@ -160,13 +192,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0748485100036",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/074/848/510/0036/front_en.4.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/638348fe-3dc5-57b1-85fd-4f1572078f93.jpg"
+      "imageFile": "images/638348fe-3dc5-57b1-85fd-4f1572078f93.jpg",
+      "suggestedPriceCentavos": 9900,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Sta. Lucia Grocers",
+        "sourceUrl": "https://staluciagrocers.com/products/century-tuna-premium-red-chunks-in-water-184g",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "e9408545-a9fe-5d36-9093-fceba789db7f",
       "source": "raze_store_api",
       "sourceProductId": "e9408545-a9fe-5d36-9093-fceba789db7f",
-      "updatedAt": "2026-09-03T03:57:25.095545+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0748485102238",
       "name": "Century Tuna with Calamansi",
       "brand": "Century Tuna",
@@ -176,13 +216,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0748485102238",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/074/848/510/2238/front_en.23.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/e9408545-a9fe-5d36-9093-fceba789db7f.jpg"
+      "imageFile": "images/e9408545-a9fe-5d36-9093-fceba789db7f.jpg",
+      "suggestedPriceCentavos": 4300,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "AtHome Online Store",
+        "sourceUrl": "https://www.athomeonlinestore.com/product-detail?Product=wow-ulam-menudo-155g",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "86a76510-b0c7-5a86-874a-6388ad559372",
       "source": "raze_store_api",
       "sourceProductId": "86a76510-b0c7-5a86-874a-6388ad559372",
-      "updatedAt": "2026-09-03T03:57:25.098321+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4801981127177",
       "name": "Coca-Cola Original Taste",
       "brand": "Coca-Cola",
@@ -192,15 +240,23 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4801981127177",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/198/112/7177/front_en.6.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/86a76510-b0c7-5a86-874a-6388ad559372.jpg"
+      "imageFile": "images/86a76510-b0c7-5a86-874a-6388ad559372.jpg",
+      "suggestedPriceCentavos": 1525,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Shield Drugstore",
+        "sourceUrl": "https://www.shielddrugstore.com/shop/gr-t11152-bev-cat00096-coca-cola-original-taste-190ml-35118",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "ee3ab869-1629-59ae-b5dd-185310531654",
       "source": "raze_store_api",
       "sourceProductId": "ee3ab869-1629-59ae-b5dd-185310531654",
-      "updatedAt": "2026-09-03T03:57:25.101136+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4807770270055",
-      "name": "Instant Pancit Canton Original Flavour",
+      "name": "Lucky Me! Pancit Canton Original",
       "brand": "Lucky Me!",
       "unitLabel": "60 g",
       "category": "Instant Noodles",
@@ -208,13 +264,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4807770270055",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/777/027/0055/front_fr.20.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/ee3ab869-1629-59ae-b5dd-185310531654.jpg"
+      "imageFile": "images/ee3ab869-1629-59ae-b5dd-185310531654.jpg",
+      "suggestedPriceCentavos": 1225,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Iloilo Supermart",
+        "sourceUrl": "https://store.iloilosupermart.com/product/lucky-me-pancit-canton-original-60g/",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "c47c04ca-d755-5768-8c1b-f38f4776b3c9",
       "source": "raze_store_api",
       "sourceProductId": "c47c04ca-d755-5768-8c1b-f38f4776b3c9",
-      "updatedAt": "2026-09-03T03:57:25.102877+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4800163443043",
       "name": "Ligo Sardines in Tomato Sauce",
       "brand": "Ligo",
@@ -224,13 +288,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4800163443043",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/016/344/3043/front_en.12.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/c47c04ca-d755-5768-8c1b-f38f4776b3c9.jpg"
+      "imageFile": "images/c47c04ca-d755-5768-8c1b-f38f4776b3c9.jpg",
+      "suggestedPriceCentavos": 2450,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Iloilo Supermart",
+        "sourceUrl": "https://store.iloilosupermart.com/product/ligo-sardines-in-tomato-sauce-easy-open-155g/",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "2a9a3bd3-8f45-5798-b03f-82a04e9404ae",
       "source": "raze_store_api",
       "sourceProductId": "2a9a3bd3-8f45-5798-b03f-82a04e9404ae",
-      "updatedAt": "2026-09-03T03:57:25.104893+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4806504710812",
       "name": "Mega Fried Sardines with Tausi",
       "brand": "Mega",
@@ -240,13 +312,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4806504710812",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/650/471/0812/front_en.16.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/2a9a3bd3-8f45-5798-b03f-82a04e9404ae.jpg"
+      "imageFile": "images/2a9a3bd3-8f45-5798-b03f-82a04e9404ae.jpg",
+      "suggestedPriceCentavos": 3275,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Daily Supermarket",
+        "sourceUrl": "https://www.daily.com.ph/categories/p/2024-mega-fried-sardines-w-tausi-155g.html",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "2f2c7ab5-7451-542e-8b73-78645f6bbaa4",
       "source": "raze_store_api",
       "sourceProductId": "2f2c7ab5-7451-542e-8b73-78645f6bbaa4",
-      "updatedAt": "2026-09-03T03:57:25.108301+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4806504710126",
       "name": "Mega Sardines in Tomato Sauce with Chili",
       "brand": "Mega",
@@ -256,13 +336,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4806504710126",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/650/471/0126/front_en.30.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/2f2c7ab5-7451-542e-8b73-78645f6bbaa4.jpg"
+      "imageFile": "images/2f2c7ab5-7451-542e-8b73-78645f6bbaa4.jpg",
+      "suggestedPriceCentavos": 2575,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Iloilo Supermart",
+        "sourceUrl": "https://store.iloilosupermart.com/product/mega-sardines-in-tomato-sauce-with-chili-155g/",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "90cb44ed-e7f1-5488-9da3-0046d5c02a1b",
       "source": "raze_store_api",
       "sourceProductId": "90cb44ed-e7f1-5488-9da3-0046d5c02a1b",
-      "updatedAt": "2026-09-03T03:57:25.115408+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4800361423588",
       "name": "Nescafé Creamy White 3-in-1 Coffee Mix (Sugar Free)",
       "brand": "Nescafe",
@@ -272,13 +360,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4800361423588",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/036/142/3588/front_en.4.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/90cb44ed-e7f1-5488-9da3-0046d5c02a1b.jpg"
+      "imageFile": "images/90cb44ed-e7f1-5488-9da3-0046d5c02a1b.jpg",
+      "suggestedPriceCentavos": 1500,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Talcreco",
+        "sourceUrl": "https://talcreco.com/consumer-goods",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "93b8961e-89a6-567d-8fa3-e06a079cc7d8",
       "source": "raze_store_api",
       "sourceProductId": "93b8961e-89a6-567d-8fa3-e06a079cc7d8",
-      "updatedAt": "2026-09-03T03:57:25.121542+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4800194105958",
       "name": "Oishi Prawn Crackers (Sweet Extra Flavor)",
       "brand": "Oishi",
@@ -288,13 +384,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4800194105958",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/019/410/5958/front_en.7.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/93b8961e-89a6-567d-8fa3-e06a079cc7d8.jpg"
+      "imageFile": "images/93b8961e-89a6-567d-8fa3-e06a079cc7d8.jpg",
+      "suggestedPriceCentavos": 1660,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Puregold",
+        "sourceUrl": "https://puregold.com.ph/index.php/pgcatalog/product/view/category/SNACKS/subcategory/CHIPS%2C%20NUTS%20%26%20CORN/title/OISHI%20PRAWN%20CRACKERS%20SWEET%26EXTRA%20HOT%20FLAVOR%20%2060G/barcode/4800194105958",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "7b106d93-cd98-5abe-98f5-1d2f42118c66",
       "source": "raze_store_api",
       "sourceProductId": "7b106d93-cd98-5abe-98f5-1d2f42118c66",
-      "updatedAt": "2026-09-03T03:57:25.126899+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4800016671500",
       "name": "Piattos Sour Cream and Onion",
       "brand": "Jack N Jill",
@@ -304,13 +408,21 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4800016671500",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/001/667/1500/front_en.28.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/7b106d93-cd98-5abe-98f5-1d2f42118c66.jpg"
+      "imageFile": "images/7b106d93-cd98-5abe-98f5-1d2f42118c66.jpg",
+      "suggestedPriceCentavos": 3875,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Sta. Lucia Grocers",
+        "sourceUrl": "https://staluciagrocers.com/products/jack-n-jill-piattos-sour-cream--onion-flavored-potato-crisps-85g",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "c68b200d-dcfe-55e3-89ce-47c233714361",
       "source": "raze_store_api",
       "sourceProductId": "c68b200d-dcfe-55e3-89ce-47c233714361",
-      "updatedAt": "2026-09-03T03:57:25.133010+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4808887010015",
       "name": "Purefoods Corned Beef",
       "brand": "Purefoods",
@@ -320,29 +432,45 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/4808887010015",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/888/701/0015/front_en.40.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/c68b200d-dcfe-55e3-89ce-47c233714361.jpg"
+      "imageFile": "images/c68b200d-dcfe-55e3-89ce-47c233714361.jpg",
+      "suggestedPriceCentavos": 11850,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Iloilo Supermart",
+        "sourceUrl": "https://store.iloilosupermart.com/product/purefoods-corned-beef-210g/",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "521fad25-482f-53cb-ab50-4648f0c4604d",
       "source": "raze_store_api",
       "sourceProductId": "521fad25-482f-53cb-ab50-4648f0c4604d",
-      "updatedAt": "2026-09-03T03:57:25.129493+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "4808887010022",
       "name": "Purefoods Corned Beef",
       "brand": "Purefoods",
-      "unitLabel": "150 g",
+      "unitLabel": "380 g",
       "category": "Canned Goods",
       "remoteImageUrl": "https://images.openfoodfacts.org/images/products/480/888/701/0022/front_en.13.400.jpg",
       "sourceUrl": "https://world.openfoodfacts.org/product/4808887010022",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/480/888/701/0022/front_en.13.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/521fad25-482f-53cb-ab50-4648f0c4604d.jpg"
+      "imageFile": "images/521fad25-482f-53cb-ab50-4648f0c4604d.jpg",
+      "suggestedPriceCentavos": 18900,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Gaisano",
+        "sourceUrl": "https://shopgaisano.com/products/purefoods-corned-beef-380g",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
     },
     {
       "catalogProductId": "105aed9a-5492-56f7-a4eb-34219805c9b9",
       "source": "raze_store_api",
       "sourceProductId": "105aed9a-5492-56f7-a4eb-34219805c9b9",
-      "updatedAt": "2026-09-03T03:57:25.137770+00:00",
+      "updatedAt": "2026-09-03T04:30:00Z",
       "barcode": "0750515018235",
       "name": "SkyFlakes Crackers",
       "brand": "M.Y. San",
@@ -352,7 +480,3399 @@
       "sourceUrl": "https://world.openfoodfacts.org/product/0750515018235",
       "imageSourceUrl": "https://images.openfoodfacts.org/images/products/075/051/501/8235/front_fr.17.400.jpg",
       "imageLicense": "CC-BY-SA-3.0",
-      "imageFile": "images/105aed9a-5492-56f7-a4eb-34219805c9b9.jpg"
+      "imageFile": "images/105aed9a-5492-56f7-a4eb-34219805c9b9.jpg",
+      "suggestedPriceCentavos": 5175,
+      "referencePrice": {
+        "kind": "retailer_price",
+        "source": "Ever Supermarket",
+        "sourceUrl": "https://ever.ph/products/9000005956-bangkal",
+        "effectiveFrom": "2026-09-03",
+        "notes": "Philippine retailer-listed price observed on 3 September 2026. This is a suggested starting price, not an official SRP; confirm the local selling price before use."
+      }
+    },
+    {
+      "catalogProductId": "e84a508b-0c0d-59df-9acb-718efa8552f5",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "e84a508b-0c0d-59df-9acb-718efa8552f5",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Family's Budget Pack Plain Sardines in Tomato Sauce",
+      "unitLabel": "130 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1525,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2bf458c7-468a-5d84-a53f-13536782512f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2bf458c7-468a-5d84-a53f-13536782512f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Saba Phil. Sardines - NCR",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1725,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "5363268e-d22c-536d-8682-e53f25755a25",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "5363268e-d22c-536d-8682-e53f25755a25",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Free Flowing (Green) - Luzon",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1275,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "5fc49b5f-8a5f-5042-bca3-c9ec3b15bbb0",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "5fc49b5f-8a5f-5042-bca3-c9ec3b15bbb0",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Saba Phil. Sardines - Luzon/Viz/Min",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1750,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "e911358f-a0c4-579b-a3c4-b69e09eb340a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "e911358f-a0c4-579b-a3c4-b69e09eb340a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Free Flowing (Green) - Visayas & Mindanao",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1350,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "4109c7da-1408-5a9f-a1e1-45c037fcbcf1",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "4109c7da-1408-5a9f-a1e1-45c037fcbcf1",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Atami Regular Lid Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "945ed768-efc7-56a3-8664-44710729c09f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "945ed768-efc7-56a3-8664-44710729c09f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Mikado Regular Lid Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0ac8e894-6310-5f74-8293-877eb8e5c78e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0ac8e894-6310-5f74-8293-877eb8e5c78e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Iodized Salt",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1725,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "93e00344-c46c-5df5-89a1-72a37e2281bd",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "93e00344-c46c-5df5-89a1-72a37e2281bd",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "King Cup Regular Lid Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "357ee34d-22c0-5e2e-b02f-69f12d61bdd0",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "357ee34d-22c0-5e2e-b02f-69f12d61bdd0",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Refined (Blue) - Luzon",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "68498b04-4490-57ed-bb51-6a05be145a47",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "68498b04-4490-57ed-bb51-6a05be145a47",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Mariko Regular Lid Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1975,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ba96c887-ae4b-5887-96d8-478ad2c181e6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ba96c887-ae4b-5887-96d8-478ad2c181e6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Refined (Blue) - Visayas & Mindanao",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2325,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "3c6b96b2-f266-5989-9de9-360ef9379883",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "3c6b96b2-f266-5989-9de9-360ef9379883",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Sallenas Regular Lid Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "c009ab04-1a29-5f4e-ab62-766fe82b20a6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "c009ab04-1a29-5f4e-ab62-766fe82b20a6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Atami EOC Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "527f5f64-7595-5d9a-a2e3-423b804dc234",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "527f5f64-7595-5d9a-a2e3-423b804dc234",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Free Flowing (Green) - Luzon",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "39c88bcd-7815-58a7-82b8-754843778071",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "39c88bcd-7815-58a7-82b8-754843778071",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Mikado EOC Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "dcca087d-20b7-571c-a0f5-e16095657cf4",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "dcca087d-20b7-571c-a0f5-e16095657cf4",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Toyo Bonus Green Regular Lid Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1870,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "df0e9a34-0e93-54da-93d1-535b0fad4329",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "df0e9a34-0e93-54da-93d1-535b0fad4329",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Free Flowing (Green) - Visayas & Mindanao",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2550,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0cf122a7-7c53-5c84-9f50-da2f3a76f489",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0cf122a7-7c53-5c84-9f50-da2f3a76f489",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "555 Bonus Pack Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1965,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "8e6edb16-e9d8-59c5-ab00-ed65dbbccce8",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "8e6edb16-e9d8-59c5-ab00-ed65dbbccce8",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lucky 7 Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1965,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "9b3c93f6-b022-5eda-88f3-a36330debc54",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "9b3c93f6-b022-5eda-88f3-a36330debc54",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Iodized Salt",
+      "unitLabel": "1 kg",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 3150,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a9939115-9fbd-5b3d-b3d3-0398db09b379",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a9939115-9fbd-5b3d-b3d3-0398db09b379",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Toyo Bonus Green EOC Sardines in Tomato Sauce",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b923901a-23c0-5fe6-8742-b162f3ba3f2c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b923901a-23c0-5fe6-8742-b162f3ba3f2c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Sulit Bar (BLUE, WHITE, KALAMANSI, SPECKLED BLUE) - Visayas and Mindanao",
+      "unitLabel": "330 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 1925,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "642cccf8-3fa7-5c4c-8cdf-bbf9fc058a55",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "642cccf8-3fa7-5c4c-8cdf-bbf9fc058a55",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Jersey Sweetened Condensed Creamer",
+      "unitLabel": "390 g",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 4450,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ebe07ee6-2371-58ae-a67a-c65ab13459b2",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ebe07ee6-2371-58ae-a67a-c65ab13459b2",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Bareta Bar (BLUE, SPECKLED BLUE, WHITE, KALAMANSI) - Visayas and Mindanao",
+      "unitLabel": "330 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 1975,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "22a64a6a-a735-5319-8bdb-ac57d8161b68",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "22a64a6a-a735-5319-8bdb-ac57d8161b68",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Budget Bar (WHITE ANTI BAC, FABCON, KALAMANSI, POWER BLUE, SPECKLED BLUE) - Luzon",
+      "unitLabel": "330 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a3c82528-8504-5979-b7a0-9bfd498cca90",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a3c82528-8504-5979-b7a0-9bfd498cca90",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liberty Condensada",
+      "unitLabel": "168 mL",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 3475,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "90838548-d944-5eec-a11f-44b7886033c3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "90838548-d944-5eec-a11f-44b7886033c3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Cow Bell Condensada",
+      "unitLabel": "300 mL",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 4100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "f296eed8-7656-5f3f-a1ed-bd438226dad5",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "f296eed8-7656-5f3f-a1ed-bd438226dad5",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Bareta Bar FABCON Visayas and Mindanao",
+      "unitLabel": "330 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "eb0298d6-92fa-5c7f-8074-35da12e0252f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "eb0298d6-92fa-5c7f-8074-35da12e0252f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liberty Condensada",
+      "unitLabel": "300 mL",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 5300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "65c51405-99b6-51d9-9846-5adcd186122a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "65c51405-99b6-51d9-9846-5adcd186122a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Speed Long Bar BLUE",
+      "unitLabel": "330 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2150,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "00aafa1c-9609-5ba5-bd89-d74f5150da09",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "00aafa1c-9609-5ba5-bd89-d74f5150da09",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Speed Long Bar (WHITE, SPECKLED BLUE, KALAMANSI)",
+      "unitLabel": "330 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2250,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "fb5f093f-df84-5991-9523-7bcb3cbe9863",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "fb5f093f-df84-5991-9523-7bcb3cbe9863",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Angel Filled Milk",
+      "unitLabel": "370 mL",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 4800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b5d9ed5b-46c2-5e53-9e84-10e9776d5b98",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b5d9ed5b-46c2-5e53-9e84-10e9776d5b98",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Surf with ActivClean Technology Blue Bar",
+      "unitLabel": "360 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2175,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "00d8d6dd-793e-578e-9260-36496e5621ce",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "00d8d6dd-793e-578e-9260-36496e5621ce",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Bear Brand",
+      "unitLabel": "135 g",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 5000,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b983bd0c-7bae-5e07-8d19-485b727688cf",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b983bd0c-7bae-5e07-8d19-485b727688cf",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Birch Tree Full Cream Milk",
+      "unitLabel": "150 g",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 7075,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "d80ebed0-f425-50f3-a46a-b81cc55e74e3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "d80ebed0-f425-50f3-a46a-b81cc55e74e3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Surf with ActivClean Technology Kalamansi Bar",
+      "unitLabel": "360 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2f093c94-8052-58d7-ac9f-5df5f04e737a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2f093c94-8052-58d7-ac9f-5df5f04e737a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Alaska Fortified Powdered Milk Drink",
+      "unitLabel": "165 g",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 4400,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7657d635-c5b6-585e-ab08-02e364563b4c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7657d635-c5b6-585e-ab08-02e364563b4c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Jersey Fortified Instant Powdered Milk Drink",
+      "unitLabel": "300 g",
+      "category": "Dairy",
+      "suggestedPriceCentavos": 9625,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6526b54f-8c0f-5455-9ccc-ffad0ef8433e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6526b54f-8c0f-5455-9ccc-ffad0ef8433e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Surf with ActivClean Technology Tawas Bar",
+      "unitLabel": "360 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "8a23569a-5722-5b0a-8d6f-763a614ea6c6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "8a23569a-5722-5b0a-8d6f-763a614ea6c6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Champion Bar (SUPRA CLEAN, CITRUS FRESH)",
+      "unitLabel": "370 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "9189b916-0525-5e4a-9742-396cfa8c3c84",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "9189b916-0525-5e4a-9742-396cfa8c3c84",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Blend 45 Pure Soluble - Supermarket",
+      "unitLabel": "25 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 2025,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b94629f7-1661-5273-8db0-2331b9079923",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b94629f7-1661-5273-8db0-2331b9079923",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Great Taste (Premium) SMKT",
+      "unitLabel": "25 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 2160,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6185f0bc-7c88-57d3-ade4-8ab33b46346e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6185f0bc-7c88-57d3-ade4-8ab33b46346e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Bonux - FLOWER FIESTA, KALAMANSI ZEST",
+      "unitLabel": "380 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "e7563873-2049-571f-a554-3bf437bacff8",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "e7563873-2049-571f-a554-3bf437bacff8",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Great Taste (Granules) SMKT",
+      "unitLabel": "25 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 2200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b2747f52-d9f9-5db9-9ae6-2a2918f36f29",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b2747f52-d9f9-5db9-9ae6-2a2918f36f29",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Tide Bar ORIGINAL SCENT",
+      "unitLabel": "380 g",
+      "category": "Household",
+      "suggestedPriceCentavos": 2400,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "9690b1ab-0b1b-548e-a764-bc2c66094df3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "9690b1ab-0b1b-548e-a764-bc2c66094df3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Great Taste (Premium) SMKT",
+      "unitLabel": "50 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 4220,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6ff77d07-6adf-581d-966b-a15a8d80ad81",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6ff77d07-6adf-581d-966b-a15a8d80ad81",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Great Taste (Granules) SMKT",
+      "unitLabel": "50 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 4300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ceeb0ab1-2865-543a-a8fe-43f3ba342265",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ceeb0ab1-2865-543a-a8fe-43f3ba342265",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "SM Bonus Distilled Water",
+      "unitLabel": "325 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 650,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "75f03cd2-44ee-57f6-8529-02fad75a9f41",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "75f03cd2-44ee-57f6-8529-02fad75a9f41",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Café Puro",
+      "unitLabel": "17 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 470,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "87332dfa-5b04-5460-8a6e-63bbddd64ed1",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "87332dfa-5b04-5460-8a6e-63bbddd64ed1",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Wilkins Distilled Water",
+      "unitLabel": "330 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "bb28f785-8993-5007-b734-1896626ab436",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "bb28f785-8993-5007-b734-1896626ab436",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Blend 45 3-in-1 Original",
+      "unitLabel": "18 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 450,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "9cb76498-6301-5fd0-ab7d-4263263229f4",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "9cb76498-6301-5fd0-ab7d-4263263229f4",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Absolute Distilled Water",
+      "unitLabel": "350 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "d6108330-3513-52b3-b0d9-5a89eb43aeb3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "d6108330-3513-52b3-b0d9-5a89eb43aeb3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "San Mig Coffee 3-in-1 Original",
+      "unitLabel": "20 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 700,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "33d4b74a-aaf6-5bcb-aa75-8924b9c197fb",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "33d4b74a-aaf6-5bcb-aa75-8924b9c197fb",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "SM Bonus Distilled Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ceb27b0a-4220-5105-b12a-0e7817ac360c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ceb27b0a-4220-5105-b12a-0e7817ac360c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Nescafe Original",
+      "unitLabel": "26 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 775,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2995c4de-f1d6-5a05-9335-c00c65c9a355",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2995c4de-f1d6-5a05-9335-c00c65c9a355",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Absolute Distilled Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1625,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "490960c1-b997-5d3d-bb15-862a5dae7144",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "490960c1-b997-5d3d-bb15-862a5dae7144",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Kopiko Black",
+      "unitLabel": "30 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "09c13aca-6cb9-5ca5-a1eb-774a25e5e09a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "09c13aca-6cb9-5ca5-a1eb-774a25e5e09a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Wilkins Distilled Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1700,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7f5aa19e-ffd5-5cdb-b8a8-52ff5b46e982",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7f5aa19e-ffd5-5cdb-b8a8-52ff5b46e982",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Great Taste Original Twin Pack",
+      "unitLabel": "33 g",
+      "category": "Instant Coffee & Drinks",
+      "suggestedPriceCentavos": 825,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0d941c70-d2fe-5c66-960d-81f9e0322e7c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0d941c70-d2fe-5c66-960d-81f9e0322e7c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Wilkins Distilled Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 2500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2b24ab35-383a-526d-bcc2-14d0344ad5db",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2b24ab35-383a-526d-bcc2-14d0344ad5db",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Absolute Distilled Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 2500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ff776dce-a0ef-5d88-826d-0d7a931ae879",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ff776dce-a0ef-5d88-826d-0d7a931ae879",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Pinoy Pandesal (10pcs./pack)",
+      "unitLabel": "250 g",
+      "category": "Bread",
+      "suggestedPriceCentavos": 2725,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "08626aff-1d29-5bc5-97f1-7952761ee2e6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "08626aff-1d29-5bc5-97f1-7952761ee2e6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Absolute Distilled Water",
+      "unitLabel": "6 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 8200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "18124df2-0933-57a0-a8cb-d03f8661423d",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "18124df2-0933-57a0-a8cb-d03f8661423d",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Pinoy Tasty",
+      "unitLabel": "450 g",
+      "category": "Bread",
+      "suggestedPriceCentavos": 4400,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "8e74ec95-6982-5e24-8070-49603bedc653",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "8e74ec95-6982-5e24-8070-49603bedc653",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "SM Bonus Distilled Water",
+      "unitLabel": "6.6 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 5450,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2f8be443-aa75-5046-ba3e-76ab5d921415",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2f8be443-aa75-5046-ba3e-76ab5d921415",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Wilkins Distilled Water",
+      "unitLabel": "7 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 8800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7a77c399-b058-5a94-bb4e-74f42ecd8fac",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7a77c399-b058-5a94-bb4e-74f42ecd8fac",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Payless (Instant Mami Chicken and Instant Mami Beef)",
+      "unitLabel": "55 g",
+      "category": "Instant Noodles",
+      "suggestedPriceCentavos": 750,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6afba930-bbaf-5f77-a86d-2b1ee860213f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6afba930-bbaf-5f77-a86d-2b1ee860213f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "SM Bonus Purified Water",
+      "unitLabel": "300 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b169e2a5-3a8b-5b91-8ad0-135d39f9bda8",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b169e2a5-3a8b-5b91-8ad0-135d39f9bda8",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Quick Chow (Instant Mami Beef and Instant Mami Chicken)",
+      "unitLabel": "55 g",
+      "category": "Instant Noodles",
+      "suggestedPriceCentavos": 775,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6a404244-dcab-537c-b577-f5450f9b1109",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6a404244-dcab-537c-b577-f5450f9b1109",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Magnolia Pure Purified Water",
+      "unitLabel": "355 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "da1004f4-764b-5ef3-ba8e-f707217d3b6e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "da1004f4-764b-5ef3-ba8e-f707217d3b6e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Refresh Purified Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 675,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "dfa91061-d5e9-54f4-a458-2c2e5590a652",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "dfa91061-d5e9-54f4-a458-2c2e5590a652",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Ho-Mi (Instant Mami Chicken & Garlic, Instant Mami Beef Brisket)",
+      "unitLabel": "55 g",
+      "category": "Instant Noodles",
+      "suggestedPriceCentavos": 850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "bf39dde1-6649-5ffd-8fb7-2806ad3e82f6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "bf39dde1-6649-5ffd-8fb7-2806ad3e82f6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Natures Spring Purified Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0f1453bf-8fdb-54e5-9eb7-d3a2824d74bc",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0f1453bf-8fdb-54e5-9eb7-d3a2824d74bc",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Magnolia Pure Purified Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "3f8610c8-8215-5437-a5a6-869f31ac8862",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "3f8610c8-8215-5437-a5a6-869f31ac8862",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lucky Me! (Instant Mami Chicken na Chicken and Instant Mami Beef na Beef)",
+      "unitLabel": "55 g",
+      "category": "Instant Noodles",
+      "suggestedPriceCentavos": 875,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "dfc23132-c8ab-5d22-bba2-8645c8bf14e5",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "dfc23132-c8ab-5d22-bba2-8645c8bf14e5",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Wilkins Pure Purified Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2e2d0ad4-dabe-5b9e-93fa-6c1bbc5c4fe8",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2e2d0ad4-dabe-5b9e-93fa-6c1bbc5c4fe8",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Natures Spring Purified Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1650,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "800c9c26-0588-5b32-babf-9557cbb4de85",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "800c9c26-0588-5b32-babf-9557cbb4de85",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Wilkins Pure Purified Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "3e513f6f-dae7-51c5-a960-32d79a027874",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "3e513f6f-dae7-51c5-a960-32d79a027874",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Magnolia Pure Purified Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7e9c2402-09cd-5fb2-b719-8bf6a6dbd496",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7e9c2402-09cd-5fb2-b719-8bf6a6dbd496",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Rock Salt",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 750,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "dfafec53-26b6-521d-8d2c-257f15f2c957",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "dfafec53-26b6-521d-8d2c-257f15f2c957",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Coarse (Red) - Luzon",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "32981bf6-5fe1-5e98-bd5d-0256bfa6e398",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "32981bf6-5fe1-5e98-bd5d-0256bfa6e398",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Supersavers Nature's Pure Mineralized Water",
+      "unitLabel": "330 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 715,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "35bf2cae-77bf-5e91-889b-aa374a4fc082",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "35bf2cae-77bf-5e91-889b-aa374a4fc082",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Coarse (Red) - Visayas & Mindanao",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1175,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "aef591c7-c839-539e-bd48-cb0076083a5f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "aef591c7-c839-539e-bd48-cb0076083a5f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Hidden Spring Mineralized Water",
+      "unitLabel": "330 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 880,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "63c60901-cf8b-5dee-8fb3-1d7bf1e2ca03",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "63c60901-cf8b-5dee-8fb3-1d7bf1e2ca03",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Viva - Nationwide Mineralized Water",
+      "unitLabel": "330 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1000,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b9906eee-1073-578b-8823-7f8d4816df14",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b9906eee-1073-578b-8823-7f8d4816df14",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Rock Salt",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1350,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6bc4caef-a3d0-5119-8a26-df94363f4cd1",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6bc4caef-a3d0-5119-8a26-df94363f4cd1",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Refresh Mineralized Water",
+      "unitLabel": "350 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 600,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "fd6d10ff-13e7-5c6e-b04d-0d65b6f3da0e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "fd6d10ff-13e7-5c6e-b04d-0d65b6f3da0e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Coarse (Red) - Luzon",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "c2990184-3acc-51d6-840f-c86330f0aa26",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "c2990184-3acc-51d6-840f-c86330f0aa26",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Summit Mineralized Water",
+      "unitLabel": "350 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1000,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "d8b5420c-2c2d-519c-9386-ee8a638398a2",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "d8b5420c-2c2d-519c-9386-ee8a638398a2",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Coarse (Red) - Visayas & Mindanao",
+      "unitLabel": "500 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2250,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "8bab55a9-ef96-57a3-8bdc-9a1af4018549",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "8bab55a9-ef96-57a3-8bdc-9a1af4018549",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Refresh Mineralized Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 825,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7d4380f4-2d52-5b44-932b-ddc16f8e8108",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7d4380f4-2d52-5b44-932b-ddc16f8e8108",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Supersavers Nature's Pure Mineralized Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 870,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "cffb93b3-ba22-5a89-ac92-d02117ee55ac",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "cffb93b3-ba22-5a89-ac92-d02117ee55ac",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Rock Salt",
+      "unitLabel": "1 kg",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 2500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "135b8ca7-4138-5ab3-98fe-081a69d0c61c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "135b8ca7-4138-5ab3-98fe-081a69d0c61c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Robinsons Mall Mineralized Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1045,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "311365ff-f81a-526b-88f5-86e7f896837e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "311365ff-f81a-526b-88f5-86e7f896837e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Hidden Spring Mineralized Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1210,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "09ca4aa5-bcdb-5e2d-a63f-49dc53f21a4f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "09ca4aa5-bcdb-5e2d-a63f-49dc53f21a4f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Iodized Salt",
+      "unitLabel": "100 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 475,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ee3f9242-33df-5f15-80db-9100d2c27557",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ee3f9242-33df-5f15-80db-9100d2c27557",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Viva - Nationwide Mineralized Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "9f5f4efb-9e45-553c-8411-3ca9392ffed8",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "9f5f4efb-9e45-553c-8411-3ca9392ffed8",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lasap Iodized Salt",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 975,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "f5475613-0049-53f3-8ede-5ee351c65f31",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "f5475613-0049-53f3-8ede-5ee351c65f31",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Summit Mineralized Water",
+      "unitLabel": "500 mL",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ae171ac8-d687-5452-8901-f60ca3f00717",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ae171ac8-d687-5452-8901-f60ca3f00717",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Refined (Blue) - Luzon",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1175,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "cc501ed2-f901-5739-8ac0-95bf330bb922",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "cc501ed2-f901-5739-8ac0-95bf330bb922",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Viva - Nationwide Mineralized Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1900,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "3b41ec53-ddc6-5bf8-a699-8ae94b1bbedb",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "3b41ec53-ddc6-5bf8-a699-8ae94b1bbedb",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Fidel Refined (Blue) - Visayas & Mindanao",
+      "unitLabel": "250 g",
+      "category": "Cooking Essentials",
+      "suggestedPriceCentavos": 1225,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "5ffe29b9-e32e-5393-b2c5-14299d3dfd07",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "5ffe29b9-e32e-5393-b2c5-14299d3dfd07",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Summit Mineralized Water",
+      "unitLabel": "1 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7382c3d1-404a-5af3-b09c-94304c6966e6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7382c3d1-404a-5af3-b09c-94304c6966e6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Summit Mineralized Water",
+      "unitLabel": "6 L",
+      "category": "Beverages",
+      "suggestedPriceCentavos": 7500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "42d65fe7-47d1-560f-9324-bfe8f386356b",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "42d65fe7-47d1-560f-9324-bfe8f386356b",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Vigil Candles White/Yellow (12pcs./pack)",
+      "unitLabel": "#01",
+      "category": "Household",
+      "suggestedPriceCentavos": 6050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "73111c51-2439-57b5-a1b4-93eda017a3ba",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "73111c51-2439-57b5-a1b4-93eda017a3ba",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Votive White/Yellow (6pcs./pack)",
+      "unitLabel": "#01",
+      "category": "Household",
+      "suggestedPriceCentavos": 8276,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "34133642-6a65-5079-8e97-d074a6300d07",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "34133642-6a65-5079-8e97-d074a6300d07",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Sperma White (10pcs./pack)",
+      "unitLabel": "#02",
+      "category": "Household",
+      "suggestedPriceCentavos": 5411,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "8102023d-c575-5700-9dac-38c1c3b510f1",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "8102023d-c575-5700-9dac-38c1c3b510f1",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Votive White/Yellow (6pcs./pack)",
+      "unitLabel": "#02",
+      "category": "Household",
+      "suggestedPriceCentavos": 7109,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "f7c23348-f5e5-501d-b0be-16e5d43a6491",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "f7c23348-f5e5-501d-b0be-16e5d43a6491",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (20pcs./pack)",
+      "unitLabel": "#03",
+      "category": "Household",
+      "suggestedPriceCentavos": 3900,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ec5562e1-2812-5aca-9508-5a5ba6382518",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ec5562e1-2812-5aca-9508-5a5ba6382518",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "5-Star Esperma White (20pcs./pack)",
+      "unitLabel": "#03",
+      "category": "Household",
+      "suggestedPriceCentavos": 5425,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "810a60c2-39eb-5d9f-949b-5675ac0dac07",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "810a60c2-39eb-5d9f-949b-5675ac0dac07",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Votive White/Yellow (6pcs./pack)",
+      "unitLabel": "#03",
+      "category": "Household",
+      "suggestedPriceCentavos": 5941,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7bf1b560-f0f1-5569-9097-63e5183e1f6a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7bf1b560-f0f1-5569-9097-63e5183e1f6a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Sperma White (20pcs./pack)",
+      "unitLabel": "#03",
+      "category": "Household",
+      "suggestedPriceCentavos": 6472,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "90c655f3-5c28-5a13-9f44-c4308d4f6686",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "90c655f3-5c28-5a13-9f44-c4308d4f6686",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liwanag Esperma Candle White (20pcs./pack)",
+      "unitLabel": "#03",
+      "category": "Household",
+      "suggestedPriceCentavos": 6578,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "d0078045-4ed7-5afa-97a9-81d027b03e8a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "d0078045-4ed7-5afa-97a9-81d027b03e8a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Sperma White (20pcs./pack)",
+      "unitLabel": "#04",
+      "category": "Household",
+      "suggestedPriceCentavos": 4774,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ec518b80-bcc2-565a-b97f-720f491aea82",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ec518b80-bcc2-565a-b97f-720f491aea82",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (20pcs./pack)",
+      "unitLabel": "#05",
+      "category": "Household",
+      "suggestedPriceCentavos": 6050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "31a221a1-7b9b-586d-9d33-6b86f5978f40",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "31a221a1-7b9b-586d-9d33-6b86f5978f40",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liwanag Esperma Candle White (20pcs./pack)",
+      "unitLabel": "#05",
+      "category": "Household",
+      "suggestedPriceCentavos": 8805,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "1d15697f-1942-5dec-b0f8-6cb3b94ff07d",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "1d15697f-1942-5dec-b0f8-6cb3b94ff07d",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (20pcs./pack)",
+      "unitLabel": "#06",
+      "category": "Household",
+      "suggestedPriceCentavos": 8500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "e21f58a2-761e-5040-8a3b-eaa055233a59",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "e21f58a2-761e-5040-8a3b-eaa055233a59",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "5-Star Esperma White (25pcs./pack)",
+      "unitLabel": "#06",
+      "category": "Household",
+      "suggestedPriceCentavos": 11550,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "97afb8a2-f4dc-5163-88fe-6c70b8f560f3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "97afb8a2-f4dc-5163-88fe-6c70b8f560f3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (12pcs./pack)",
+      "unitLabel": "#08",
+      "category": "Household",
+      "suggestedPriceCentavos": 6050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "cca4f02e-38e0-5658-8e5c-3093a9f200f0",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "cca4f02e-38e0-5658-8e5c-3093a9f200f0",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "5-Star Esperma White (5pcs./pack)",
+      "unitLabel": "#08",
+      "category": "Household",
+      "suggestedPriceCentavos": 15025,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "c9f3a201-e813-5fa8-ba4f-f068ef50d9f2",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "c9f3a201-e813-5fa8-ba4f-f068ef50d9f2",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (10pcs./pack)",
+      "unitLabel": "#10",
+      "category": "Household",
+      "suggestedPriceCentavos": 7275,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a6916d97-deef-5aa8-996a-b5f46e3d731d",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a6916d97-deef-5aa8-996a-b5f46e3d731d",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (10pcs./pack)",
+      "unitLabel": "#12",
+      "category": "Household",
+      "suggestedPriceCentavos": 7275,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "e2c9c97a-a3a3-54aa-98e3-f83de8882381",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "e2c9c97a-a3a3-54aa-98e3-f83de8882381",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "5-Star Esperma White (4pcs./pack)",
+      "unitLabel": "#14",
+      "category": "Household",
+      "suggestedPriceCentavos": 3625,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "edbf4d2c-ac3d-593e-8439-c0345085a6aa",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "edbf4d2c-ac3d-593e-8439-c0345085a6aa",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Sperma White (4pcs./pack)",
+      "unitLabel": "#14",
+      "category": "Household",
+      "suggestedPriceCentavos": 5410,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "11bd788b-fad8-5b11-aa99-734fa9704e6a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "11bd788b-fad8-5b11-aa99-734fa9704e6a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (8pcs./pack)",
+      "unitLabel": "#14",
+      "category": "Household",
+      "suggestedPriceCentavos": 7275,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "68e23451-9032-5a24-a5dc-de166b878332",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "68e23451-9032-5a24-a5dc-de166b878332",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (4pcs./pack)",
+      "unitLabel": "#16",
+      "category": "Household",
+      "suggestedPriceCentavos": 3625,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2ccb151d-6500-57e6-9b20-a953d4ed3efe",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2ccb151d-6500-57e6-9b20-a953d4ed3efe",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liwanag Esperma Candle White (4pcs./pack)",
+      "unitLabel": "#16",
+      "category": "Household",
+      "suggestedPriceCentavos": 4642,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b8a80022-6db0-5ff5-bbd3-93c35ede5824",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b8a80022-6db0-5ff5-bbd3-93c35ede5824",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Manila Wax Sperma White (2pcs./pack)",
+      "unitLabel": "#16",
+      "category": "Household",
+      "suggestedPriceCentavos": 5941,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "c885540f-e07a-5d2d-aa44-37a930fde2c4",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "c885540f-e07a-5d2d-aa44-37a930fde2c4",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (4pcs./pack)",
+      "unitLabel": "#18",
+      "category": "Household",
+      "suggestedPriceCentavos": 4850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b7470aed-b537-545b-aa9e-e45a66ca0cd5",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b7470aed-b537-545b-aa9e-e45a66ca0cd5",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liwanag Esperma Candle White (4pcs./pack)",
+      "unitLabel": "#18",
+      "category": "Household",
+      "suggestedPriceCentavos": 7613,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "27b34696-9e34-50e0-83c2-c3ad47f22fcd",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "27b34696-9e34-50e0-83c2-c3ad47f22fcd",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (4pcs./pack)",
+      "unitLabel": "#19",
+      "category": "Household",
+      "suggestedPriceCentavos": 9700,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6e553a79-f060-596a-91da-2bba3bdf0c71",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6e553a79-f060-596a-91da-2bba3bdf0c71",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (2pcs./pack)",
+      "unitLabel": "#20x2",
+      "category": "Household",
+      "suggestedPriceCentavos": 6675,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "45c701dc-c176-5f2e-a1cb-29f4dd32424c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "45c701dc-c176-5f2e-a1cb-29f4dd32424c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Candles White (4pcs./pack)",
+      "unitLabel": "#20x4",
+      "category": "Household",
+      "suggestedPriceCentavos": 12150,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "62033fff-4915-50db-8530-63c59f474d87",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "62033fff-4915-50db-8530-63c59f474d87",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "5-Star Esperma White (2pcs./pack)",
+      "unitLabel": "#22",
+      "category": "Household",
+      "suggestedPriceCentavos": 11775,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a35ff278-ef1e-5bec-9b7c-7a1f4b3707a0",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a35ff278-ef1e-5bec-9b7c-7a1f4b3707a0",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Liwanag Esperma Candle White (2pcs./pack)",
+      "unitLabel": "#24",
+      "category": "Household",
+      "suggestedPriceCentavos": 17771,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a0d6f1d0-78b6-54e4-aa29-a4e1fb216a82",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a0d6f1d0-78b6-54e4-aa29-a4e1fb216a82",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Vigil Candles White/Yellow (4pcs./pack)",
+      "unitLabel": "#2x4",
+      "category": "Household",
+      "suggestedPriceCentavos": 5450,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b5c878f2-edd8-5823-8906-bad2ac22faca",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b5c878f2-edd8-5823-8906-bad2ac22faca",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Export Vigil Candles White/Yellow (6pcs./pack)",
+      "unitLabel": "#2x6",
+      "category": "Household",
+      "suggestedPriceCentavos": 8500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "f98102a2-9736-53a2-9911-74bc215be59e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "f98102a2-9736-53a2-9911-74bc215be59e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Purefoods Chinese Style Luncheon Meat",
+      "unitLabel": "165 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 3350,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "232f3e1d-0281-5baf-a69d-2d789dc78b1a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "232f3e1d-0281-5baf-a69d-2d789dc78b1a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "CDO Chinese Style Luncheon Meat",
+      "unitLabel": "165 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 4100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "69c69c44-672d-5cf0-9dd2-d9f28988a3e3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "69c69c44-672d-5cf0-9dd2-d9f28988a3e3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Winner - Supermarket (SMKT) Meat Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "608202ac-1d40-5668-ac48-e40c83789ee3",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "608202ac-1d40-5668-ac48-e40c83789ee3",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "555 Meat Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "097818fc-871b-5331-b5f3-1756ec9d1b5a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "097818fc-871b-5331-b5f3-1756ec9d1b5a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "CDO Meat Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2175,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "540356d6-e53c-5119-899e-06a3273ad9b5",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "540356d6-e53c-5119-899e-06a3273ad9b5",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Argentina Meat Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2375,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "4b9d6802-cc98-5081-859c-2506954d0b61",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "4b9d6802-cc98-5081-859c-2506954d0b61",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Bingo Corned Beef",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2300,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "34949bfe-7c29-55ec-a3f3-90017f079c4f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "34949bfe-7c29-55ec-a3f3-90017f079c4f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "El Rancho - SMKT Corned Beef",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 3125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "f2d2c79a-7b94-58b6-b1ab-7e642e3e214d",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "f2d2c79a-7b94-58b6-b1ab-7e642e3e214d",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Winner - SMKT Corned Beef",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 3375,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b58bff68-7669-5bdf-8937-bec195b6da47",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b58bff68-7669-5bdf-8937-bec195b6da47",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Star Corned Beef",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 3400,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "79007c5d-e54c-578b-8e56-eda77468d68d",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "79007c5d-e54c-578b-8e56-eda77468d68d",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Young's Town Premium Corned Beef",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 3425,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "f6b2a73a-b183-560d-b8b7-e018828cc4d5",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "f6b2a73a-b183-560d-b8b7-e018828cc4d5",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Purefoods Beef Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1815,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "85892ec7-e859-5922-be48-efb4d9e6f7c6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "85892ec7-e859-5922-be48-efb4d9e6f7c6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Bingo Beef Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "5ca63dec-194a-5cef-92c2-939fdb098cda",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "5ca63dec-194a-5cef-92c2-939fdb098cda",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "555 Beef Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a2110067-9a37-5206-8d23-f304739c7d19",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a2110067-9a37-5206-8d23-f304739c7d19",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "CDO Beef Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2175,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "be1683e3-d885-5fd5-acf2-95c6f6202dff",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "be1683e3-d885-5fd5-acf2-95c6f6202dff",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Argentina Beef Loaf",
+      "unitLabel": "150 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "3e6dbb3b-74ab-5c5b-aa71-6e74997a3346",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "3e6dbb3b-74ab-5c5b-aa71-6e74997a3346",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "El Rancho - SMKT Beef Loaf",
+      "unitLabel": "155 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 1950,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ef9f8d99-6031-57d3-952c-ac7f6b4d3c8f",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ef9f8d99-6031-57d3-952c-ac7f6b4d3c8f",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Argentina Beef Loaf",
+      "unitLabel": "170 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "d1836349-dd7a-5a9e-8efc-e6bc99493c21",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "d1836349-dd7a-5a9e-8efc-e6bc99493c21",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Purefoods Beef Loaf",
+      "unitLabel": "200 g",
+      "category": "Canned Goods",
+      "suggestedPriceCentavos": 2490,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "1b1aba1d-9e25-5575-9b59-387172992645",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "1b1aba1d-9e25-5575-9b59-387172992645",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Datu Puti - White Vinegar - SMKT",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "ca2c8d4c-e820-56b0-903c-06f17dd60d80",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "ca2c8d4c-e820-56b0-903c-06f17dd60d80",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan Sukang Puti - SMKT",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0e176484-3388-5a8e-9bfc-8b5e8f0a0eb6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0e176484-3388-5a8e-9bfc-8b5e8f0a0eb6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Datu Puti - White Vinegar - WMKT",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1875,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "9c2c91d2-f18b-5d14-8ab0-f4cf9fcf7276",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "9c2c91d2-f18b-5d14-8ab0-f4cf9fcf7276",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan Sukang Puti Doy Pack - SMKT",
+      "unitLabel": "200 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 825,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "7aa08e72-45ec-5dbd-8f86-f9c1d6cb86a7",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "7aa08e72-45ec-5dbd-8f86-f9c1d6cb86a7",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan Sukang Puti Doy Pack - WMKT",
+      "unitLabel": "200 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 850,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "90675aef-f6e6-53aa-963c-3c1698eacacc",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "90675aef-f6e6-53aa-963c-3c1698eacacc",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lorins PET Bottle Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2325,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0e1238ac-4736-5e35-8506-f5081ac6eda9",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0e1238ac-4736-5e35-8506-f5081ac6eda9",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan Special Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2450,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "6010e4d3-18ab-53a7-a980-24eed321fd2e",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "6010e4d3-18ab-53a7-a980-24eed321fd2e",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Datu Puti - SMKT Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2700,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a5c37d6a-14ab-5e22-8d8f-da6144acf231",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a5c37d6a-14ab-5e22-8d8f-da6144acf231",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Datu Puti - WMKT Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2825,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a0bd324f-897e-59d7-a13b-823d47b81f31",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a0bd324f-897e-59d7-a13b-823d47b81f31",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Nelicom Special - SMKT Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 3050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2015ff3f-1621-58c9-90f9-74c77af7661a",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2015ff3f-1621-58c9-90f9-74c77af7661a",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Nelicom Special - WMKT Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 3175,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "e6450635-8f19-5e12-bb67-50667ec554a7",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "e6450635-8f19-5e12-bb67-50667ec554a7",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lorins - Pouch Fish Sauce",
+      "unitLabel": "150 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1150,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "1501441f-da23-57ef-ab9d-6d786876cffe",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "1501441f-da23-57ef-ab9d-6d786876cffe",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Lorins - Budget Pouch Fish Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "3c90e641-b11a-59e8-bc76-5039e80bae2d",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "3c90e641-b11a-59e8-bc76-5039e80bae2d",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Datu Puti - SMKT Soy Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1975,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2b038091-bd9f-5e1c-a236-69b4a808d6e4",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2b038091-bd9f-5e1c-a236-69b4a808d6e4",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Datu Puti - WMKT Soy Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2050,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "89ef69ab-2652-5c40-9262-ccac2c28acd7",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "89ef69ab-2652-5c40-9262-ccac2c28acd7",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan - SMKT Soy Sauce",
+      "unitLabel": "350 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 2075,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "950ab826-ec09-58a8-8d8e-cc04f3377d67",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "950ab826-ec09-58a8-8d8e-cc04f3377d67",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan Doy Pack - SMKT Soy Sauce",
+      "unitLabel": "200 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1100,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "4d863477-7b2d-5c3b-91b1-429338e5d224",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "4d863477-7b2d-5c3b-91b1-429338e5d224",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Silver Swan Doy Pack - WMKT Soy Sauce",
+      "unitLabel": "200 ml",
+      "category": "Condiments",
+      "suggestedPriceCentavos": 1150,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "a5d88007-08bb-52cf-b6d2-96ca6129f186",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "a5d88007-08bb-52cf-b6d2-96ca6129f186",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Green Cross (Pure Care) Soap",
+      "unitLabel": "55 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 1500,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "859c1a2f-ce40-517e-b893-e01143cfb285",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "859c1a2f-ce40-517e-b893-e01143cfb285",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Palmolive Naturals - Pinkish Glow (pink), Hydrating Glow (green), White with Natural Papaya, and White with Natural Milk Soap",
+      "unitLabel": "55 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 1700,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "162f1928-7d9b-5de2-8576-33f63c212017",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "162f1928-7d9b-5de2-8576-33f63c212017",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Safeguard Pure White Soap",
+      "unitLabel": "55 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 2200,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "cf00b31a-b42f-5fd8-bbc9-0ad93abc0552",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "cf00b31a-b42f-5fd8-bbc9-0ad93abc0552",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Green Cross (Pure Care) Soap",
+      "unitLabel": "85 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 2575,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "8641992d-38ad-51fd-a3b7-2b46aff1fc9b",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "8641992d-38ad-51fd-a3b7-2b46aff1fc9b",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Safeguard Pure White Soap",
+      "unitLabel": "82 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 3125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "b2a16cc6-618f-5fff-bbfc-61cfa1459ff6",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "b2a16cc6-618f-5fff-bbfc-61cfa1459ff6",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Green Cross (Pure Care) Soap",
+      "unitLabel": "125 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 3725,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "5609a3c1-a774-55c0-b6e2-389bd0373995",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "5609a3c1-a774-55c0-b6e2-389bd0373995",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Safeguard Pure White Soap",
+      "unitLabel": "119 g",
+      "category": "Personal Care",
+      "suggestedPriceCentavos": 4900,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "39bfc763-b18e-5454-b82b-8e000cb42ff7",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "39bfc763-b18e-5454-b82b-8e000cb42ff7",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Eveready Heavy Duty Small Red - Pack of 2",
+      "unitLabel": "AA",
+      "category": "Household",
+      "suggestedPriceCentavos": 2700,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "0041d1c1-2167-5f1c-bfca-b3d84cfde2af",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "0041d1c1-2167-5f1c-bfca-b3d84cfde2af",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Eveready Heavy Duty Red - Blister Pack of 4",
+      "unitLabel": "AA",
+      "category": "Household",
+      "suggestedPriceCentavos": 4800,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "1662e4df-ad56-5330-97fe-d1cf2269cd7c",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "1662e4df-ad56-5330-97fe-d1cf2269cd7c",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Eveready Super Heavy Duty Small Black - Pack of 2",
+      "unitLabel": "AA",
+      "category": "Household",
+      "suggestedPriceCentavos": 3995,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "2ec86a30-a096-509a-a6e0-64a987a5b068",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "2ec86a30-a096-509a-a6e0-64a987a5b068",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Energizer Max - Blister Pack of 4",
+      "unitLabel": "AA",
+      "category": "Household",
+      "suggestedPriceCentavos": 20625,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "221a8349-59fd-5b81-8c72-c15b7129e80b",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "221a8349-59fd-5b81-8c72-c15b7129e80b",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Eveready Heavy Duty Red - Blister Pack of 2",
+      "unitLabel": "D",
+      "category": "Household",
+      "suggestedPriceCentavos": 5125,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
+    },
+    {
+      "catalogProductId": "345575d5-4dd9-5a30-9793-ec7650b808ae",
+      "source": "dti_bnpc_srp",
+      "sourceProductId": "345575d5-4dd9-5a30-9793-ec7650b808ae",
+      "updatedAt": "2025-02-01T00:00:00Z",
+      "name": "Eveready Super Heavy Duty Black - Blister Pack of 2",
+      "unitLabel": "D",
+      "category": "Household",
+      "suggestedPriceCentavos": 7775,
+      "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+      "referencePrice": {
+        "kind": "srp",
+        "source": "DTI BNPC SRP Bulletin",
+        "sourceUrl": "https://www.dti.gov.ph/wp-content/uploads/2025/08/BNPCSRPBULLETIN01FEBRUARY2025.002.pdf",
+        "effectiveFrom": "2025-02-01",
+        "notes": "Historical suggested retail price as of 1 February 2025; store prices may vary. Regional and market qualifiers are preserved in the product name."
+      }
     }
   ]
 }

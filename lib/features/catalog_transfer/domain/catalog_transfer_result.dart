@@ -9,10 +9,12 @@ enum CatalogTransferAction {
 /// Controls how an offline catalog pack handles products already on the
 /// device. Neither mode deletes products that are absent from the pack.
 enum CatalogPackImportMode {
-  /// Add missing products while preserving store-owned values on matches.
+  /// Add missing products while preserving confirmed store-owned values on
+  /// matches. A suggested price may fill an existing zero main price.
   keepExisting,
 
   /// Add missing products and replace supported catalog fields on matches.
+  /// Confirmed, nonzero store prices remain unchanged.
   overwriteMatching,
 }
 

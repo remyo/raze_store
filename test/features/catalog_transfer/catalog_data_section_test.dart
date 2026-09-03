@@ -36,7 +36,7 @@ void main() {
 
     expect(find.text('Offline catalog pack'), findsOneWidget);
     expect(
-      find.textContaining('Choose whether matching catalog details'),
+      find.textContaining('Existing non-zero main prices always stay'),
       findsOneWidget,
     );
     await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));

@@ -54,11 +54,12 @@ picker first.
 
 Pack import is always non-deleting and offers two modes. **Keep existing** is
 the recommended default: it adds missing products without replacing matches.
-**Update matching and add new** replaces matching catalog details and the main
-price when the pack provides an SRP. Both modes preserve the owner's selected
-photo, sub-unit prices, products missing from the pack, receipt settings, and
-the unfinished cart. Reference prices are starting values rather than a promise
-of the price charged by every store.
+**Update matching and add new** replaces matching catalog details. In both
+modes, an existing non-zero main price always wins; a pack suggestion is used
+only for a new product or to fill an existing ₱0 price. Both modes preserve the
+owner's selected photo, sub-unit prices, products missing from the pack, receipt
+settings, and the unfinished cart. Reference prices are starting values rather
+than a promise of the price charged by every store.
 
 The earlier `raze_store_api` prototype remains in the repository for possible
 future catalog-building tools, but the Flutter app does not require or contact
@@ -100,15 +101,19 @@ Importing one is non-destructive and does not touch store settings or the cart.
 
 ### Import the included starter catalog
 
-The repository includes a ready-to-import catalog containing 20 reviewed
-Filipino products and 20 optimized offline images:
+The repository includes a ready-to-import revision 3 catalog containing 208
+common Philippine products. All 208 rows have a positive suggested starting
+price; the original 20 barcode products also include optimized offline images:
 
 **[Download `filipino-sari-sari-starter-v1.razepack`](outputs/filipino-sari-sari-starter-v1.razepack?raw=1)**
 
-- File size: 353,669 bytes (about 0.34 MiB)
-- SHA-256: `1381164e77e5cdcd2ea09ffa536cff5c5486b0979f4ac9fce5ab604ff23a3122`
-- Three products have dated reference SRPs. The other products intentionally
-  start at ₱0 until the store owner confirms a selling price.
+- File size: 364,731 bytes (about 0.35 MiB)
+- SHA-256: `1b7e801280937461ad592307ae6056ace2a73e6b8b4653aba9e95a2fd302fe1d`
+- 191 prices are exact product/unit matches from the dated DTI BNPC SRP
+  bulletin; 17 are exact-product Philippine retailer observations
+- No catalog row starts at ₱0.00
+- DTI-only rows omit barcodes and images because the bulletin does not publish
+  them; they remain searchable and editable in the app
 
 To import it on a phone:
 
@@ -119,18 +124,19 @@ To import it on a phone:
 3. For an existing store, open **Settings → Catalog files → Import catalog
    pack**.
 4. Choose **Keep existing** for a safe additive import, or **Update matching
-   and add new** to apply a newer catalog's details and SRPs. Then choose the
-   downloaded file and wait for confirmation.
-5. Open **Products** and set the selling price of any ₱0 item before scanning
-   it into the cart.
+   and add new** to apply a newer catalog's details. In either mode, a pack
+   suggestion fills a ₱0 price but never replaces a non-zero store price. Choose
+   the downloaded file and wait for confirmation.
+5. Open **Products** to review the suggested prices for your store. You can
+   change any price before using it at checkout.
 
 Importing the same pack again does not duplicate its products. The recommended
 **Keep existing** mode does not overwrite locally edited product values. The
 explicit update mode can replace the name, barcode, brand, category, main unit,
-remote/catalog image, and main price when an SRP is present; it still keeps the
-owner's selected photo and sub-unit prices. A `.razepack` is shared starter
-data; use a private `.razestore` backup when moving one store's complete data to
-another phone.
+and remote/catalog image; it still keeps the owner's selected photo, sub-unit
+prices, and any non-zero main price. Both modes can initialize a ₱0 main price
+from a pack suggestion. A `.razepack` is shared starter data; use a private
+`.razestore` backup when moving one store's complete data to another phone.
 
 ### Build or update the starter catalog
 
@@ -146,10 +152,12 @@ python3 tool/build_catalog_pack.py \
   --overwrite
 ```
 
-Before publishing, import the rebuilt pack on a clean test installation and
-update the file size and SHA-256 shown above. The complete source schema, image
-limits, provenance rules, safety contract, and larger-pack sizing guidance are
-documented in [`docs/catalog-pack-format.md`](docs/catalog-pack-format.md).
+Before publishing, import the rebuilt pack on a clean test installation. The
+complete source schema, image limits, provenance rules, safety contract, and
+larger-pack sizing guidance are documented in
+[`docs/catalog-pack-format.md`](docs/catalog-pack-format.md). Source-specific
+provenance is recorded in
+[`catalog_packs/filipino-sari-sari-starter-v1/ATTRIBUTION.md`](catalog_packs/filipino-sari-sari-starter-v1/ATTRIBUTION.md).
 
 A `.razestore` file is the private, lossless backup. It contains products, main
 and sub-unit prices, managed product photos, completed sales, receipt/store

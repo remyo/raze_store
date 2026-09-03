@@ -321,6 +321,7 @@ class _ProductCategoryBrowser extends StatelessWidget {
     final textScaler = MediaQuery.textScalerOf(context);
     final scaledLabelHeight = textScaler.scale(14);
     final textScale = scaledLabelHeight / 14;
+    const categoryGap = AppSpacing.xs;
     // ChoiceChip labels stay on one line, but their row must follow the real
     // accessibility scale instead of clipping it at an arbitrary ceiling.
     final rowHeight = math.max(48.0, scaledLabelHeight + 30);
@@ -331,7 +332,7 @@ class _ProductCategoryBrowser extends StatelessWidget {
       label: 'Product categories',
       child: SizedBox(
         key: const ValueKey('product-category-browser'),
-        height: rowHeight * 2 + AppSpacing.xxs,
+        height: rowHeight * 2 + categoryGap,
         child: GridView.builder(
           key: const ValueKey('product-category-grid'),
           scrollDirection: Axis.horizontal,
@@ -341,8 +342,8 @@ class _ProductCategoryBrowser extends StatelessWidget {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisExtent: columnWidth,
-            mainAxisSpacing: AppSpacing.xs,
-            crossAxisSpacing: AppSpacing.xxs,
+            mainAxisSpacing: categoryGap,
+            crossAxisSpacing: categoryGap,
           ),
           itemBuilder: (context, index) {
             final category = choices[index];
@@ -357,10 +358,16 @@ class _ProductCategoryBrowser extends StatelessWidget {
                 ),
                 label: SizedBox(
                   width: columnWidth - 34,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: FittedBox(
+                    key: ValueKey('product-category-label-$label'),
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                      ),
+                      child: Text(label, maxLines: 1, softWrap: false),
+                    ),
                   ),
                 ),
                 tooltip: label,

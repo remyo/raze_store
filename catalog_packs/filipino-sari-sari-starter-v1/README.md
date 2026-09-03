@@ -1,15 +1,21 @@
 # Filipino Sari-sari Starter Catalog
 
-This is a small, reviewed proof source for the app's offline `.razepack`
-workflow. It contains 20 packaged food and drink products and one optimized
-256 px image per product. It is intentionally not described as a complete
-Philippine catalog.
+This directory is the reviewed source for the app's offline `.razepack`.
+Revision 3 contains 208 products across broad shelf categories. Every product
+has a positive suggested starting price:
 
-Revision 2 normalizes the product filters to broad shelf categories such as
-`Canned Goods`, `Snacks`, `Biscuits`, and `Beverages`, rather than creating a
-separate category for every food subtype.
+- 191 exact product/unit prices from the Philippine Department of Trade and
+  Industry BNPC SRP Bulletin dated 1 February 2025
+- 17 exact-product Philippine retailer observations for image-backed starter
+  products not listed in that bulletin
 
-Build it from the repository root:
+The original 20 starter rows retain their stable catalog/source identities so
+installing this revision updates an earlier installation instead of creating
+duplicates. Those rows retain reviewed barcodes and optimized offline images.
+DTI-only rows intentionally omit barcodes and images because the bulletin does
+not publish them; do not invent either value.
+
+Build the importable file from the repository root:
 
 ```sh
 python3 tool/build_catalog_pack.py \
@@ -18,17 +24,18 @@ python3 tool/build_catalog_pack.py \
   --overwrite
 ```
 
-Only three rows contain `suggestedPriceCentavos`. Those values are exact
-product/size matches from the dated DTI BNPC SRP bulletin named in each row;
-they are historical references, not guaranteed current store prices. The other
-products intentionally import at zero so the owner must confirm a selling
-price before they can be added to the cart.
+Prices in this shared catalog are editable starting values, not a promise of a
+current price in every barangay or store. DTI prices are clearly marked as
+historical SRPs. Retailer observations are clearly marked `retailer_price` and
+must not be presented as official SRPs. Each priced row keeps its source URL,
+effective/observation date, and explanatory note in `referencePrice`.
 
-Product metadata comes from Open Food Facts contributors under ODbL 1.0 / DbCL
-1.0. Product images come from Open Food Facts contributors under CC BY-SA 3.0.
-Each source row retains the original product and image URLs. Package artwork
-may be subject to additional third-party rights.
+The app imports the pack without deleting local products. An existing non-zero
+store price always wins; the pack suggestion is applied only to a new product
+or a matching product whose saved main price is zero. Owners can edit prices,
+names, categories, and units after import.
 
-Do not scale this by inventing barcodes or prices. A larger release should be
-built from the Open Food Facts bulk export and bulk image dataset, deduplicated,
-category-balanced, and manually checked before publication.
+Product metadata and images for the original 20 records come from Open Food
+Facts contributors under ODbL 1.0 / DbCL 1.0 and CC BY-SA 3.0 respectively.
+See `ATTRIBUTION.md` and the per-product URLs in `source.json` for full
+provenance.

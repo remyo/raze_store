@@ -53,10 +53,11 @@ final class CatalogImportResult {
 
 /// Imports a distributable, offline shared-catalog ZIP.
 ///
-/// The default mode preserves store-owned values. An explicit overwrite can
-/// update matching catalog fields and the main selling price, while local
-/// photos, sub-unit prices, cart rows, settings, and products missing from the
-/// pack always remain untouched.
+/// Both modes preserve a confirmed, nonzero store price. A pack suggestion can
+/// initialize a new product or fill an existing zero price. An explicit
+/// overwrite can update matching catalog fields, while local photos, sub-unit
+/// prices, cart rows, settings, and products missing from the pack always
+/// remain untouched.
 final class CatalogPackService {
   CatalogPackService({
     required database.AppDatabase database,
@@ -1015,6 +1016,9 @@ final class CatalogPackService {
         final repairedPath = installedImage ?? item.existingUsableCatalogImage;
         final shouldRepairImage =
             repairedPath != null && repairedPath != existing.catalogImagePath;
+        final suggestedPrice = product.suggestedPriceCentavos;
+        final shouldApplySuggestedPrice =
+            existing.priceCentavos == 0 && suggestedPrice != null;
         if (mode == CatalogPackImportMode.overwriteMatching) {
           await (_database.update(
             _database.storeProducts,
@@ -1032,9 +1036,9 @@ final class CatalogPackService {
                   ? Value(repairedPath)
                   : const Value.absent(),
               sourceUpdatedAt: Value(product.updatedAt),
-              priceCentavos: product.suggestedPriceCentavos == null
-                  ? const Value.absent()
-                  : Value(product.suggestedPriceCentavos!),
+              priceCentavos: shouldApplySuggestedPrice
+                  ? Value(suggestedPrice)
+                  : const Value.absent(),
               updatedAt: Value(now),
             ),
           );
@@ -1046,7 +1050,11 @@ final class CatalogPackService {
           updatedCount++;
           continue;
         }
-        if (!shouldLinkSource && !shouldRepairImage) continue;
+        if (!shouldLinkSource &&
+            !shouldRepairImage &&
+            !shouldApplySuggestedPrice) {
+          continue;
+        }
 
         await (_database.update(
           _database.storeProducts,
@@ -1063,6 +1071,12 @@ final class CatalogPackService {
             ),
             catalogImagePath: shouldRepairImage
                 ? Value(repairedPath)
+                : const Value.absent(),
+            priceCentavos: shouldApplySuggestedPrice
+                ? Value(suggestedPrice)
+                : const Value.absent(),
+            updatedAt: shouldApplySuggestedPrice
+                ? Value(now)
                 : const Value.absent(),
           ),
         );

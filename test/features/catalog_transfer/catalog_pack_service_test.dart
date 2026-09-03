@@ -89,6 +89,37 @@ void main() {
     },
   );
 
+  test('checked-in starter pack imports 208 positive-price products', () async {
+    final pack = File('outputs/filipino-sari-sari-starter-v1.razepack');
+
+    final result = await service.importMerging(pack.path);
+
+    expect(result.success, isTrue);
+    expect(result.productCount, 208);
+    expect(result.createdCount, 208);
+    expect(result.updatedCount, 0);
+    expect(result.imageCount, 20);
+    final imported = await LocalCatalogRepository(
+      database,
+      imageStore: imageStore,
+    ).searchProducts('');
+    expect(imported, hasLength(208));
+    expect(
+      imported,
+      everyElement(predicate<StoreProduct>((p) => p.priceCentavos > 0)),
+    );
+    expect(
+      imported.map((product) => product.category).toSet(),
+      containsAll(<String?>{
+        'Beverages',
+        'Bread',
+        'Canned Goods',
+        'Condiments',
+        'Household',
+      }),
+    );
+  });
+
   test(
     'matched product preserves owner fields, prices, units, photo, cart, and profile',
     () async {
@@ -184,7 +215,7 @@ void main() {
   );
 
   test(
-    'overwrite mode updates matching catalog fields and adds new products safely',
+    'overwrite mode updates catalog fields while preserving a confirmed price',
     () async {
       final ownerPhotoSource = File('${testRoot.path}/owner-overwrite.png');
       await ownerPhotoSource.writeAsBytes(_pngBytes(10));
@@ -274,7 +305,7 @@ void main() {
       expect(updated.category, 'Pack Category');
       expect(updated.unitLabel, 'Pack');
       expect(updated.remoteImageUrl, contains('matching-shared-id.png'));
-      expect(updated.priceCentavos, 9999);
+      expect(updated.priceCentavos, 4321);
       expect(updated.sourceUpdatedAt, packUpdatedAt);
       expect(updated.localImagePath, ownerPhoto);
       expect(updated.sellingUnits.single.id, 'owner-piece');
@@ -292,6 +323,12 @@ void main() {
         products.singleWhere((product) => product.barcode == '333').name,
         'New From Pack',
       );
+      expect(
+        products
+            .singleWhere((product) => product.barcode == '333')
+            .priceCentavos,
+        1250,
+      );
       final cart = await LocalCartRepository(database).getDraft();
       expect(cart.items.single.name, 'Owner Name');
       expect(cart.items.single.unitPriceCentavos, 4321);
@@ -301,6 +338,57 @@ void main() {
       );
     },
   );
+
+  for (final mode in CatalogPackImportMode.values) {
+    test(
+      '${mode.name} fills an existing zero price from the pack SRP',
+      () async {
+        final catalog = LocalCatalogRepository(
+          database,
+          imageStore: imageStore,
+        );
+        final original = await catalog.createProduct(
+          ProductDraft(
+            id: 'zero-price-product',
+            barcode: '111',
+            source: 'raze_store_api',
+            sourceProductId: 'zero-price-shared-id',
+            sourceUpdatedAt: DateTime.utc(2025),
+            name: 'Local Product',
+            priceCentavos: 0,
+          ),
+        );
+        final pack = await _writePack(
+          testRoot,
+          number: packNumber++,
+          products: [
+            _product(
+              id: 'zero-price-shared-id',
+              barcode: '111',
+              name: 'Pack Product',
+              updatedAt: DateTime.utc(2026),
+              priceCentavos: 1599,
+            ),
+          ],
+        );
+
+        final result = await service.importMerging(pack.path, mode: mode);
+
+        expect(result.success, isTrue);
+        expect(result.createdCount, 0);
+        expect(result.updatedCount, 1);
+        final updated = (await catalog.searchProducts('')).single;
+        expect(updated.id, original.id);
+        expect(updated.priceCentavos, 1599);
+        expect(
+          updated.name,
+          mode == CatalogPackImportMode.keepExisting
+              ? 'Local Product'
+              : 'Pack Product',
+        );
+      },
+    );
+  }
 
   test(
     'overwrite mode keeps the current price when the pack has no SRP',

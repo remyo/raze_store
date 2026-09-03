@@ -155,9 +155,22 @@ void main() {
         grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(grid.scrollDirection, Axis.horizontal);
     expect(delegate.crossAxisCount, 2);
+    expect(delegate.mainAxisSpacing, AppSpacing.xs);
+    expect(delegate.crossAxisSpacing, delegate.mainAxisSpacing);
     expect(
       find.descendant(of: browser, matching: find.byType(Scrollable)),
       findsOneWidget,
+    );
+
+    final allLabel = tester.widget<FittedBox>(
+      find.byKey(const ValueKey('product-category-label-All')),
+    );
+    expect(allLabel.fit, BoxFit.scaleDown);
+    expect(allLabel.alignment, Alignment.centerLeft);
+    final labelPadding = allLabel.child! as Padding;
+    expect(
+      labelPadding.padding,
+      const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
     );
 
     final all = find.byKey(const ValueKey('product-category-all'));

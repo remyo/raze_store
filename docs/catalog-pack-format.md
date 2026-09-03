@@ -121,19 +121,22 @@ and mismatched image extensions are rejected.
 The app validates the complete pack, then matches a row by
 `(source, sourceProductId)` or canonical barcode. A missing row is created with
 the suggested price, or zero when none is supplied. Import always keeps
-products absent from the pack, settings, receipt data, and the cart.
+products absent from the pack, settings, receipt data, and the cart. For a
+matched row, both import modes preserve any nonzero store price. A suggested
+price fills the main price only when its saved value is zero.
 
 The importer offers two explicit conflict modes:
 
 - **Keep existing** (default) is additive and repair-only. A matched row keeps
-  its product details, main price, selling units, and owner photo. The importer
-  may link shared-source metadata or repair a missing pack-owned image, and it
-  never moves the stored source timestamp backward.
+  its product details, confirmed main price, selling units, and owner photo. The
+  importer may fill a zero main price from the pack suggestion, link
+  shared-source metadata, or repair a missing pack-owned image, and it never
+  moves the stored source timestamp backward.
 - **Update matching and add new** replaces a matched row's barcode, name,
   brand, category, main unit label, remote image URL, bundled catalog image,
-  and source timestamp. It replaces the main price only when the pack supplies
-  a suggested price. It preserves the row ID, owner-selected photo, and all
-  sub-unit prices.
+  and source timestamp. It uses a pack suggestion only when the saved main price
+  is zero. It preserves the row ID, every nonzero main price, owner-selected
+  photo, and all sub-unit prices.
 
 Use one stable `packId` and monotonically increasing revisions for a release
 line. The current app checks that `revision` is positive but does not store it
@@ -179,8 +182,9 @@ pack for reproducible releases. The builder reads only format headers to check
 dimensions; it does not fully decode or repair an image. Validate the rendered
 source image separately during editorial review.
 
-The checked-in 20-product starter uses 256 px JPEGs averaging about 17.5 KiB
-and builds to about 0.34 MiB. Practical planning ranges are:
+The checked-in revision 3 starter contains 208 products and 20 optimized 256 px
+JPEGs. Most DTI-only rows have no image because their source does not publish
+one, so the built pack remains well under 1 MiB. Practical planning ranges are:
 
 | Products | Metadata only | With one optimized image each |
 | ---: | ---: | ---: |
