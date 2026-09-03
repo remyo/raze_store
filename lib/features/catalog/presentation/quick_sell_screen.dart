@@ -30,6 +30,9 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
   final Map<String, Future<void>> _lineQueues = {};
   late final TextEditingController _searchController;
   String _query = '';
+  bool _openingCart = false;
+
+  bool get _canOpenCart => !_openingCart && _lineQueues.isEmpty;
 
   @override
   void initState() {
@@ -53,7 +56,8 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
       title: 'Quick units',
       actions: [
         IconButton(
-          onPressed: () => context.go('/cart'),
+          key: const ValueKey('quick-sell-open-cart'),
+          onPressed: _canOpenCart ? _openCart : null,
           tooltip: 'Open cart',
           icon: Badge(
             isLabelVisible: (currentCart?.totalQuantity ?? 0) > 0,
@@ -83,7 +87,7 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
       bottomNavigationBar: currentCart?.isNotEmpty == true
           ? _CartSummaryBar(
               cart: currentCart!,
-              onOpenCart: () => context.go('/cart'),
+              onOpenCart: _canOpenCart ? _openCart : null,
             )
           : null,
     );
@@ -180,6 +184,7 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
                     child: _UnitProductCard(
                       product: product,
                       cart: cart,
+                      quantityChangesEnabled: !_openingCart,
                       quantityFor: (option) => _displayQuantity(
                         cart,
                         product.id,
@@ -226,6 +231,8 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
     CartDraft cart,
     int requestedQuantity,
   ) {
+    if (_openingCart) return;
+
     final lineKey = buildCartLineId(product.id, option.sellingUnitId);
     final item = _cartItem(cart, product.id, option.sellingUnitId);
     final currentQuantity = _displayQuantity(
@@ -259,6 +266,30 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
         option: option,
       ),
     );
+  }
+
+  Future<void> _openCart() async {
+    if (_openingCart) return;
+
+    setState(() => _openingCart = true);
+
+    // A stale callback can still reach this method during the frame in which
+    // the cart button becomes disabled. Waiting for the writes captured after
+    // the guard is set keeps them from completing after checkout starts.
+    final pendingWrites = _lineQueues.values.toSet().toList(growable: false);
+    await Future.wait(
+      pendingWrites.map((write) async {
+        try {
+          await write;
+        } on Object {
+          // The matching settlement callback reports the write failure. It is
+          // still safe to open the cart once the failed write has completed.
+        }
+      }),
+    );
+
+    if (!mounted) return;
+    context.go('/cart');
   }
 
   Future<void> _writeAfter(
@@ -345,6 +376,7 @@ class _UnitProductCard extends StatelessWidget {
   const _UnitProductCard({
     required this.product,
     required this.cart,
+    required this.quantityChangesEnabled,
     required this.quantityFor,
     required this.onQuantityChanged,
     required this.onEdit,
@@ -352,6 +384,7 @@ class _UnitProductCard extends StatelessWidget {
 
   final StoreProduct product;
   final CartDraft cart;
+  final bool quantityChangesEnabled;
   final int Function(ProductSaleOption option) quantityFor;
   final void Function(ProductSaleOption option, int quantity) onQuantityChanged;
   final VoidCallback onEdit;
@@ -428,6 +461,7 @@ class _UnitProductCard extends StatelessWidget {
                   option: option,
                   cartItem: cartItem,
                   quantity: quantityFor(option),
+                  enabled: quantityChangesEnabled,
                   onChanged: (quantity) => onQuantityChanged(option, quantity),
                 );
               },
@@ -445,6 +479,7 @@ class _UnitOptionRow extends StatelessWidget {
     required this.option,
     required this.cartItem,
     required this.quantity,
+    required this.enabled,
     required this.onChanged,
   });
 
@@ -452,6 +487,7 @@ class _UnitOptionRow extends StatelessWidget {
   final ProductSaleOption option;
   final CartItem? cartItem;
   final int quantity;
+  final bool enabled;
   final ValueChanged<int> onChanged;
 
   @override
@@ -466,8 +502,9 @@ class _UnitOptionRow extends StatelessWidget {
         cartItem != null &&
         (displayedPrice != option.priceCentavos ||
             displayedLabel != option.label);
-    final canAdd = displayedPrice > 0 && quantity < maximumCartQuantity;
-    final canRemove = quantity > 0;
+    final canAdd =
+        enabled && displayedPrice > 0 && quantity < maximumCartQuantity;
+    final canRemove = enabled && quantity > 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -568,7 +605,7 @@ class _CartSummaryBar extends StatelessWidget {
   const _CartSummaryBar({required this.cart, required this.onOpenCart});
 
   final CartDraft cart;
-  final VoidCallback onOpenCart;
+  final VoidCallback? onOpenCart;
 
   @override
   Widget build(BuildContext context) {
@@ -601,6 +638,7 @@ class _CartSummaryBar extends StatelessWidget {
                 ),
               ),
               FilledButton.icon(
+                key: const ValueKey('quick-sell-view-cart'),
                 onPressed: onOpenCart,
                 icon: const Icon(Icons.shopping_basket_outlined),
                 label: const Text('View cart'),

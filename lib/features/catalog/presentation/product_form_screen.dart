@@ -15,6 +15,7 @@ import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
+import 'package:raze_store/features/catalog/presentation/duplicate_barcode_resolution.dart';
 
 class ProductFormScreen extends ConsumerWidget {
   const ProductFormScreen({
@@ -338,11 +339,27 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                           textInputAction: TextInputAction.next,
                           onFieldSubmitted: (_) =>
                               FocusScope.of(context).nextFocus(),
-                          decoration: const InputDecoration(
-                            labelText: 'Category',
-                            hintText: 'Choose a suggestion or type your own',
-                            prefixIcon: Icon(Icons.category_outlined),
-                          ),
+                          decoration:
+                              const InputDecoration(
+                                labelText: 'Category',
+                                hintText: 'Choose or type your own',
+                                prefixIcon: Icon(Icons.category_outlined),
+                              ).copyWith(
+                                suffixIcon: IconButton(
+                                  key: const ValueKey(
+                                    'choose-product-category',
+                                  ),
+                                  tooltip: 'Choose category',
+                                  onPressed: _blocked
+                                      ? null
+                                      : () => _showCategoryPicker(
+                                          categorySuggestions,
+                                        ),
+                                  icon: const Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                  ),
+                                ),
+                              ),
                         ),
                     optionsViewBuilder: (context, onSelected, options) {
                       final values = options.toList(growable: false);
@@ -375,7 +392,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'You can type a new category. Imported catalog packs can add more suggestions.',
+                    'Add reusable custom categories from Store settings.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -492,6 +509,63 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showCategoryPicker(List<String> categories) async {
+    _categoryFocusNode.unfocus();
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 520),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: Text(
+                'Choose category',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                key: const ValueKey('product-category-options'),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  final selected =
+                      _categoryController.text.trim().toLowerCase() ==
+                      category.toLowerCase();
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(
+                      selected
+                          ? Icons.check_circle_rounded
+                          : Icons.category_outlined,
+                    ),
+                    title: Text(category),
+                    onTap: () => Navigator.of(context).pop(category),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    _categoryController.value = TextEditingValue(
+      text: selected,
+      selection: TextSelection.collapsed(offset: selected.length),
     );
   }
 
@@ -654,24 +728,41 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
         context.pop(savedProduct);
       }
     } on DuplicateBarcodeException catch (error) {
-      if (savedPhotoPath != null) {
-        await ref
-            .read(localProductImageStoreProvider)
-            .deleteIfManaged(savedPhotoPath);
-      }
+      await _deleteManagedPhotoBestEffort(savedPhotoPath);
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Barcode ${error.barcode} is already in your store.'),
-        ),
-      );
-    } on DuplicateCatalogProductException {
-      if (savedPhotoPath != null) {
-        await ref
-            .read(localProductImageStoreProvider)
-            .deleteIfManaged(savedPhotoPath);
+      StoreProduct? existingProduct;
+      try {
+        existingProduct = await ref
+            .read(catalogRepositoryProvider)
+            .findByBarcode(error.barcode);
+      } catch (_) {
+        // The uniqueness error remains useful even if the follow-up lookup
+        // cannot load the existing row.
       }
+      if (!mounted) return;
+      if (existingProduct == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Barcode ${error.barcode} is already in your store. No duplicate was created.',
+            ),
+          ),
+        );
+        return;
+      }
+      final useExisting = await showDuplicateBarcodeResolution(
+        context,
+        existingProduct: existingProduct,
+      );
+      if (useExisting != true || !mounted) return;
+      if (widget.goToProductsAfterSave) {
+        context.go('/products');
+      } else {
+        context.pop(existingProduct);
+      }
+    } on DuplicateCatalogProductException {
+      await _deleteManagedPhotoBestEffort(savedPhotoPath);
       if (!mounted) return;
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -682,16 +773,22 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
         ),
       );
     } catch (_) {
-      if (savedPhotoPath != null) {
-        await ref
-            .read(localProductImageStoreProvider)
-            .deleteIfManaged(savedPhotoPath);
-      }
+      await _deleteManagedPhotoBestEffort(savedPhotoPath);
       if (!mounted) return;
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not save this product.')),
       );
+    }
+  }
+
+  Future<void> _deleteManagedPhotoBestEffort(String? path) async {
+    if (path == null) return;
+    try {
+      await ref.read(localProductImageStoreProvider).deleteIfManaged(path);
+    } catch (_) {
+      // Keep the original save error visible and re-enable the form even if
+      // cleanup itself fails.
     }
   }
 
@@ -946,6 +1043,9 @@ class _PhotoEditor extends StatelessWidget {
     final existingPath = removeExisting ? null : product?.localImagePath;
     final hasPhoto = pendingPhoto != null || existingPath != null;
     final scheme = Theme.of(context).colorScheme;
+    final previewCacheSize = (104 * MediaQuery.devicePixelRatioOf(context))
+        .ceil()
+        .clamp(104, 512);
 
     return Card(
       child: Padding(
@@ -960,6 +1060,8 @@ class _PhotoEditor extends StatelessWidget {
                       width: 104,
                       height: 104,
                       fit: BoxFit.cover,
+                      cacheWidth: previewCacheSize,
+                      cacheHeight: previewCacheSize,
                       errorBuilder: (_, _, _) => const ProductImagePlaceholder(
                         width: 104,
                         height: 104,
@@ -971,6 +1073,8 @@ class _PhotoEditor extends StatelessWidget {
                       width: 104,
                       height: 104,
                       fit: BoxFit.cover,
+                      cacheWidth: previewCacheSize,
+                      cacheHeight: previewCacheSize,
                       errorBuilder: (_, _, _) => const ProductImagePlaceholder(
                         width: 104,
                         height: 104,

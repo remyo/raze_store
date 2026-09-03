@@ -28,27 +28,43 @@ abstract final class AppSpacing {
 
 /// Standard component dimensions, with touch targets kept at least 48dp.
 abstract final class AppSize {
+  /// Dense visual controls still receive a padded 48dp Material hit target.
+  static const double compactControl = 36;
+  static const double compactChip = 34;
   static const double minimumTouchTarget = 48;
-  static const double field = 56;
-  static const double primaryButton = 56;
-  static const double appBar = 64;
-  static const double icon = 24;
-  static const double smallThumbnail = 56;
-  static const double thumbnail = 72;
-  static const double largeThumbnail = 96;
+  static const double appBar = 44;
+  static const double field = 48;
+  static const double primaryControl = 42;
+
+  /// Backwards-compatible name used by existing feature screens.
+  static const double primaryButton = primaryControl;
+  static const double compactRow = 48;
+  static const double regularRow = 52;
+  static const double comfortableRow = 64;
+  static const double iconBadge = 40;
+  static const double iconBadgeLarge = 44;
+  static const double icon = 20;
+  static const double iconLarge = 24;
+  static const double smallThumbnail = 48;
+  static const double thumbnail = 56;
+  static const double largeThumbnail = 72;
 }
 
 /// A soft corner hierarchy inspired by familiar neighborhood-store packaging.
 abstract final class AppRadius {
   static const double small = 8;
-  static const double medium = 12;
-  static const double large = 18;
-  static const double extraLarge = 24;
+  static const double medium = 10;
+  static const double large = 12;
+  static const double extraLarge = 12;
   static const double pill = 999;
 
   static const BorderRadius control = BorderRadius.all(Radius.circular(medium));
   static const BorderRadius card = BorderRadius.all(Radius.circular(large));
   static const BorderRadius panel = BorderRadius.all(
+    Radius.circular(extraLarge),
+  );
+  static const BorderRadius tile = BorderRadius.all(Radius.circular(large));
+  static const BorderRadius dialog = BorderRadius.all(
     Radius.circular(extraLarge),
   );
 }

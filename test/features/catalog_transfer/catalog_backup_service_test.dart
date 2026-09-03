@@ -9,9 +9,11 @@ import 'package:raze_store/core/database/app_database.dart' show AppDatabase;
 import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/features/cart/data/local_cart_repository.dart';
 import 'package:raze_store/features/catalog/data/local_catalog_repository.dart';
+import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
+import 'package:raze_store/features/sales/data/local_sales_repository.dart';
 import 'package:raze_store/features/settings/data/local_settings_repository.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -87,12 +89,21 @@ void main() {
         product,
         saleOption: product.saleOptions.last,
       );
+      final completedAt = DateTime.utc(2026, 9, 2, 14, 45);
+      final sourceSale = await LocalSalesRepository(
+        sourceDatabase,
+        now: () => completedAt,
+      ).completeCurrentCart(cashReceivedCentavos: 10000);
       final preferences = await SharedPreferences.getInstance();
       await preferences.setString('theme_mode', 'dark');
       await preferences.setBool(
         'raze_store.onboarding.store_setup_complete',
         true,
       );
+      await preferences.setStringList(customCatalogCategoriesPreferenceKey, [
+        'Mobile Load',
+        'Frozen Treats',
+      ]);
 
       final archivePath = '${testRoot.path}/store.razestore';
       final exported = await CatalogBackupService(
@@ -125,6 +136,9 @@ void main() {
         'raze_store.onboarding.store_setup_complete',
         false,
       );
+      await preferences.setStringList(customCatalogCategoriesPreferenceKey, [
+        'Old Category',
+      ]);
 
       final restored = await CatalogBackupService(
         database: targetDatabase,
@@ -162,6 +176,19 @@ void main() {
         (await LocalCartRepository(targetDatabase).getDraft()).isEmpty,
         isTrue,
       );
+      final restoredSale = await LocalSalesRepository(
+        targetDatabase,
+      ).getSale(sourceSale.id);
+      expect(restoredSale, isNotNull);
+      expect(restoredSale!.completedAt, completedAt);
+      expect(restoredSale.storeNameSnapshot, 'Aling Nena Store');
+      expect(restoredSale.cashReceivedCentavos, 10000);
+      expect(restoredSale.lines, hasLength(2));
+      expect(restoredSale.totalCentavos, 8000);
+      expect(
+        restoredSale.lines.every((line) => line.imagePathSnapshot == null),
+        isTrue,
+      );
       final profile = await LocalSettingsRepository(
         targetDatabase,
       ).getStoreProfile();
@@ -172,6 +199,10 @@ void main() {
         preferences.getBool('raze_store.onboarding.store_setup_complete'),
         isTrue,
       );
+      expect(preferences.getStringList(customCatalogCategoriesPreferenceKey), [
+        'Frozen Treats',
+        'Mobile Load',
+      ]);
     },
   );
 
@@ -298,10 +329,7 @@ void main() {
     ).restoreReplacing(archivePath: archivePath);
 
     expect(result, isA<CatalogTransferSuccess>());
-    expect(
-      result.message,
-      contains('appearance setting could not be restored'),
-    );
+    expect(result.message, contains('some app settings could not be restored'));
     expect(
       (await LocalCatalogRepository(
         targetDatabase,
@@ -475,6 +503,7 @@ Future<void> _rewriteAsVersion1(File file) async {
   };
   final data = (jsonDecode(utf8.decode(entries['data.json']!)) as Map)
       .cast<String, Object?>();
+  (data['preferences'] as Map).remove('customCategories');
   for (final value in (data['products'] as List).cast<Object?>()) {
     final product = (value as Map).cast<String, Object?>();
     product.remove('catalogImage');

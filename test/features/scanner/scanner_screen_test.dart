@@ -33,7 +33,7 @@ void main() {
   });
 
   testWidgets(
-    'known camera scans add the main unit once per scan and reject a burst',
+    'known single-unit scans add once per scan and reject a camera burst',
     (tester) async {
       final platform = _FakeMobileScannerPlatform();
       MobileScannerPlatform.instance = platform;
@@ -79,6 +79,46 @@ void main() {
       expect(cart.saleOptions, [null, null]);
     },
   );
+
+  testWidgets('a barcode with sub-unit prices asks which unit to add', (
+    tester,
+  ) async {
+    final platform = _FakeMobileScannerPlatform();
+    MobileScannerPlatform.instance = platform;
+    final product = _product(
+      sellingUnits: const [
+        SellingUnit(
+          id: 'piece',
+          label: 'Piece',
+          price: Money.fromCentavos(1000),
+        ),
+      ],
+    );
+    final local = _LookupCatalogRepository(product);
+    final cart = _RecordingCartRepository();
+
+    await _pumpScanner(tester, local: local, cart: cart);
+    platform.addBarcode(
+      const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
+    );
+    await _pumpForScan(tester);
+
+    expect(local.lookupCalls, 1);
+    expect(cart.addCalls, 0);
+    expect(find.text('Choose how it is sold'), findsOneWidget);
+    expect(find.text('Pack'), findsWidgets);
+    expect(find.text('Piece'), findsOneWidget);
+
+    await tester.tap(find.text('Piece'));
+    await tester.pump();
+    await tester.tap(find.text('Add 1 Piece'));
+    await _pumpForScan(tester);
+
+    expect(cart.addCalls, 1);
+    expect(cart.totalQuantity, 1);
+    expect(cart.saleOptions.single?.sellingUnitId, 'piece');
+    expect(find.text('Local product added to cart.'), findsOneWidget);
+  });
 
   testWidgets('an unknown barcode keeps the add-product workflow', (
     tester,
@@ -152,7 +192,10 @@ Future<void> _pumpForScan(WidgetTester tester) async {
   }
 }
 
-StoreProduct _product({int priceCentavos = 12000}) => StoreProduct(
+StoreProduct _product({
+  int priceCentavos = 12000,
+  List<SellingUnit> sellingUnits = const [],
+}) => StoreProduct(
   id: 'local-product',
   metadata: CatalogMetadata(
     barcode: '4800012345678',
@@ -160,9 +203,7 @@ StoreProduct _product({int priceCentavos = 12000}) => StoreProduct(
     unitLabel: 'Pack',
   ),
   price: Money.fromCentavos(priceCentavos),
-  sellingUnits: const [
-    SellingUnit(id: 'piece', label: 'Piece', price: Money.fromCentavos(1000)),
-  ],
+  sellingUnits: sellingUnits,
   createdAt: DateTime.utc(2026, 9, 3),
   updatedAt: DateTime.utc(2026, 9, 3),
 );

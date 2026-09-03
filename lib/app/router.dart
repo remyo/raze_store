@@ -5,13 +5,17 @@ import 'package:raze_store/features/cart/presentation/cart_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
 import 'package:raze_store/features/catalog/presentation/quick_sell_screen.dart';
-import 'package:raze_store/features/catalog/presentation/quick_add_product_screen.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/onboarding/presentation/app_startup_gate.dart';
 import 'package:raze_store/features/onboarding/presentation/first_launch_setup_screen.dart';
 import 'package:raze_store/features/scanner/presentation/scanner_screen.dart';
 import 'package:raze_store/features/receipt/receipt.dart';
+import 'package:raze_store/features/sales/domain/completed_sale.dart';
+import 'package:raze_store/features/sales/presentation/sale_detail_screen.dart';
+import 'package:raze_store/features/sales/presentation/sales_screen.dart';
 import 'package:raze_store/features/settings/presentation/settings_screen.dart';
+import 'package:raze_store/features/settings/presentation/catalog_category_settings_screen.dart';
+import 'package:raze_store/features/settings/presentation/storage_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -53,12 +57,34 @@ final appRouter = GoRouter(
             ),
           ],
         ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/sales',
+              builder: (context, state) => const SalesScreen(),
+              routes: [
+                GoRoute(
+                  path: ':id',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) => SaleDetailScreen(
+                    saleId: state.pathParameters['id']!,
+                    initialSale: state.extra is CompletedSale
+                        ? state.extra! as CompletedSale
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ],
     ),
     GoRoute(
       path: '/products/quick-add',
       parentNavigatorKey: rootNavigatorKey,
-      builder: (context, state) => QuickAddProductScreen(
+      // Keep the old route as a compatibility alias, but use the complete
+      // editor so photos are available before the product is first saved.
+      builder: (context, state) => ProductFormScreen(
         initialBarcode: state.uri.queryParameters['barcode'],
         initialMetadata: state.extra is CatalogMetadata
             ? state.extra! as CatalogMetadata
@@ -94,6 +120,16 @@ final appRouter = GoRouter(
       path: '/settings',
       parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/categories',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const CatalogCategorySettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/storage',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const StorageScreen(),
     ),
     GoRoute(
       path: '/receipt',

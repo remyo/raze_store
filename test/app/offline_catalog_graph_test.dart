@@ -31,6 +31,9 @@ void main() {
 
     expect(paths, isNot(contains('/catalog')));
     expect(paths, contains('/quick-sell'));
+    expect(paths, contains('/sales'));
+    expect(paths, contains(':id'));
+    expect(paths, contains('/settings/storage'));
   });
 }
 

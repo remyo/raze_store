@@ -35,8 +35,12 @@ void main() {
     );
 
     final rendered = tester.widget<Image>(find.byType(Image));
-    expect(rendered.image, isA<FileImage>());
-    expect((rendered.image as FileImage).file.path, local.path);
+    expect(rendered.image, isA<ResizeImage>());
+    final resized = rendered.image as ResizeImage;
+    expect(resized.width, 1024);
+    expect(resized.height, 1024);
+    expect(resized.imageProvider, isA<FileImage>());
+    expect((resized.imageProvider as FileImage).file.path, local.path);
   });
 
   testWidgets('catalog pack image is used when there is no owner photo', (

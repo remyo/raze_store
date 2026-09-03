@@ -51,6 +51,11 @@ optional. A 12-digit numeric UPC is canonicalized to its zero-prefixed EAN-13
 form, matching the app. Do not change `catalogProductId`, `source`, or
 `sourceProductId` between revisions for the same real product.
 
+Use broad shelf categories that stay useful as filters when the catalog grows,
+such as `Canned Goods`, `Snacks`, `Biscuits`, `Bread`, `Beverages`, or
+`Instant Noodles`. Put the specific kind in the product name instead of making
+categories such as `Canned tuna`, `Corned beef`, or `Prawn crackers`.
+
 A suggested price is an integer number of Philippine centavos. Include one
 only for an exact product-and-size match from a dated, reviewable source. The
 builder then requires an audit record:
@@ -113,20 +118,30 @@ and mismatched image extensions are rejected.
 
 ## Import and revision semantics
 
-Import is additive and repair-only. The app validates the complete pack, then
-matches a row by `(source, sourceProductId)` or canonical barcode. A missing
-row is created with the suggested price, or zero when none is supplied. An
-existing store row keeps its name, selling price, units, category, owner photo,
-and all other owner-managed values. The importer may link or repair a missing
-pack-owned image and advances the source timestamp without moving it backward.
-It never deletes products, settings, receipt data, or the cart.
+The app validates the complete pack, then matches a row by
+`(source, sourceProductId)` or canonical barcode. A missing row is created with
+the suggested price, or zero when none is supplied. Import always keeps
+products absent from the pack, settings, receipt data, and the cart.
+
+The importer offers two explicit conflict modes:
+
+- **Keep existing** (default) is additive and repair-only. A matched row keeps
+  its product details, main price, selling units, and owner photo. The importer
+  may link shared-source metadata or repair a missing pack-owned image, and it
+  never moves the stored source timestamp backward.
+- **Update matching and add new** replaces a matched row's barcode, name,
+  brand, category, main unit label, remote image URL, bundled catalog image,
+  and source timestamp. It replaces the main price only when the pack supplies
+  a suggested price. It preserves the row ID, owner-selected photo, and all
+  sub-unit prices.
 
 Use one stable `packId` and monotonically increasing revisions for a release
 line. The current app checks that `revision` is positive but does not store it
-or use it to block older packs; safe re-import behavior comes from the
-additive/repair-only merge. Corrected metadata for an already imported product
-does not replace the owner's row. If a release grows too large, create stable
-category packs instead of changing identities or relying on deletion.
+or use it to block older packs. Keep-existing mode remains safe even if an older
+pack is selected. Update-matching mode is an explicit overwrite, so publishers
+and users should apply releases in revision order. If a release grows too
+large, create stable category packs instead of changing identities or relying
+on deletion.
 
 ## Provenance and licensing
 

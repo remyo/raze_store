@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/money/money.dart';
+import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/core/storage/product_photo_services.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
@@ -104,6 +105,110 @@ void main() {
     expect(remover.deletedPaths, [processedPath]);
   });
 
+  testWidgets('takes and saves a photo while creating a product', (
+    tester,
+  ) async {
+    final directory = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('raze_store_create_photo_test_'),
+    ))!;
+    addTearDown(() => directory.delete(recursive: true));
+    final source = File('${directory.path}/camera.png');
+    await tester.runAsync(
+      () => source.writeAsBytes(base64Decode(_onePixelPng)),
+    );
+    final repository = _RecordingCatalogRepository();
+    final picker = _FakePhotoPicker(XFile(source.path));
+    final imageStore = _RecordingProductImageStore();
+    final router = GoRouter(
+      initialLocation: '/products/new',
+      routes: [
+        GoRoute(
+          path: '/products/new',
+          builder: (_, _) =>
+              const ProductFormScreen(goToProductsAfterSave: true),
+        ),
+        GoRoute(
+          path: '/products',
+          builder: (_, _) => const Scaffold(body: Text('Product list')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(repository),
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productPhotoPickerProvider.overrideWithValue(picker),
+          localProductImageStoreProvider.overrideWithValue(imageStore),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Take a photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    await tester.tap(find.text('Take a photo'));
+    await tester.pumpAndSettle();
+
+    expect(picker.cameraCalls, 1);
+    expect(find.text('Change photo'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('product-name-field')),
+      'Test product',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('product-main-price-field')),
+      '12.50',
+    );
+    await tester.tap(find.text('Save product'));
+    await tester.pumpAndSettle();
+
+    expect(repository.created, hasLength(1));
+    expect(imageStore.persistedSourcePaths, [source.path]);
+    final storedPath = repository.created.single.localImagePath;
+    expect(storedPath, isNotNull);
+    expect(File(storedPath!).existsSync(), isTrue);
+    expect(find.text('Product list'), findsOneWidget);
+  });
+
+  testWidgets('offers camera and gallery while editing a product', (
+    tester,
+  ) async {
+    final product = StoreProduct(
+      id: 'existing-product',
+      metadata: CatalogMetadata(name: 'Existing product'),
+      price: const Money.fromCentavos(1250),
+      createdAt: DateTime.utc(2026, 9, 3),
+      updatedAt: DateTime.utc(2026, 9, 3),
+    );
+    final repository = _RecordingCatalogRepository(watchedProduct: product);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(repository),
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: ProductFormScreen(productId: product.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit product'), findsOneWidget);
+    await tester.tap(find.text('Add photo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Take a photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+  });
+
   testWidgets('rejects the fallback main label for a sub-unit', (tester) async {
     await _pumpForm(tester);
 
@@ -156,6 +261,37 @@ void main() {
     );
   });
 
+  testWidgets('opens an explicit category picker while adding a product', (
+    tester,
+  ) async {
+    await _pumpForm(
+      tester,
+      categorySuggestions: const ['Canned Goods', 'Snacks'],
+    );
+
+    final picker = find.byKey(const ValueKey('choose-product-category'));
+    await tester.ensureVisible(picker);
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('product-category-options')),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(ListTile, 'Canned Goods'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-category-field')),
+          )
+          .controller
+          ?.text,
+      'Canned Goods',
+    );
+  });
+
   testWidgets('requires a main barcode when a sub-unit is added', (
     tester,
   ) async {
@@ -169,6 +305,84 @@ void main() {
       find.text('Add a main barcode for sub-unit prices.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a duplicate barcode offers the product that already owns it', (
+    tester,
+  ) async {
+    final existing = StoreProduct(
+      id: 'existing-coffee',
+      metadata: CatalogMetadata(
+        barcode: '4800012345678',
+        name: 'Existing coffee',
+      ),
+      price: const Money.fromCentavos(1250),
+      createdAt: DateTime.utc(2026, 9, 3),
+      updatedAt: DateTime.utc(2026, 9, 3),
+    );
+    final repository = _RecordingCatalogRepository(
+      duplicateBarcodeProduct: existing,
+    );
+    StoreProduct? routeResult;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, _) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                routeResult = await context.push<StoreProduct>('/products/new');
+              },
+              child: const Text('Open add product'),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/products/new',
+          builder: (_, _) => const ProductFormScreen(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(repository),
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+
+    await tester.tap(find.text('Open add product'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('product-name-field')),
+      'Accidental duplicate',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('product-main-price-field')),
+      '10.00',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('product-barcode-field')),
+      '4800012345678',
+    );
+    await tester.tap(find.text('Save product'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Barcode already saved'), findsOneWidget);
+    expect(find.textContaining('belongs to Existing coffee'), findsOneWidget);
+    expect(find.textContaining('no duplicate was created'), findsOneWidget);
+    expect(repository.created, hasLength(1));
+
+    await tester.tap(
+      find.byKey(const ValueKey('use-existing-barcode-product')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(routeResult?.id, existing.id);
+    expect(find.text('Open add product'), findsOneWidget);
   });
 
   testWidgets('setup handoff saves and navigates to the product list', (
@@ -301,11 +515,22 @@ Future<void> _pumpForm(
 }
 
 final class _RecordingCatalogRepository implements CatalogRepository {
+  _RecordingCatalogRepository({
+    this.watchedProduct,
+    this.duplicateBarcodeProduct,
+  });
+
+  final StoreProduct? watchedProduct;
+  final StoreProduct? duplicateBarcodeProduct;
   final List<ProductDraft> created = [];
 
   @override
   Future<StoreProduct> createProduct(ProductDraft draft) async {
     created.add(draft);
+    final duplicate = duplicateBarcodeProduct;
+    if (duplicate != null && duplicate.barcode == draft.barcode) {
+      throw DuplicateBarcodeException(draft.barcode!);
+    }
     return StoreProduct(
       id: 'created-product',
       metadata: draft.metadata,
@@ -319,8 +544,10 @@ final class _RecordingCatalogRepository implements CatalogRepository {
   Future<void> deleteProduct(String id) => throw UnimplementedError();
 
   @override
-  Future<StoreProduct?> findByBarcode(String rawBarcode) =>
-      throw UnimplementedError();
+  Future<StoreProduct?> findByBarcode(String rawBarcode) async {
+    final duplicate = duplicateBarcodeProduct;
+    return duplicate?.barcode == rawBarcode ? duplicate : null;
+  }
 
   @override
   Future<StoreProduct?> findBySource(String source, String sourceProductId) =>
@@ -338,23 +565,45 @@ final class _RecordingCatalogRepository implements CatalogRepository {
       throw UnimplementedError();
 
   @override
-  Stream<StoreProduct?> watchProduct(String id) => const Stream.empty();
+  Stream<StoreProduct?> watchProduct(String id) => watchedProduct == null
+      ? const Stream.empty()
+      : Stream.value(watchedProduct);
 
   @override
   Stream<List<StoreProduct>> watchProducts({String query = ''}) =>
       const Stream.empty();
 }
 
+final class _RecordingProductImageStore extends LocalProductImageStore {
+  _RecordingProductImageStore() : super(root: Directory.systemTemp);
+
+  final List<String> persistedSourcePaths = [];
+
+  @override
+  Future<String> persist({required XFile source}) async {
+    persistedSourcePaths.add(source.path);
+    return source.path;
+  }
+}
+
 final class _FakePhotoPicker implements ProductPhotoPicker {
-  const _FakePhotoPicker(this.file);
+  _FakePhotoPicker(this.file);
 
   final XFile file;
+  int cameraCalls = 0;
+  int galleryCalls = 0;
 
   @override
-  Future<XFile?> pickFromGallery() async => file;
+  Future<XFile?> pickFromGallery() async {
+    galleryCalls++;
+    return file;
+  }
 
   @override
-  Future<XFile?> takePhoto() async => file;
+  Future<XFile?> takePhoto() async {
+    cameraCalls++;
+    return file;
+  }
 }
 
 final class _FakeBackgroundRemover implements ProductBackgroundRemover {

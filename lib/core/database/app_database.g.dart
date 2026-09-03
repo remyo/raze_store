@@ -2541,6 +2541,1273 @@ class StoreProfilesCompanion extends UpdateCompanion<StoreProfile> {
   }
 }
 
+class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SalesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
+    'completed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _storeNameSnapshotMeta = const VerificationMeta(
+    'storeNameSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> storeNameSnapshot =
+      GeneratedColumn<String>(
+        'store_name_snapshot',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _storeAddressSnapshotMeta =
+      const VerificationMeta('storeAddressSnapshot');
+  @override
+  late final GeneratedColumn<String> storeAddressSnapshot =
+      GeneratedColumn<String>(
+        'store_address_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _storeContactSnapshotMeta =
+      const VerificationMeta('storeContactSnapshot');
+  @override
+  late final GeneratedColumn<String> storeContactSnapshot =
+      GeneratedColumn<String>(
+        'store_contact_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _footerMessageSnapshotMeta =
+      const VerificationMeta('footerMessageSnapshot');
+  @override
+  late final GeneratedColumn<String> footerMessageSnapshot =
+      GeneratedColumn<String>(
+        'footer_message_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _cashReceivedCentavosMeta =
+      const VerificationMeta('cashReceivedCentavos');
+  @override
+  late final GeneratedColumn<int> cashReceivedCentavos = GeneratedColumn<int>(
+    'cash_received_centavos',
+    aliasedName,
+    true,
+    check: () => const CustomExpression<bool>('cash_received_centavos >= 0'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    completedAt,
+    storeNameSnapshot,
+    storeAddressSnapshot,
+    storeContactSnapshot,
+    footerMessageSnapshot,
+    cashReceivedCentavos,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sales';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Sale> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_completedAtMeta);
+    }
+    if (data.containsKey('store_name_snapshot')) {
+      context.handle(
+        _storeNameSnapshotMeta,
+        storeNameSnapshot.isAcceptableOrUnknown(
+          data['store_name_snapshot']!,
+          _storeNameSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_storeNameSnapshotMeta);
+    }
+    if (data.containsKey('store_address_snapshot')) {
+      context.handle(
+        _storeAddressSnapshotMeta,
+        storeAddressSnapshot.isAcceptableOrUnknown(
+          data['store_address_snapshot']!,
+          _storeAddressSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('store_contact_snapshot')) {
+      context.handle(
+        _storeContactSnapshotMeta,
+        storeContactSnapshot.isAcceptableOrUnknown(
+          data['store_contact_snapshot']!,
+          _storeContactSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('footer_message_snapshot')) {
+      context.handle(
+        _footerMessageSnapshotMeta,
+        footerMessageSnapshot.isAcceptableOrUnknown(
+          data['footer_message_snapshot']!,
+          _footerMessageSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cash_received_centavos')) {
+      context.handle(
+        _cashReceivedCentavosMeta,
+        cashReceivedCentavos.isAcceptableOrUnknown(
+          data['cash_received_centavos']!,
+          _cashReceivedCentavosMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Sale map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Sale(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}completed_at'],
+      )!,
+      storeNameSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}store_name_snapshot'],
+      )!,
+      storeAddressSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}store_address_snapshot'],
+      ),
+      storeContactSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}store_contact_snapshot'],
+      ),
+      footerMessageSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}footer_message_snapshot'],
+      ),
+      cashReceivedCentavos: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cash_received_centavos'],
+      ),
+    );
+  }
+
+  @override
+  $SalesTable createAlias(String alias) {
+    return $SalesTable(attachedDatabase, alias);
+  }
+}
+
+class Sale extends DataClass implements Insertable<Sale> {
+  final String id;
+  final DateTime completedAt;
+  final String storeNameSnapshot;
+  final String? storeAddressSnapshot;
+  final String? storeContactSnapshot;
+  final String? footerMessageSnapshot;
+  final int? cashReceivedCentavos;
+  const Sale({
+    required this.id,
+    required this.completedAt,
+    required this.storeNameSnapshot,
+    this.storeAddressSnapshot,
+    this.storeContactSnapshot,
+    this.footerMessageSnapshot,
+    this.cashReceivedCentavos,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['completed_at'] = Variable<DateTime>(completedAt);
+    map['store_name_snapshot'] = Variable<String>(storeNameSnapshot);
+    if (!nullToAbsent || storeAddressSnapshot != null) {
+      map['store_address_snapshot'] = Variable<String>(storeAddressSnapshot);
+    }
+    if (!nullToAbsent || storeContactSnapshot != null) {
+      map['store_contact_snapshot'] = Variable<String>(storeContactSnapshot);
+    }
+    if (!nullToAbsent || footerMessageSnapshot != null) {
+      map['footer_message_snapshot'] = Variable<String>(footerMessageSnapshot);
+    }
+    if (!nullToAbsent || cashReceivedCentavos != null) {
+      map['cash_received_centavos'] = Variable<int>(cashReceivedCentavos);
+    }
+    return map;
+  }
+
+  SalesCompanion toCompanion(bool nullToAbsent) {
+    return SalesCompanion(
+      id: Value(id),
+      completedAt: Value(completedAt),
+      storeNameSnapshot: Value(storeNameSnapshot),
+      storeAddressSnapshot: storeAddressSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(storeAddressSnapshot),
+      storeContactSnapshot: storeContactSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(storeContactSnapshot),
+      footerMessageSnapshot: footerMessageSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(footerMessageSnapshot),
+      cashReceivedCentavos: cashReceivedCentavos == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cashReceivedCentavos),
+    );
+  }
+
+  factory Sale.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Sale(
+      id: serializer.fromJson<String>(json['id']),
+      completedAt: serializer.fromJson<DateTime>(json['completedAt']),
+      storeNameSnapshot: serializer.fromJson<String>(json['storeNameSnapshot']),
+      storeAddressSnapshot: serializer.fromJson<String?>(
+        json['storeAddressSnapshot'],
+      ),
+      storeContactSnapshot: serializer.fromJson<String?>(
+        json['storeContactSnapshot'],
+      ),
+      footerMessageSnapshot: serializer.fromJson<String?>(
+        json['footerMessageSnapshot'],
+      ),
+      cashReceivedCentavos: serializer.fromJson<int?>(
+        json['cashReceivedCentavos'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'completedAt': serializer.toJson<DateTime>(completedAt),
+      'storeNameSnapshot': serializer.toJson<String>(storeNameSnapshot),
+      'storeAddressSnapshot': serializer.toJson<String?>(storeAddressSnapshot),
+      'storeContactSnapshot': serializer.toJson<String?>(storeContactSnapshot),
+      'footerMessageSnapshot': serializer.toJson<String?>(
+        footerMessageSnapshot,
+      ),
+      'cashReceivedCentavos': serializer.toJson<int?>(cashReceivedCentavos),
+    };
+  }
+
+  Sale copyWith({
+    String? id,
+    DateTime? completedAt,
+    String? storeNameSnapshot,
+    Value<String?> storeAddressSnapshot = const Value.absent(),
+    Value<String?> storeContactSnapshot = const Value.absent(),
+    Value<String?> footerMessageSnapshot = const Value.absent(),
+    Value<int?> cashReceivedCentavos = const Value.absent(),
+  }) => Sale(
+    id: id ?? this.id,
+    completedAt: completedAt ?? this.completedAt,
+    storeNameSnapshot: storeNameSnapshot ?? this.storeNameSnapshot,
+    storeAddressSnapshot: storeAddressSnapshot.present
+        ? storeAddressSnapshot.value
+        : this.storeAddressSnapshot,
+    storeContactSnapshot: storeContactSnapshot.present
+        ? storeContactSnapshot.value
+        : this.storeContactSnapshot,
+    footerMessageSnapshot: footerMessageSnapshot.present
+        ? footerMessageSnapshot.value
+        : this.footerMessageSnapshot,
+    cashReceivedCentavos: cashReceivedCentavos.present
+        ? cashReceivedCentavos.value
+        : this.cashReceivedCentavos,
+  );
+  Sale copyWithCompanion(SalesCompanion data) {
+    return Sale(
+      id: data.id.present ? data.id.value : this.id,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+      storeNameSnapshot: data.storeNameSnapshot.present
+          ? data.storeNameSnapshot.value
+          : this.storeNameSnapshot,
+      storeAddressSnapshot: data.storeAddressSnapshot.present
+          ? data.storeAddressSnapshot.value
+          : this.storeAddressSnapshot,
+      storeContactSnapshot: data.storeContactSnapshot.present
+          ? data.storeContactSnapshot.value
+          : this.storeContactSnapshot,
+      footerMessageSnapshot: data.footerMessageSnapshot.present
+          ? data.footerMessageSnapshot.value
+          : this.footerMessageSnapshot,
+      cashReceivedCentavos: data.cashReceivedCentavos.present
+          ? data.cashReceivedCentavos.value
+          : this.cashReceivedCentavos,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Sale(')
+          ..write('id: $id, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('storeNameSnapshot: $storeNameSnapshot, ')
+          ..write('storeAddressSnapshot: $storeAddressSnapshot, ')
+          ..write('storeContactSnapshot: $storeContactSnapshot, ')
+          ..write('footerMessageSnapshot: $footerMessageSnapshot, ')
+          ..write('cashReceivedCentavos: $cashReceivedCentavos')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    completedAt,
+    storeNameSnapshot,
+    storeAddressSnapshot,
+    storeContactSnapshot,
+    footerMessageSnapshot,
+    cashReceivedCentavos,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Sale &&
+          other.id == this.id &&
+          other.completedAt == this.completedAt &&
+          other.storeNameSnapshot == this.storeNameSnapshot &&
+          other.storeAddressSnapshot == this.storeAddressSnapshot &&
+          other.storeContactSnapshot == this.storeContactSnapshot &&
+          other.footerMessageSnapshot == this.footerMessageSnapshot &&
+          other.cashReceivedCentavos == this.cashReceivedCentavos);
+}
+
+class SalesCompanion extends UpdateCompanion<Sale> {
+  final Value<String> id;
+  final Value<DateTime> completedAt;
+  final Value<String> storeNameSnapshot;
+  final Value<String?> storeAddressSnapshot;
+  final Value<String?> storeContactSnapshot;
+  final Value<String?> footerMessageSnapshot;
+  final Value<int?> cashReceivedCentavos;
+  final Value<int> rowid;
+  const SalesCompanion({
+    this.id = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.storeNameSnapshot = const Value.absent(),
+    this.storeAddressSnapshot = const Value.absent(),
+    this.storeContactSnapshot = const Value.absent(),
+    this.footerMessageSnapshot = const Value.absent(),
+    this.cashReceivedCentavos = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SalesCompanion.insert({
+    required String id,
+    required DateTime completedAt,
+    required String storeNameSnapshot,
+    this.storeAddressSnapshot = const Value.absent(),
+    this.storeContactSnapshot = const Value.absent(),
+    this.footerMessageSnapshot = const Value.absent(),
+    this.cashReceivedCentavos = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       completedAt = Value(completedAt),
+       storeNameSnapshot = Value(storeNameSnapshot);
+  static Insertable<Sale> custom({
+    Expression<String>? id,
+    Expression<DateTime>? completedAt,
+    Expression<String>? storeNameSnapshot,
+    Expression<String>? storeAddressSnapshot,
+    Expression<String>? storeContactSnapshot,
+    Expression<String>? footerMessageSnapshot,
+    Expression<int>? cashReceivedCentavos,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (storeNameSnapshot != null) 'store_name_snapshot': storeNameSnapshot,
+      if (storeAddressSnapshot != null)
+        'store_address_snapshot': storeAddressSnapshot,
+      if (storeContactSnapshot != null)
+        'store_contact_snapshot': storeContactSnapshot,
+      if (footerMessageSnapshot != null)
+        'footer_message_snapshot': footerMessageSnapshot,
+      if (cashReceivedCentavos != null)
+        'cash_received_centavos': cashReceivedCentavos,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SalesCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? completedAt,
+    Value<String>? storeNameSnapshot,
+    Value<String?>? storeAddressSnapshot,
+    Value<String?>? storeContactSnapshot,
+    Value<String?>? footerMessageSnapshot,
+    Value<int?>? cashReceivedCentavos,
+    Value<int>? rowid,
+  }) {
+    return SalesCompanion(
+      id: id ?? this.id,
+      completedAt: completedAt ?? this.completedAt,
+      storeNameSnapshot: storeNameSnapshot ?? this.storeNameSnapshot,
+      storeAddressSnapshot: storeAddressSnapshot ?? this.storeAddressSnapshot,
+      storeContactSnapshot: storeContactSnapshot ?? this.storeContactSnapshot,
+      footerMessageSnapshot:
+          footerMessageSnapshot ?? this.footerMessageSnapshot,
+      cashReceivedCentavos: cashReceivedCentavos ?? this.cashReceivedCentavos,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    if (storeNameSnapshot.present) {
+      map['store_name_snapshot'] = Variable<String>(storeNameSnapshot.value);
+    }
+    if (storeAddressSnapshot.present) {
+      map['store_address_snapshot'] = Variable<String>(
+        storeAddressSnapshot.value,
+      );
+    }
+    if (storeContactSnapshot.present) {
+      map['store_contact_snapshot'] = Variable<String>(
+        storeContactSnapshot.value,
+      );
+    }
+    if (footerMessageSnapshot.present) {
+      map['footer_message_snapshot'] = Variable<String>(
+        footerMessageSnapshot.value,
+      );
+    }
+    if (cashReceivedCentavos.present) {
+      map['cash_received_centavos'] = Variable<int>(cashReceivedCentavos.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SalesCompanion(')
+          ..write('id: $id, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('storeNameSnapshot: $storeNameSnapshot, ')
+          ..write('storeAddressSnapshot: $storeAddressSnapshot, ')
+          ..write('storeContactSnapshot: $storeContactSnapshot, ')
+          ..write('footerMessageSnapshot: $footerMessageSnapshot, ')
+          ..write('cashReceivedCentavos: $cashReceivedCentavos, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SaleLinesTable extends SaleLines
+    with TableInfo<$SaleLinesTable, SaleLine> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SaleLinesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _saleIdMeta = const VerificationMeta('saleId');
+  @override
+  late final GeneratedColumn<String> saleId = GeneratedColumn<String>(
+    'sale_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sales (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    check: () => const CustomExpression<bool>('position >= 0'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _productIdSnapshotMeta = const VerificationMeta(
+    'productIdSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> productIdSnapshot =
+      GeneratedColumn<String>(
+        'product_id_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _sellingUnitIdSnapshotMeta =
+      const VerificationMeta('sellingUnitIdSnapshot');
+  @override
+  late final GeneratedColumn<String> sellingUnitIdSnapshot =
+      GeneratedColumn<String>(
+        'selling_unit_id_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _barcodeSnapshotMeta = const VerificationMeta(
+    'barcodeSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> barcodeSnapshot = GeneratedColumn<String>(
+    'barcode_snapshot',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameSnapshotMeta = const VerificationMeta(
+    'nameSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> nameSnapshot = GeneratedColumn<String>(
+    'name_snapshot',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _brandSnapshotMeta = const VerificationMeta(
+    'brandSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> brandSnapshot = GeneratedColumn<String>(
+    'brand_snapshot',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _unitLabelSnapshotMeta = const VerificationMeta(
+    'unitLabelSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> unitLabelSnapshot =
+      GeneratedColumn<String>(
+        'unit_label_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _imagePathSnapshotMeta = const VerificationMeta(
+    'imagePathSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> imagePathSnapshot =
+      GeneratedColumn<String>(
+        'image_path_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _unitPriceCentavosMeta = const VerificationMeta(
+    'unitPriceCentavos',
+  );
+  @override
+  late final GeneratedColumn<int> unitPriceCentavos = GeneratedColumn<int>(
+    'unit_price_centavos',
+    aliasedName,
+    false,
+    check: () => const CustomExpression<bool>('unit_price_centavos >= 0'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    check: () => const CustomExpression<bool>('quantity > 0'),
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    saleId,
+    position,
+    productIdSnapshot,
+    sellingUnitIdSnapshot,
+    barcodeSnapshot,
+    nameSnapshot,
+    brandSnapshot,
+    unitLabelSnapshot,
+    imagePathSnapshot,
+    unitPriceCentavos,
+    quantity,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sale_lines';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SaleLine> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sale_id')) {
+      context.handle(
+        _saleIdMeta,
+        saleId.isAcceptableOrUnknown(data['sale_id']!, _saleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_saleIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('product_id_snapshot')) {
+      context.handle(
+        _productIdSnapshotMeta,
+        productIdSnapshot.isAcceptableOrUnknown(
+          data['product_id_snapshot']!,
+          _productIdSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('selling_unit_id_snapshot')) {
+      context.handle(
+        _sellingUnitIdSnapshotMeta,
+        sellingUnitIdSnapshot.isAcceptableOrUnknown(
+          data['selling_unit_id_snapshot']!,
+          _sellingUnitIdSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('barcode_snapshot')) {
+      context.handle(
+        _barcodeSnapshotMeta,
+        barcodeSnapshot.isAcceptableOrUnknown(
+          data['barcode_snapshot']!,
+          _barcodeSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name_snapshot')) {
+      context.handle(
+        _nameSnapshotMeta,
+        nameSnapshot.isAcceptableOrUnknown(
+          data['name_snapshot']!,
+          _nameSnapshotMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_nameSnapshotMeta);
+    }
+    if (data.containsKey('brand_snapshot')) {
+      context.handle(
+        _brandSnapshotMeta,
+        brandSnapshot.isAcceptableOrUnknown(
+          data['brand_snapshot']!,
+          _brandSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unit_label_snapshot')) {
+      context.handle(
+        _unitLabelSnapshotMeta,
+        unitLabelSnapshot.isAcceptableOrUnknown(
+          data['unit_label_snapshot']!,
+          _unitLabelSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_path_snapshot')) {
+      context.handle(
+        _imagePathSnapshotMeta,
+        imagePathSnapshot.isAcceptableOrUnknown(
+          data['image_path_snapshot']!,
+          _imagePathSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unit_price_centavos')) {
+      context.handle(
+        _unitPriceCentavosMeta,
+        unitPriceCentavos.isAcceptableOrUnknown(
+          data['unit_price_centavos']!,
+          _unitPriceCentavosMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_unitPriceCentavosMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {saleId, position};
+  @override
+  SaleLine map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SaleLine(
+      saleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sale_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      productIdSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_id_snapshot'],
+      ),
+      sellingUnitIdSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selling_unit_id_snapshot'],
+      ),
+      barcodeSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}barcode_snapshot'],
+      ),
+      nameSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name_snapshot'],
+      )!,
+      brandSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}brand_snapshot'],
+      ),
+      unitLabelSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_label_snapshot'],
+      ),
+      imagePathSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_path_snapshot'],
+      ),
+      unitPriceCentavos: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unit_price_centavos'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+    );
+  }
+
+  @override
+  $SaleLinesTable createAlias(String alias) {
+    return $SaleLinesTable(attachedDatabase, alias);
+  }
+}
+
+class SaleLine extends DataClass implements Insertable<SaleLine> {
+  final String saleId;
+  final int position;
+  final String? productIdSnapshot;
+  final String? sellingUnitIdSnapshot;
+  final String? barcodeSnapshot;
+  final String nameSnapshot;
+  final String? brandSnapshot;
+  final String? unitLabelSnapshot;
+  final String? imagePathSnapshot;
+  final int unitPriceCentavos;
+  final int quantity;
+  const SaleLine({
+    required this.saleId,
+    required this.position,
+    this.productIdSnapshot,
+    this.sellingUnitIdSnapshot,
+    this.barcodeSnapshot,
+    required this.nameSnapshot,
+    this.brandSnapshot,
+    this.unitLabelSnapshot,
+    this.imagePathSnapshot,
+    required this.unitPriceCentavos,
+    required this.quantity,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sale_id'] = Variable<String>(saleId);
+    map['position'] = Variable<int>(position);
+    if (!nullToAbsent || productIdSnapshot != null) {
+      map['product_id_snapshot'] = Variable<String>(productIdSnapshot);
+    }
+    if (!nullToAbsent || sellingUnitIdSnapshot != null) {
+      map['selling_unit_id_snapshot'] = Variable<String>(sellingUnitIdSnapshot);
+    }
+    if (!nullToAbsent || barcodeSnapshot != null) {
+      map['barcode_snapshot'] = Variable<String>(barcodeSnapshot);
+    }
+    map['name_snapshot'] = Variable<String>(nameSnapshot);
+    if (!nullToAbsent || brandSnapshot != null) {
+      map['brand_snapshot'] = Variable<String>(brandSnapshot);
+    }
+    if (!nullToAbsent || unitLabelSnapshot != null) {
+      map['unit_label_snapshot'] = Variable<String>(unitLabelSnapshot);
+    }
+    if (!nullToAbsent || imagePathSnapshot != null) {
+      map['image_path_snapshot'] = Variable<String>(imagePathSnapshot);
+    }
+    map['unit_price_centavos'] = Variable<int>(unitPriceCentavos);
+    map['quantity'] = Variable<int>(quantity);
+    return map;
+  }
+
+  SaleLinesCompanion toCompanion(bool nullToAbsent) {
+    return SaleLinesCompanion(
+      saleId: Value(saleId),
+      position: Value(position),
+      productIdSnapshot: productIdSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(productIdSnapshot),
+      sellingUnitIdSnapshot: sellingUnitIdSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sellingUnitIdSnapshot),
+      barcodeSnapshot: barcodeSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(barcodeSnapshot),
+      nameSnapshot: Value(nameSnapshot),
+      brandSnapshot: brandSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(brandSnapshot),
+      unitLabelSnapshot: unitLabelSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unitLabelSnapshot),
+      imagePathSnapshot: imagePathSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imagePathSnapshot),
+      unitPriceCentavos: Value(unitPriceCentavos),
+      quantity: Value(quantity),
+    );
+  }
+
+  factory SaleLine.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SaleLine(
+      saleId: serializer.fromJson<String>(json['saleId']),
+      position: serializer.fromJson<int>(json['position']),
+      productIdSnapshot: serializer.fromJson<String?>(
+        json['productIdSnapshot'],
+      ),
+      sellingUnitIdSnapshot: serializer.fromJson<String?>(
+        json['sellingUnitIdSnapshot'],
+      ),
+      barcodeSnapshot: serializer.fromJson<String?>(json['barcodeSnapshot']),
+      nameSnapshot: serializer.fromJson<String>(json['nameSnapshot']),
+      brandSnapshot: serializer.fromJson<String?>(json['brandSnapshot']),
+      unitLabelSnapshot: serializer.fromJson<String?>(
+        json['unitLabelSnapshot'],
+      ),
+      imagePathSnapshot: serializer.fromJson<String?>(
+        json['imagePathSnapshot'],
+      ),
+      unitPriceCentavos: serializer.fromJson<int>(json['unitPriceCentavos']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'saleId': serializer.toJson<String>(saleId),
+      'position': serializer.toJson<int>(position),
+      'productIdSnapshot': serializer.toJson<String?>(productIdSnapshot),
+      'sellingUnitIdSnapshot': serializer.toJson<String?>(
+        sellingUnitIdSnapshot,
+      ),
+      'barcodeSnapshot': serializer.toJson<String?>(barcodeSnapshot),
+      'nameSnapshot': serializer.toJson<String>(nameSnapshot),
+      'brandSnapshot': serializer.toJson<String?>(brandSnapshot),
+      'unitLabelSnapshot': serializer.toJson<String?>(unitLabelSnapshot),
+      'imagePathSnapshot': serializer.toJson<String?>(imagePathSnapshot),
+      'unitPriceCentavos': serializer.toJson<int>(unitPriceCentavos),
+      'quantity': serializer.toJson<int>(quantity),
+    };
+  }
+
+  SaleLine copyWith({
+    String? saleId,
+    int? position,
+    Value<String?> productIdSnapshot = const Value.absent(),
+    Value<String?> sellingUnitIdSnapshot = const Value.absent(),
+    Value<String?> barcodeSnapshot = const Value.absent(),
+    String? nameSnapshot,
+    Value<String?> brandSnapshot = const Value.absent(),
+    Value<String?> unitLabelSnapshot = const Value.absent(),
+    Value<String?> imagePathSnapshot = const Value.absent(),
+    int? unitPriceCentavos,
+    int? quantity,
+  }) => SaleLine(
+    saleId: saleId ?? this.saleId,
+    position: position ?? this.position,
+    productIdSnapshot: productIdSnapshot.present
+        ? productIdSnapshot.value
+        : this.productIdSnapshot,
+    sellingUnitIdSnapshot: sellingUnitIdSnapshot.present
+        ? sellingUnitIdSnapshot.value
+        : this.sellingUnitIdSnapshot,
+    barcodeSnapshot: barcodeSnapshot.present
+        ? barcodeSnapshot.value
+        : this.barcodeSnapshot,
+    nameSnapshot: nameSnapshot ?? this.nameSnapshot,
+    brandSnapshot: brandSnapshot.present
+        ? brandSnapshot.value
+        : this.brandSnapshot,
+    unitLabelSnapshot: unitLabelSnapshot.present
+        ? unitLabelSnapshot.value
+        : this.unitLabelSnapshot,
+    imagePathSnapshot: imagePathSnapshot.present
+        ? imagePathSnapshot.value
+        : this.imagePathSnapshot,
+    unitPriceCentavos: unitPriceCentavos ?? this.unitPriceCentavos,
+    quantity: quantity ?? this.quantity,
+  );
+  SaleLine copyWithCompanion(SaleLinesCompanion data) {
+    return SaleLine(
+      saleId: data.saleId.present ? data.saleId.value : this.saleId,
+      position: data.position.present ? data.position.value : this.position,
+      productIdSnapshot: data.productIdSnapshot.present
+          ? data.productIdSnapshot.value
+          : this.productIdSnapshot,
+      sellingUnitIdSnapshot: data.sellingUnitIdSnapshot.present
+          ? data.sellingUnitIdSnapshot.value
+          : this.sellingUnitIdSnapshot,
+      barcodeSnapshot: data.barcodeSnapshot.present
+          ? data.barcodeSnapshot.value
+          : this.barcodeSnapshot,
+      nameSnapshot: data.nameSnapshot.present
+          ? data.nameSnapshot.value
+          : this.nameSnapshot,
+      brandSnapshot: data.brandSnapshot.present
+          ? data.brandSnapshot.value
+          : this.brandSnapshot,
+      unitLabelSnapshot: data.unitLabelSnapshot.present
+          ? data.unitLabelSnapshot.value
+          : this.unitLabelSnapshot,
+      imagePathSnapshot: data.imagePathSnapshot.present
+          ? data.imagePathSnapshot.value
+          : this.imagePathSnapshot,
+      unitPriceCentavos: data.unitPriceCentavos.present
+          ? data.unitPriceCentavos.value
+          : this.unitPriceCentavos,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SaleLine(')
+          ..write('saleId: $saleId, ')
+          ..write('position: $position, ')
+          ..write('productIdSnapshot: $productIdSnapshot, ')
+          ..write('sellingUnitIdSnapshot: $sellingUnitIdSnapshot, ')
+          ..write('barcodeSnapshot: $barcodeSnapshot, ')
+          ..write('nameSnapshot: $nameSnapshot, ')
+          ..write('brandSnapshot: $brandSnapshot, ')
+          ..write('unitLabelSnapshot: $unitLabelSnapshot, ')
+          ..write('imagePathSnapshot: $imagePathSnapshot, ')
+          ..write('unitPriceCentavos: $unitPriceCentavos, ')
+          ..write('quantity: $quantity')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    saleId,
+    position,
+    productIdSnapshot,
+    sellingUnitIdSnapshot,
+    barcodeSnapshot,
+    nameSnapshot,
+    brandSnapshot,
+    unitLabelSnapshot,
+    imagePathSnapshot,
+    unitPriceCentavos,
+    quantity,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SaleLine &&
+          other.saleId == this.saleId &&
+          other.position == this.position &&
+          other.productIdSnapshot == this.productIdSnapshot &&
+          other.sellingUnitIdSnapshot == this.sellingUnitIdSnapshot &&
+          other.barcodeSnapshot == this.barcodeSnapshot &&
+          other.nameSnapshot == this.nameSnapshot &&
+          other.brandSnapshot == this.brandSnapshot &&
+          other.unitLabelSnapshot == this.unitLabelSnapshot &&
+          other.imagePathSnapshot == this.imagePathSnapshot &&
+          other.unitPriceCentavos == this.unitPriceCentavos &&
+          other.quantity == this.quantity);
+}
+
+class SaleLinesCompanion extends UpdateCompanion<SaleLine> {
+  final Value<String> saleId;
+  final Value<int> position;
+  final Value<String?> productIdSnapshot;
+  final Value<String?> sellingUnitIdSnapshot;
+  final Value<String?> barcodeSnapshot;
+  final Value<String> nameSnapshot;
+  final Value<String?> brandSnapshot;
+  final Value<String?> unitLabelSnapshot;
+  final Value<String?> imagePathSnapshot;
+  final Value<int> unitPriceCentavos;
+  final Value<int> quantity;
+  final Value<int> rowid;
+  const SaleLinesCompanion({
+    this.saleId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.productIdSnapshot = const Value.absent(),
+    this.sellingUnitIdSnapshot = const Value.absent(),
+    this.barcodeSnapshot = const Value.absent(),
+    this.nameSnapshot = const Value.absent(),
+    this.brandSnapshot = const Value.absent(),
+    this.unitLabelSnapshot = const Value.absent(),
+    this.imagePathSnapshot = const Value.absent(),
+    this.unitPriceCentavos = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SaleLinesCompanion.insert({
+    required String saleId,
+    required int position,
+    this.productIdSnapshot = const Value.absent(),
+    this.sellingUnitIdSnapshot = const Value.absent(),
+    this.barcodeSnapshot = const Value.absent(),
+    required String nameSnapshot,
+    this.brandSnapshot = const Value.absent(),
+    this.unitLabelSnapshot = const Value.absent(),
+    this.imagePathSnapshot = const Value.absent(),
+    required int unitPriceCentavos,
+    required int quantity,
+    this.rowid = const Value.absent(),
+  }) : saleId = Value(saleId),
+       position = Value(position),
+       nameSnapshot = Value(nameSnapshot),
+       unitPriceCentavos = Value(unitPriceCentavos),
+       quantity = Value(quantity);
+  static Insertable<SaleLine> custom({
+    Expression<String>? saleId,
+    Expression<int>? position,
+    Expression<String>? productIdSnapshot,
+    Expression<String>? sellingUnitIdSnapshot,
+    Expression<String>? barcodeSnapshot,
+    Expression<String>? nameSnapshot,
+    Expression<String>? brandSnapshot,
+    Expression<String>? unitLabelSnapshot,
+    Expression<String>? imagePathSnapshot,
+    Expression<int>? unitPriceCentavos,
+    Expression<int>? quantity,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (saleId != null) 'sale_id': saleId,
+      if (position != null) 'position': position,
+      if (productIdSnapshot != null) 'product_id_snapshot': productIdSnapshot,
+      if (sellingUnitIdSnapshot != null)
+        'selling_unit_id_snapshot': sellingUnitIdSnapshot,
+      if (barcodeSnapshot != null) 'barcode_snapshot': barcodeSnapshot,
+      if (nameSnapshot != null) 'name_snapshot': nameSnapshot,
+      if (brandSnapshot != null) 'brand_snapshot': brandSnapshot,
+      if (unitLabelSnapshot != null) 'unit_label_snapshot': unitLabelSnapshot,
+      if (imagePathSnapshot != null) 'image_path_snapshot': imagePathSnapshot,
+      if (unitPriceCentavos != null) 'unit_price_centavos': unitPriceCentavos,
+      if (quantity != null) 'quantity': quantity,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SaleLinesCompanion copyWith({
+    Value<String>? saleId,
+    Value<int>? position,
+    Value<String?>? productIdSnapshot,
+    Value<String?>? sellingUnitIdSnapshot,
+    Value<String?>? barcodeSnapshot,
+    Value<String>? nameSnapshot,
+    Value<String?>? brandSnapshot,
+    Value<String?>? unitLabelSnapshot,
+    Value<String?>? imagePathSnapshot,
+    Value<int>? unitPriceCentavos,
+    Value<int>? quantity,
+    Value<int>? rowid,
+  }) {
+    return SaleLinesCompanion(
+      saleId: saleId ?? this.saleId,
+      position: position ?? this.position,
+      productIdSnapshot: productIdSnapshot ?? this.productIdSnapshot,
+      sellingUnitIdSnapshot:
+          sellingUnitIdSnapshot ?? this.sellingUnitIdSnapshot,
+      barcodeSnapshot: barcodeSnapshot ?? this.barcodeSnapshot,
+      nameSnapshot: nameSnapshot ?? this.nameSnapshot,
+      brandSnapshot: brandSnapshot ?? this.brandSnapshot,
+      unitLabelSnapshot: unitLabelSnapshot ?? this.unitLabelSnapshot,
+      imagePathSnapshot: imagePathSnapshot ?? this.imagePathSnapshot,
+      unitPriceCentavos: unitPriceCentavos ?? this.unitPriceCentavos,
+      quantity: quantity ?? this.quantity,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (saleId.present) {
+      map['sale_id'] = Variable<String>(saleId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (productIdSnapshot.present) {
+      map['product_id_snapshot'] = Variable<String>(productIdSnapshot.value);
+    }
+    if (sellingUnitIdSnapshot.present) {
+      map['selling_unit_id_snapshot'] = Variable<String>(
+        sellingUnitIdSnapshot.value,
+      );
+    }
+    if (barcodeSnapshot.present) {
+      map['barcode_snapshot'] = Variable<String>(barcodeSnapshot.value);
+    }
+    if (nameSnapshot.present) {
+      map['name_snapshot'] = Variable<String>(nameSnapshot.value);
+    }
+    if (brandSnapshot.present) {
+      map['brand_snapshot'] = Variable<String>(brandSnapshot.value);
+    }
+    if (unitLabelSnapshot.present) {
+      map['unit_label_snapshot'] = Variable<String>(unitLabelSnapshot.value);
+    }
+    if (imagePathSnapshot.present) {
+      map['image_path_snapshot'] = Variable<String>(imagePathSnapshot.value);
+    }
+    if (unitPriceCentavos.present) {
+      map['unit_price_centavos'] = Variable<int>(unitPriceCentavos.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SaleLinesCompanion(')
+          ..write('saleId: $saleId, ')
+          ..write('position: $position, ')
+          ..write('productIdSnapshot: $productIdSnapshot, ')
+          ..write('sellingUnitIdSnapshot: $sellingUnitIdSnapshot, ')
+          ..write('barcodeSnapshot: $barcodeSnapshot, ')
+          ..write('nameSnapshot: $nameSnapshot, ')
+          ..write('brandSnapshot: $brandSnapshot, ')
+          ..write('unitLabelSnapshot: $unitLabelSnapshot, ')
+          ..write('imagePathSnapshot: $imagePathSnapshot, ')
+          ..write('unitPriceCentavos: $unitPriceCentavos, ')
+          ..write('quantity: $quantity, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2549,6 +3816,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ProductSellingUnitsTable(this);
   late final $DraftCartItemsTable draftCartItems = $DraftCartItemsTable(this);
   late final $StoreProfilesTable storeProfiles = $StoreProfilesTable(this);
+  late final $SalesTable sales = $SalesTable(this);
+  late final $SaleLinesTable saleLines = $SaleLinesTable(this);
   late final Index storeProductsBarcodeUniqueIdx = Index(
     'store_products_barcode_unique_idx',
     'CREATE UNIQUE INDEX store_products_barcode_unique_idx ON store_products (barcode)',
@@ -2565,6 +3834,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'product_selling_units_product_position_idx',
     'CREATE INDEX product_selling_units_product_position_idx ON product_selling_units (product_id, position)',
   );
+  late final Index salesCompletedAtIdx = Index(
+    'sales_completed_at_idx',
+    'CREATE INDEX sales_completed_at_idx ON sales (completed_at)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2574,10 +3847,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     productSellingUnits,
     draftCartItems,
     storeProfiles,
+    sales,
+    saleLines,
     storeProductsBarcodeUniqueIdx,
     storeProductsNameIdx,
     storeProductsSourceIdentityUniqueIdx,
     productSellingUnitsProductPositionIdx,
+    salesCompletedAtIdx,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2587,6 +3863,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('product_selling_units', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sales',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sale_lines', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -4053,6 +5336,794 @@ typedef $$StoreProfilesTableProcessedTableManager =
       StoreProfile,
       PrefetchHooks Function()
     >;
+typedef $$SalesTableCreateCompanionBuilder =
+    SalesCompanion Function({
+      required String id,
+      required DateTime completedAt,
+      required String storeNameSnapshot,
+      Value<String?> storeAddressSnapshot,
+      Value<String?> storeContactSnapshot,
+      Value<String?> footerMessageSnapshot,
+      Value<int?> cashReceivedCentavos,
+      Value<int> rowid,
+    });
+typedef $$SalesTableUpdateCompanionBuilder =
+    SalesCompanion Function({
+      Value<String> id,
+      Value<DateTime> completedAt,
+      Value<String> storeNameSnapshot,
+      Value<String?> storeAddressSnapshot,
+      Value<String?> storeContactSnapshot,
+      Value<String?> footerMessageSnapshot,
+      Value<int?> cashReceivedCentavos,
+      Value<int> rowid,
+    });
+
+final class $$SalesTableReferences
+    extends BaseReferences<_$AppDatabase, $SalesTable, Sale> {
+  $$SalesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$SaleLinesTable, List<SaleLine>>
+  _saleLinesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.saleLines,
+    aliasName: $_aliasNameGenerator(db.sales.id, db.saleLines.saleId),
+  );
+
+  $$SaleLinesTableProcessedTableManager get saleLinesRefs {
+    final manager = $$SaleLinesTableTableManager(
+      $_db,
+      $_db.saleLines,
+    ).filter((f) => f.saleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_saleLinesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$SalesTableFilterComposer extends Composer<_$AppDatabase, $SalesTable> {
+  $$SalesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storeNameSnapshot => $composableBuilder(
+    column: $table.storeNameSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storeAddressSnapshot => $composableBuilder(
+    column: $table.storeAddressSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get storeContactSnapshot => $composableBuilder(
+    column: $table.storeContactSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get footerMessageSnapshot => $composableBuilder(
+    column: $table.footerMessageSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cashReceivedCentavos => $composableBuilder(
+    column: $table.cashReceivedCentavos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> saleLinesRefs(
+    Expression<bool> Function($$SaleLinesTableFilterComposer f) f,
+  ) {
+    final $$SaleLinesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.saleLines,
+      getReferencedColumn: (t) => t.saleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SaleLinesTableFilterComposer(
+            $db: $db,
+            $table: $db.saleLines,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SalesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SalesTable> {
+  $$SalesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storeNameSnapshot => $composableBuilder(
+    column: $table.storeNameSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storeAddressSnapshot => $composableBuilder(
+    column: $table.storeAddressSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get storeContactSnapshot => $composableBuilder(
+    column: $table.storeContactSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get footerMessageSnapshot => $composableBuilder(
+    column: $table.footerMessageSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cashReceivedCentavos => $composableBuilder(
+    column: $table.cashReceivedCentavos,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SalesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SalesTable> {
+  $$SalesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get storeNameSnapshot => $composableBuilder(
+    column: $table.storeNameSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get storeAddressSnapshot => $composableBuilder(
+    column: $table.storeAddressSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get storeContactSnapshot => $composableBuilder(
+    column: $table.storeContactSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get footerMessageSnapshot => $composableBuilder(
+    column: $table.footerMessageSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cashReceivedCentavos => $composableBuilder(
+    column: $table.cashReceivedCentavos,
+    builder: (column) => column,
+  );
+
+  Expression<T> saleLinesRefs<T extends Object>(
+    Expression<T> Function($$SaleLinesTableAnnotationComposer a) f,
+  ) {
+    final $$SaleLinesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.saleLines,
+      getReferencedColumn: (t) => t.saleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SaleLinesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.saleLines,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SalesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SalesTable,
+          Sale,
+          $$SalesTableFilterComposer,
+          $$SalesTableOrderingComposer,
+          $$SalesTableAnnotationComposer,
+          $$SalesTableCreateCompanionBuilder,
+          $$SalesTableUpdateCompanionBuilder,
+          (Sale, $$SalesTableReferences),
+          Sale,
+          PrefetchHooks Function({bool saleLinesRefs})
+        > {
+  $$SalesTableTableManager(_$AppDatabase db, $SalesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SalesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SalesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SalesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> completedAt = const Value.absent(),
+                Value<String> storeNameSnapshot = const Value.absent(),
+                Value<String?> storeAddressSnapshot = const Value.absent(),
+                Value<String?> storeContactSnapshot = const Value.absent(),
+                Value<String?> footerMessageSnapshot = const Value.absent(),
+                Value<int?> cashReceivedCentavos = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SalesCompanion(
+                id: id,
+                completedAt: completedAt,
+                storeNameSnapshot: storeNameSnapshot,
+                storeAddressSnapshot: storeAddressSnapshot,
+                storeContactSnapshot: storeContactSnapshot,
+                footerMessageSnapshot: footerMessageSnapshot,
+                cashReceivedCentavos: cashReceivedCentavos,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required DateTime completedAt,
+                required String storeNameSnapshot,
+                Value<String?> storeAddressSnapshot = const Value.absent(),
+                Value<String?> storeContactSnapshot = const Value.absent(),
+                Value<String?> footerMessageSnapshot = const Value.absent(),
+                Value<int?> cashReceivedCentavos = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SalesCompanion.insert(
+                id: id,
+                completedAt: completedAt,
+                storeNameSnapshot: storeNameSnapshot,
+                storeAddressSnapshot: storeAddressSnapshot,
+                storeContactSnapshot: storeContactSnapshot,
+                footerMessageSnapshot: footerMessageSnapshot,
+                cashReceivedCentavos: cashReceivedCentavos,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable(table), $$SalesTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({saleLinesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (saleLinesRefs) db.saleLines],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (saleLinesRefs)
+                    await $_getPrefetchedData<Sale, $SalesTable, SaleLine>(
+                      currentTable: table,
+                      referencedTable: $$SalesTableReferences
+                          ._saleLinesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$SalesTableReferences(db, table, p0).saleLinesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.saleId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SalesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SalesTable,
+      Sale,
+      $$SalesTableFilterComposer,
+      $$SalesTableOrderingComposer,
+      $$SalesTableAnnotationComposer,
+      $$SalesTableCreateCompanionBuilder,
+      $$SalesTableUpdateCompanionBuilder,
+      (Sale, $$SalesTableReferences),
+      Sale,
+      PrefetchHooks Function({bool saleLinesRefs})
+    >;
+typedef $$SaleLinesTableCreateCompanionBuilder =
+    SaleLinesCompanion Function({
+      required String saleId,
+      required int position,
+      Value<String?> productIdSnapshot,
+      Value<String?> sellingUnitIdSnapshot,
+      Value<String?> barcodeSnapshot,
+      required String nameSnapshot,
+      Value<String?> brandSnapshot,
+      Value<String?> unitLabelSnapshot,
+      Value<String?> imagePathSnapshot,
+      required int unitPriceCentavos,
+      required int quantity,
+      Value<int> rowid,
+    });
+typedef $$SaleLinesTableUpdateCompanionBuilder =
+    SaleLinesCompanion Function({
+      Value<String> saleId,
+      Value<int> position,
+      Value<String?> productIdSnapshot,
+      Value<String?> sellingUnitIdSnapshot,
+      Value<String?> barcodeSnapshot,
+      Value<String> nameSnapshot,
+      Value<String?> brandSnapshot,
+      Value<String?> unitLabelSnapshot,
+      Value<String?> imagePathSnapshot,
+      Value<int> unitPriceCentavos,
+      Value<int> quantity,
+      Value<int> rowid,
+    });
+
+final class $$SaleLinesTableReferences
+    extends BaseReferences<_$AppDatabase, $SaleLinesTable, SaleLine> {
+  $$SaleLinesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SalesTable _saleIdTable(_$AppDatabase db) => db.sales.createAlias(
+    $_aliasNameGenerator(db.saleLines.saleId, db.sales.id),
+  );
+
+  $$SalesTableProcessedTableManager get saleId {
+    final $_column = $_itemColumn<String>('sale_id')!;
+
+    final manager = $$SalesTableTableManager(
+      $_db,
+      $_db.sales,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_saleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SaleLinesTableFilterComposer
+    extends Composer<_$AppDatabase, $SaleLinesTable> {
+  $$SaleLinesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get productIdSnapshot => $composableBuilder(
+    column: $table.productIdSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sellingUnitIdSnapshot => $composableBuilder(
+    column: $table.sellingUnitIdSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get barcodeSnapshot => $composableBuilder(
+    column: $table.barcodeSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nameSnapshot => $composableBuilder(
+    column: $table.nameSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get brandSnapshot => $composableBuilder(
+    column: $table.brandSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitLabelSnapshot => $composableBuilder(
+    column: $table.unitLabelSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imagePathSnapshot => $composableBuilder(
+    column: $table.imagePathSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unitPriceCentavos => $composableBuilder(
+    column: $table.unitPriceCentavos,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SalesTableFilterComposer get saleId {
+    final $$SalesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.saleId,
+      referencedTable: $db.sales,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SalesTableFilterComposer(
+            $db: $db,
+            $table: $db.sales,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SaleLinesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SaleLinesTable> {
+  $$SaleLinesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get productIdSnapshot => $composableBuilder(
+    column: $table.productIdSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sellingUnitIdSnapshot => $composableBuilder(
+    column: $table.sellingUnitIdSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get barcodeSnapshot => $composableBuilder(
+    column: $table.barcodeSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nameSnapshot => $composableBuilder(
+    column: $table.nameSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get brandSnapshot => $composableBuilder(
+    column: $table.brandSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitLabelSnapshot => $composableBuilder(
+    column: $table.unitLabelSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imagePathSnapshot => $composableBuilder(
+    column: $table.imagePathSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unitPriceCentavos => $composableBuilder(
+    column: $table.unitPriceCentavos,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SalesTableOrderingComposer get saleId {
+    final $$SalesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.saleId,
+      referencedTable: $db.sales,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SalesTableOrderingComposer(
+            $db: $db,
+            $table: $db.sales,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SaleLinesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SaleLinesTable> {
+  $$SaleLinesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get productIdSnapshot => $composableBuilder(
+    column: $table.productIdSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get sellingUnitIdSnapshot => $composableBuilder(
+    column: $table.sellingUnitIdSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get barcodeSnapshot => $composableBuilder(
+    column: $table.barcodeSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nameSnapshot => $composableBuilder(
+    column: $table.nameSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get brandSnapshot => $composableBuilder(
+    column: $table.brandSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get unitLabelSnapshot => $composableBuilder(
+    column: $table.unitLabelSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get imagePathSnapshot => $composableBuilder(
+    column: $table.imagePathSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get unitPriceCentavos => $composableBuilder(
+    column: $table.unitPriceCentavos,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  $$SalesTableAnnotationComposer get saleId {
+    final $$SalesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.saleId,
+      referencedTable: $db.sales,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SalesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.sales,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SaleLinesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SaleLinesTable,
+          SaleLine,
+          $$SaleLinesTableFilterComposer,
+          $$SaleLinesTableOrderingComposer,
+          $$SaleLinesTableAnnotationComposer,
+          $$SaleLinesTableCreateCompanionBuilder,
+          $$SaleLinesTableUpdateCompanionBuilder,
+          (SaleLine, $$SaleLinesTableReferences),
+          SaleLine,
+          PrefetchHooks Function({bool saleId})
+        > {
+  $$SaleLinesTableTableManager(_$AppDatabase db, $SaleLinesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SaleLinesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SaleLinesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SaleLinesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> saleId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String?> productIdSnapshot = const Value.absent(),
+                Value<String?> sellingUnitIdSnapshot = const Value.absent(),
+                Value<String?> barcodeSnapshot = const Value.absent(),
+                Value<String> nameSnapshot = const Value.absent(),
+                Value<String?> brandSnapshot = const Value.absent(),
+                Value<String?> unitLabelSnapshot = const Value.absent(),
+                Value<String?> imagePathSnapshot = const Value.absent(),
+                Value<int> unitPriceCentavos = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SaleLinesCompanion(
+                saleId: saleId,
+                position: position,
+                productIdSnapshot: productIdSnapshot,
+                sellingUnitIdSnapshot: sellingUnitIdSnapshot,
+                barcodeSnapshot: barcodeSnapshot,
+                nameSnapshot: nameSnapshot,
+                brandSnapshot: brandSnapshot,
+                unitLabelSnapshot: unitLabelSnapshot,
+                imagePathSnapshot: imagePathSnapshot,
+                unitPriceCentavos: unitPriceCentavos,
+                quantity: quantity,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String saleId,
+                required int position,
+                Value<String?> productIdSnapshot = const Value.absent(),
+                Value<String?> sellingUnitIdSnapshot = const Value.absent(),
+                Value<String?> barcodeSnapshot = const Value.absent(),
+                required String nameSnapshot,
+                Value<String?> brandSnapshot = const Value.absent(),
+                Value<String?> unitLabelSnapshot = const Value.absent(),
+                Value<String?> imagePathSnapshot = const Value.absent(),
+                required int unitPriceCentavos,
+                required int quantity,
+                Value<int> rowid = const Value.absent(),
+              }) => SaleLinesCompanion.insert(
+                saleId: saleId,
+                position: position,
+                productIdSnapshot: productIdSnapshot,
+                sellingUnitIdSnapshot: sellingUnitIdSnapshot,
+                barcodeSnapshot: barcodeSnapshot,
+                nameSnapshot: nameSnapshot,
+                brandSnapshot: brandSnapshot,
+                unitLabelSnapshot: unitLabelSnapshot,
+                imagePathSnapshot: imagePathSnapshot,
+                unitPriceCentavos: unitPriceCentavos,
+                quantity: quantity,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SaleLinesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({saleId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (saleId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.saleId,
+                                referencedTable: $$SaleLinesTableReferences
+                                    ._saleIdTable(db),
+                                referencedColumn: $$SaleLinesTableReferences
+                                    ._saleIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SaleLinesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SaleLinesTable,
+      SaleLine,
+      $$SaleLinesTableFilterComposer,
+      $$SaleLinesTableOrderingComposer,
+      $$SaleLinesTableAnnotationComposer,
+      $$SaleLinesTableCreateCompanionBuilder,
+      $$SaleLinesTableUpdateCompanionBuilder,
+      (SaleLine, $$SaleLinesTableReferences),
+      SaleLine,
+      PrefetchHooks Function({bool saleId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4065,4 +6136,8 @@ class $AppDatabaseManager {
       $$DraftCartItemsTableTableManager(_db, _db.draftCartItems);
   $$StoreProfilesTableTableManager get storeProfiles =>
       $$StoreProfilesTableTableManager(_db, _db.storeProfiles);
+  $$SalesTableTableManager get sales =>
+      $$SalesTableTableManager(_db, _db.sales);
+  $$SaleLinesTableTableManager get saleLines =>
+      $$SaleLinesTableTableManager(_db, _db.saleLines);
 }

@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:raze_store/core/barcode/barcode.dart';
 import 'package:raze_store/core/database/app_database.dart' as database;
 import 'package:raze_store/core/storage/local_product_image_store.dart';
+import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -21,7 +22,7 @@ final RegExp _portablePhotoPattern = RegExp(
   r'^photos/[a-f0-9]{28}\.[a-z0-9]{1,8}$',
 );
 
-/// Creates and restores a complete, offline Raze Store catalog archive.
+/// Creates and restores a complete, offline Raze Store archive.
 ///
 /// The archive is a versioned ZIP with a checksummed manifest. Restore fully
 /// validates and stages the archive before replacing any database rows.
@@ -42,7 +43,7 @@ final class CatalogBackupService {
            preferencesFactory ?? SharedPreferences.getInstance,
        _uuid = uuid;
 
-  static const archiveVersion = 2;
+  static const archiveVersion = 3;
   static const archiveFormat = 'raze-store-backup';
   static const archiveExtension = 'razestore';
   static const _oldestSupportedArchiveVersion = 1;
@@ -62,6 +63,9 @@ final class CatalogBackupService {
   static const _maximumProducts = 50000;
   static const _maximumSellingUnits = 100000;
   static const _maximumSellingUnitsPerProduct = 100;
+  static const _maximumSales = 250000;
+  static const _maximumSaleLines = 1000000;
+  static const _maximumSaleLinesPerSale = 1000;
 
   final database.AppDatabase _database;
   final LocalProductImageStore _imageStore;
@@ -82,25 +86,40 @@ final class CatalogBackupService {
       final snapshot = await _readSnapshot();
       _validateSnapshotForExport(snapshot);
       final stagedFiles = <String, File>{};
-      final portablePhotos = await _stagePhotos(
+      final stagedPhotos = await _stagePhotos(
         products: snapshot.products,
         staging: staging,
         stagedFiles: stagedFiles,
+      );
+      final portableSaleLineImages = await _stageSaleLineImages(
+        lines: snapshot.saleLines,
+        staging: staging,
+        stagedFiles: stagedFiles,
+        portableByCanonicalSource: stagedPhotos.portableByCanonicalSource,
       );
       final photoCount = stagedFiles.length;
 
       final data = <String, Object?>{
         'products': [
           for (final row in snapshot.products)
-            _productToJson(row, portablePhotos[row.id]),
+            _productToJson(row, stagedPhotos.byProduct[row.id]),
         ],
         'sellingUnits': [
           for (final row in snapshot.sellingUnits) _sellingUnitToJson(row),
+        ],
+        'sales': [for (final row in snapshot.sales) _saleToJson(row)],
+        'saleLines': [
+          for (final row in snapshot.saleLines)
+            _saleLineToJson(
+              row,
+              portableSaleLineImages[(row.saleId, row.position)],
+            ),
         ],
         'storeProfile': _profileToJson(snapshot.profile),
         'preferences': <String, Object?>{
           'themeMode': snapshot.themeMode,
           'storeSetupComplete': snapshot.storeSetupComplete,
+          'customCategories': snapshot.customCategories,
         },
       };
       final dataFile = File(p.join(staging.path, _dataPath));
@@ -147,6 +166,8 @@ final class CatalogBackupService {
           'counts': <String, Object?>{
             'products': snapshot.products.length,
             'sellingUnits': snapshot.sellingUnits.length,
+            'sales': snapshot.sales.length,
+            'saleLines': snapshot.saleLines.length,
             'photos': photoCount,
           },
         }),
@@ -229,21 +250,42 @@ final class CatalogBackupService {
       final oldPhotos = await _existingPhotoPaths();
       final restoredLocalPhotoPaths = <String, String>{};
       final restoredCatalogImagePaths = <String, String>{};
+      final restoredSaleLineImages = <(String, int), String>{};
+      final restoredByPortablePath = <String, String>{};
+
+      Future<String> restorePortablePhoto(String portablePath) async {
+        final existing = restoredByPortablePath[portablePath];
+        if (existing != null) return existing;
+        final stagedFile = _safeStageFile(staging!, portablePath);
+        final savedPath = await _imageStore.persistFile(stagedFile);
+        restoredByPortablePath[portablePath] = savedPath;
+        newPhotoPaths.add(savedPath);
+        return savedPath;
+      }
+
       for (final product in validated.data.products) {
         final localPhoto = product.localPhoto;
         if (localPhoto != null) {
-          final stagedFile = _safeStageFile(staging, localPhoto);
-          final savedPath = await _imageStore.persistFile(stagedFile);
-          restoredLocalPhotoPaths[product.id] = savedPath;
-          newPhotoPaths.add(savedPath);
+          restoredLocalPhotoPaths[product.id] = await restorePortablePhoto(
+            localPhoto,
+          );
         }
         final catalogImage = product.catalogImage;
         if (catalogImage != null) {
-          final stagedFile = _safeStageFile(staging, catalogImage);
-          final savedPath = await _imageStore.persistFile(stagedFile);
-          restoredCatalogImagePaths[product.id] = savedPath;
-          newPhotoPaths.add(savedPath);
+          restoredCatalogImagePaths[product.id] = await restorePortablePhoto(
+            catalogImage,
+          );
         }
+      }
+      for (final line in validated.data.saleLines) {
+        final image = line.imageReference;
+        if (image == null) continue;
+        restoredSaleLineImages[(
+          line.saleId,
+          line.position,
+        )] = _isRemoteImageReference(image)
+            ? image
+            : await restorePortablePhoto(image);
       }
 
       try {
@@ -251,6 +293,7 @@ final class CatalogBackupService {
           validated.data,
           restoredLocalPhotoPaths,
           restoredCatalogImagePaths,
+          restoredSaleLineImages,
         );
         databaseReplaced = true;
       } catch (_) {
@@ -280,8 +323,8 @@ final class CatalogBackupService {
       return CatalogTransferSuccess(
         action: CatalogTransferAction.backupRestore,
         message: preferencesRestored
-            ? 'Backup restored. Your local catalog was replaced.'
-            : 'Catalog, photos, and receipt details were restored, but the app appearance setting could not be restored.',
+            ? 'Backup restored. Your local catalog and sales history were replaced.'
+            : 'Catalog, sales, photos, and receipt details were restored, but some app settings could not be restored.',
         productCount: validated.data.products.length,
         sellingUnitCount: validated.data.sellingUnits.length,
         photoCount: newPhotoPaths.length,
@@ -324,27 +367,77 @@ final class CatalogBackupService {
     final databaseRows = await _database.transaction(() async {
       final products = await _database.select(_database.storeProducts).get();
       final units = await _database.select(_database.productSellingUnits).get();
+      final sales = await _database.select(_database.sales).get();
+      final saleLines = await _database.select(_database.saleLines).get();
       final profile = await _database
           .select(_database.storeProfiles)
           .getSingleOrNull();
-      return (products: products, units: units, profile: profile);
+      return (
+        products: products,
+        units: units,
+        sales: sales,
+        saleLines: saleLines,
+        profile: profile,
+      );
     });
     final preferences = await _preferencesFactory();
+    final rawCustomCategories =
+        preferences.getStringList(customCatalogCategoriesPreferenceKey) ??
+        const <String>[];
+    late final List<String> customCategories;
+    try {
+      customCategories = _parseCustomCategories(rawCustomCategories);
+    } on FormatException catch (error) {
+      throw _BackupException(
+        CatalogTransferFailureCode.validationFailed,
+        'Custom category settings are invalid. Review them before creating a backup.',
+        error,
+      );
+    }
     return _DatabaseSnapshot(
       products: databaseRows.products,
       sellingUnits: databaseRows.units,
+      sales: databaseRows.sales,
+      saleLines: databaseRows.saleLines,
       profile: databaseRows.profile,
       themeMode: preferences.getString(_themeModeKey),
       storeSetupComplete: preferences.getBool(_onboardingKey) ?? false,
+      customCategories: customCategories,
     );
   }
 
   void _validateSnapshotForExport(_DatabaseSnapshot snapshot) {
     if (snapshot.products.length > _maximumProducts ||
-        snapshot.sellingUnits.length > _maximumSellingUnits) {
+        snapshot.sellingUnits.length > _maximumSellingUnits ||
+        snapshot.sales.length > _maximumSales ||
+        snapshot.saleLines.length > _maximumSaleLines) {
       throw const _BackupException(
         CatalogTransferFailureCode.archiveTooLarge,
         'This catalog has too many records to back up safely.',
+      );
+    }
+    final saleIds = snapshot.sales.map((sale) => sale.id).toSet();
+    final lineCountBySale = <String, int>{};
+    for (final line in snapshot.saleLines) {
+      if (!saleIds.contains(line.saleId)) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.validationFailed,
+          'A completed-sale line references a missing sale.',
+        );
+      }
+      final lineCount = (lineCountBySale[line.saleId] ?? 0) + 1;
+      if (lineCount > _maximumSaleLinesPerSale) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.archiveTooLarge,
+          'A completed sale has too many product lines to back up safely.',
+        );
+      }
+      lineCountBySale[line.saleId] = lineCount;
+    }
+    if (snapshot.sales.any((sale) => lineCountBySale[sale.id] == null)) {
+      throw const _BackupException(
+        CatalogTransferFailureCode.validationFailed,
+        'A completed sale has no product lines.',
       );
     }
     final mainLabels = <String, String>{
@@ -389,7 +482,7 @@ final class CatalogBackupService {
     }
   }
 
-  Future<Map<String, _PortableProductPhotos>> _stagePhotos({
+  Future<_StagedProductPhotos> _stagePhotos({
     required List<database.StoreProduct> products,
     required Directory staging,
     required Map<String, File> stagedFiles,
@@ -397,6 +490,7 @@ final class CatalogBackupService {
     final root = await _imageStore.managedDirectory();
     final canonicalRoot = await root.resolveSymbolicLinks();
     final portablePaths = <String, _PortableProductPhotos>{};
+    final portableByCanonicalSource = <String, String>{};
     for (final product in products) {
       final localPhoto = await _stageProductImage(
         product: product,
@@ -405,6 +499,7 @@ final class CatalogBackupService {
         staging: staging,
         stagedFiles: stagedFiles,
         canonicalRoot: canonicalRoot,
+        portableByCanonicalSource: portableByCanonicalSource,
       );
       final catalogImage = await _stageProductImage(
         product: product,
@@ -413,6 +508,7 @@ final class CatalogBackupService {
         staging: staging,
         stagedFiles: stagedFiles,
         canonicalRoot: canonicalRoot,
+        portableByCanonicalSource: portableByCanonicalSource,
       );
       if (localPhoto != null || catalogImage != null) {
         portablePaths[product.id] = _PortableProductPhotos(
@@ -421,7 +517,10 @@ final class CatalogBackupService {
         );
       }
     }
-    return portablePaths;
+    return _StagedProductPhotos(
+      byProduct: portablePaths,
+      portableByCanonicalSource: portableByCanonicalSource,
+    );
   }
 
   Future<String?> _stageProductImage({
@@ -431,6 +530,7 @@ final class CatalogBackupService {
     required Directory staging,
     required Map<String, File> stagedFiles,
     required String canonicalRoot,
+    required Map<String, String> portableByCanonicalSource,
   }) async {
     final imagePath = storedPath?.trim();
     if (imagePath == null || imagePath.isEmpty) return null;
@@ -470,6 +570,7 @@ final class CatalogBackupService {
     final destination = _safeStageFile(staging, portable);
     await destination.parent.create(recursive: true);
     await File(canonicalSource).copy(destination.path);
+    portableByCanonicalSource.putIfAbsent(canonicalSource, () => portable);
     final normalizedStored = p.normalize(File(imagePath).absolute.path);
     if (resolved != normalizedStored) {
       final query = _database.update(_database.storeProducts)
@@ -490,6 +591,67 @@ final class CatalogBackupService {
     }
     stagedFiles[portable] = destination;
     return portable;
+  }
+
+  Future<Map<(String, int), String>> _stageSaleLineImages({
+    required List<database.SaleLine> lines,
+    required Directory staging,
+    required Map<String, File> stagedFiles,
+    required Map<String, String> portableByCanonicalSource,
+  }) async {
+    final root = await _imageStore.managedDirectory();
+    final canonicalRoot = await root.resolveSymbolicLinks();
+    final portablePaths = <(String, int), String>{};
+    for (final line in lines) {
+      final imagePath = line.imagePathSnapshot?.trim();
+      if (imagePath == null || imagePath.isEmpty) continue;
+      final key = (line.saleId, line.position);
+      if (_isRemoteImageReference(imagePath)) {
+        portablePaths[key] = imagePath;
+        continue;
+      }
+
+      final resolved = await _imageStore.resolveManagedPath(imagePath);
+      // Sale thumbnails are optional presentation data, not receipt data.
+      // Legacy builds could retain a catalog-owned path that later disappeared
+      // when its product was edited or deleted. Omit that stale reference so it
+      // can never prevent the user's catalog and sales backup from succeeding.
+      if (resolved == null) continue;
+      final source = File(resolved);
+      if (!await source.exists()) continue;
+      final canonicalSource = await source.resolveSymbolicLinks();
+      if (!p.isWithin(canonicalRoot, canonicalSource)) continue;
+      final stat = await File(canonicalSource).stat();
+      if (stat.type != FileSystemEntityType.file ||
+          stat.size > _maximumEntryBytes) {
+        continue;
+      }
+
+      var portable = portableByCanonicalSource[canonicalSource];
+      if (portable == null) {
+        portable = _portableSalePhotoPath(line, resolved);
+        final destination = _safeStageFile(staging, portable);
+        await destination.parent.create(recursive: true);
+        await File(canonicalSource).copy(destination.path);
+        stagedFiles[portable] = destination;
+        portableByCanonicalSource[canonicalSource] = portable;
+      }
+      portablePaths[key] = portable;
+
+      final normalizedStored = p.normalize(File(imagePath).absolute.path);
+      if (resolved != normalizedStored) {
+        await (_database.update(_database.saleLines)..where(
+              (table) =>
+                  table.saleId.equals(line.saleId) &
+                  table.position.equals(line.position) &
+                  table.imagePathSnapshot.equals(imagePath),
+            ))
+            .write(
+              database.SaleLinesCompanion(imagePathSnapshot: Value(resolved)),
+            );
+      }
+    }
+    return portablePaths;
   }
 
   Future<void> _encodeArchive({
@@ -788,6 +950,7 @@ final class CatalogBackupService {
       final dataBytes = await stagedDataFile.readAsBytes();
       final data = _BackupData.fromJson(
         _decodeObject(dataBytes, 'catalog data'),
+        archiveVersion: manifest.archiveVersion,
       );
       _validateData(data, manifest);
       return _ValidatedBackup(data: data);
@@ -895,6 +1058,8 @@ final class CatalogBackupService {
     }
     if (manifest.productCount < 0 ||
         manifest.sellingUnitCount < 0 ||
+        manifest.saleCount < 0 ||
+        manifest.saleLineCount < 0 ||
         manifest.photoCount < 0) {
       throw const _BackupException(
         CatalogTransferFailureCode.invalidFile,
@@ -903,7 +1068,9 @@ final class CatalogBackupService {
     }
     if (manifest.productCount > _maximumProducts ||
         manifest.sellingUnitCount > _maximumSellingUnits ||
-        manifest.photoCount > _maximumProducts) {
+        manifest.saleCount > _maximumSales ||
+        manifest.saleLineCount > _maximumSaleLines ||
+        manifest.photoCount > _maximumFileCount - 2) {
       throw const _BackupException(
         CatalogTransferFailureCode.archiveTooLarge,
         'This backup contains too many catalog records.',
@@ -947,7 +1114,9 @@ final class CatalogBackupService {
 
   void _validateData(_BackupData data, _BackupManifest manifest) {
     if (data.products.length > _maximumProducts ||
-        data.sellingUnits.length > _maximumSellingUnits) {
+        data.sellingUnits.length > _maximumSellingUnits ||
+        data.sales.length > _maximumSales ||
+        data.saleLines.length > _maximumSaleLines) {
       throw const _BackupException(
         CatalogTransferFailureCode.archiveTooLarge,
         'This backup contains too many catalog records.',
@@ -1030,6 +1199,48 @@ final class CatalogBackupService {
         );
       }
     }
+    final saleIds = _unique(data.sales.map((sale) => sale.id), 'sale');
+    final saleLineKeys = <(String, int)>{};
+    final lineCountsBySale = <String, int>{};
+    for (final line in data.saleLines) {
+      if (!saleIds.contains(line.saleId)) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.validationFailed,
+          'A completed-sale line references a missing sale.',
+        );
+      }
+      if (!saleLineKeys.add((line.saleId, line.position))) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.validationFailed,
+          'The backup contains duplicate completed-sale line positions.',
+        );
+      }
+      final lineCount = (lineCountsBySale[line.saleId] ?? 0) + 1;
+      if (lineCount > _maximumSaleLinesPerSale) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.archiveTooLarge,
+          'A completed sale has too many product lines.',
+        );
+      }
+      lineCountsBySale[line.saleId] = lineCount;
+      final image = line.imageReference;
+      if (image != null && !_isRemoteImageReference(image)) {
+        _validatePortablePath(image);
+        if (!_portablePhotoPattern.hasMatch(image)) {
+          throw const _BackupException(
+            CatalogTransferFailureCode.validationFailed,
+            'The backup contains an invalid completed-sale image reference.',
+          );
+        }
+        referencedPhotos.add(image);
+      }
+    }
+    if (data.sales.any((sale) => lineCountsBySale[sale.id] == null)) {
+      throw const _BackupException(
+        CatalogTransferFailureCode.validationFailed,
+        'A completed sale has no product lines.',
+      );
+    }
     final descriptorPhotos = manifest.files
         .map((item) => item.path)
         .where((path) => path.startsWith(_photoPrefix))
@@ -1043,6 +1254,8 @@ final class CatalogBackupService {
     }
     if (manifest.productCount != data.products.length ||
         manifest.sellingUnitCount != data.sellingUnits.length ||
+        manifest.saleCount != data.sales.length ||
+        manifest.saleLineCount != data.saleLines.length ||
         manifest.photoCount != referencedPhotos.length) {
       throw const _BackupException(
         CatalogTransferFailureCode.integrityMismatch,
@@ -1055,9 +1268,12 @@ final class CatalogBackupService {
     _BackupData data,
     Map<String, String> localPhotoPaths,
     Map<String, String> catalogImagePaths,
+    Map<(String, int), String> saleLineImagePaths,
   ) async {
     await _database.transaction(() async {
       await _database.delete(_database.draftCartItems).go();
+      await _database.delete(_database.saleLines).go();
+      await _database.delete(_database.sales).go();
       await _database.delete(_database.productSellingUnits).go();
       await _database.delete(_database.storeProducts).go();
       await _database.delete(_database.storeProfiles).go();
@@ -1095,6 +1311,36 @@ final class CatalogBackupService {
               updatedAt: Value(item.updatedAt),
             ),
         ]);
+        batch.insertAll(_database.sales, [
+          for (final item in data.sales)
+            database.SalesCompanion.insert(
+              id: item.id,
+              completedAt: item.completedAt,
+              storeNameSnapshot: item.storeNameSnapshot,
+              storeAddressSnapshot: Value(item.storeAddressSnapshot),
+              storeContactSnapshot: Value(item.storeContactSnapshot),
+              footerMessageSnapshot: Value(item.footerMessageSnapshot),
+              cashReceivedCentavos: Value(item.cashReceivedCentavos),
+            ),
+        ]);
+        batch.insertAll(_database.saleLines, [
+          for (final item in data.saleLines)
+            database.SaleLinesCompanion.insert(
+              saleId: item.saleId,
+              position: item.position,
+              productIdSnapshot: Value(item.productIdSnapshot),
+              sellingUnitIdSnapshot: Value(item.sellingUnitIdSnapshot),
+              barcodeSnapshot: Value(item.barcodeSnapshot),
+              nameSnapshot: item.nameSnapshot,
+              brandSnapshot: Value(item.brandSnapshot),
+              unitLabelSnapshot: Value(item.unitLabelSnapshot),
+              imagePathSnapshot: Value(
+                saleLineImagePaths[(item.saleId, item.position)],
+              ),
+              unitPriceCentavos: item.unitPriceCentavos,
+              quantity: item.quantity,
+            ),
+        ]);
         batch.insert(
           _database.storeProfiles,
           database.StoreProfilesCompanion.insert(
@@ -1117,6 +1363,12 @@ final class CatalogBackupService {
       final oldThemeMode = storage.getString(_themeModeKey);
       final hadOnboarding = storage.containsKey(_onboardingKey);
       final oldOnboarding = storage.getBool(_onboardingKey);
+      final hadCustomCategories = storage.containsKey(
+        customCatalogCategoriesPreferenceKey,
+      );
+      final oldCustomCategories = storage.getStringList(
+        customCatalogCategoriesPreferenceKey,
+      );
       try {
         final themeMode = preferences.themeMode;
         final themeSaved = themeMode == null
@@ -1125,7 +1377,16 @@ final class CatalogBackupService {
         // A successful restore includes a valid store profile, so startup
         // should never force the user through setup again.
         final onboardingSaved = await storage.setBool(_onboardingKey, true);
-        if (!themeSaved || !onboardingSaved) throw StateError('save failed');
+        final customCategoriesSaved = preferences.customCategories.isEmpty
+            ? (!hadCustomCategories ||
+                  await storage.remove(customCatalogCategoriesPreferenceKey))
+            : await storage.setStringList(
+                customCatalogCategoriesPreferenceKey,
+                preferences.customCategories,
+              );
+        if (!themeSaved || !onboardingSaved || !customCategoriesSaved) {
+          throw StateError('save failed');
+        }
         return true;
       } catch (_) {
         try {
@@ -1139,6 +1400,14 @@ final class CatalogBackupService {
           } else {
             await storage.remove(_onboardingKey);
           }
+          if (hadCustomCategories && oldCustomCategories != null) {
+            await storage.setStringList(
+              customCatalogCategoriesPreferenceKey,
+              oldCustomCategories,
+            );
+          } else {
+            await storage.remove(customCatalogCategoriesPreferenceKey);
+          }
         } catch (_) {
           // A warning is returned below even when rollback is unavailable.
         }
@@ -1150,11 +1419,18 @@ final class CatalogBackupService {
   }
 
   Future<List<String>> _existingPhotoPaths() async {
-    final rows = await _database.select(_database.storeProducts).get();
-    return rows
-        .expand(
-          (row) => [row.localImagePath?.trim(), row.catalogImagePath?.trim()],
-        )
+    final paths = await _database.transaction(() async {
+      final products = await _database.select(_database.storeProducts).get();
+      final saleLines = await _database.select(_database.saleLines).get();
+      return <String?>[
+        for (final row in products) ...[
+          row.localImagePath?.trim(),
+          row.catalogImagePath?.trim(),
+        ],
+        for (final row in saleLines) row.imagePathSnapshot?.trim(),
+      ];
+    });
+    return paths
         .whereType<String>()
         .where((path) => path.isNotEmpty)
         .toSet()
@@ -1168,6 +1444,20 @@ final class CatalogBackupService {
   ) {
     final key = sha256
         .convert(utf8.encode('$productId\u0000${slot.name}\u0000$filePath'))
+        .toString()
+        .substring(0, 28);
+    var extension = p.extension(filePath).toLowerCase();
+    if (!RegExp(r'^\.[a-z0-9]{1,8}$').hasMatch(extension)) extension = '.bin';
+    return '$_photoPrefix$key$extension';
+  }
+
+  String _portableSalePhotoPath(database.SaleLine line, String filePath) {
+    final key = sha256
+        .convert(
+          utf8.encode(
+            'sale\u0000${line.saleId}\u0000${line.position}\u0000$filePath',
+          ),
+        )
         .toString()
         .substring(0, 28);
     var extension = p.extension(filePath).toLowerCase();
@@ -1267,6 +1557,33 @@ final class CatalogBackupService {
         'updatedAt': row.updatedAt.toUtc().toIso8601String(),
       };
 
+  Map<String, Object?> _saleToJson(database.Sale row) => <String, Object?>{
+    'id': row.id,
+    'completedAt': row.completedAt.toUtc().toIso8601String(),
+    'storeNameSnapshot': row.storeNameSnapshot,
+    'storeAddressSnapshot': row.storeAddressSnapshot,
+    'storeContactSnapshot': row.storeContactSnapshot,
+    'footerMessageSnapshot': row.footerMessageSnapshot,
+    'cashReceivedCentavos': row.cashReceivedCentavos,
+  };
+
+  Map<String, Object?> _saleLineToJson(
+    database.SaleLine row,
+    String? imageReference,
+  ) => <String, Object?>{
+    'saleId': row.saleId,
+    'position': row.position,
+    'productIdSnapshot': row.productIdSnapshot,
+    'sellingUnitIdSnapshot': row.sellingUnitIdSnapshot,
+    'barcodeSnapshot': row.barcodeSnapshot,
+    'nameSnapshot': row.nameSnapshot,
+    'brandSnapshot': row.brandSnapshot,
+    'unitLabelSnapshot': row.unitLabelSnapshot,
+    'imageReference': imageReference,
+    'unitPriceCentavos': row.unitPriceCentavos,
+    'quantity': row.quantity,
+  };
+
   Map<String, Object?> _profileToJson(database.StoreProfile? row) =>
       <String, Object?>{
         'storeName': row?.storeName ?? 'Raze Store',
@@ -1311,16 +1628,22 @@ final class _DatabaseSnapshot {
   const _DatabaseSnapshot({
     required this.products,
     required this.sellingUnits,
+    required this.sales,
+    required this.saleLines,
     required this.profile,
     required this.themeMode,
     required this.storeSetupComplete,
+    required this.customCategories,
   });
 
   final List<database.StoreProduct> products;
   final List<database.ProductSellingUnit> sellingUnits;
+  final List<database.Sale> sales;
+  final List<database.SaleLine> saleLines;
   final database.StoreProfile? profile;
   final String? themeMode;
   final bool storeSetupComplete;
+  final List<String> customCategories;
 }
 
 enum _ProductImageSlot { local, catalog }
@@ -1330,6 +1653,16 @@ final class _PortableProductPhotos {
 
   final String? localPhoto;
   final String? catalogImage;
+}
+
+final class _StagedProductPhotos {
+  const _StagedProductPhotos({
+    required this.byProduct,
+    required this.portableByCanonicalSource,
+  });
+
+  final Map<String, _PortableProductPhotos> byProduct;
+  final Map<String, String> portableByCanonicalSource;
 }
 
 final class _ValidatedBackup {
@@ -1347,14 +1680,17 @@ final class _BackupManifest {
     required this.files,
     required this.productCount,
     required this.sellingUnitCount,
+    required this.saleCount,
+    required this.saleLineCount,
     required this.photoCount,
   });
 
   factory _BackupManifest.fromJson(Map<String, Object?> json) {
     final counts = _asMap(json['counts'], 'manifest counts');
+    final archiveVersion = _integer(json['archiveVersion'], 'archive version');
     return _BackupManifest(
       format: _string(json['format'], 'manifest format'),
-      archiveVersion: _integer(json['archiveVersion'], 'archive version'),
+      archiveVersion: archiveVersion,
       databaseSchemaVersion: _integer(
         json['databaseSchemaVersion'],
         'database schema version',
@@ -1367,6 +1703,12 @@ final class _BackupManifest {
           .toList(growable: false),
       productCount: _integer(counts['products'], 'product count'),
       sellingUnitCount: _integer(counts['sellingUnits'], 'selling-unit count'),
+      saleCount: archiveVersion >= 3
+          ? _integer(counts['sales'], 'sale count')
+          : 0,
+      saleLineCount: archiveVersion >= 3
+          ? _integer(counts['saleLines'], 'sale-line count')
+          : 0,
       photoCount: _integer(counts['photos'], 'photo count'),
     );
   }
@@ -1378,6 +1720,8 @@ final class _BackupManifest {
   final List<_FileDescriptor> files;
   final int productCount;
   final int sellingUnitCount;
+  final int saleCount;
+  final int saleLineCount;
   final int photoCount;
 }
 
@@ -1419,15 +1763,28 @@ final class _BackupData {
   const _BackupData({
     required this.products,
     required this.sellingUnits,
+    required this.sales,
+    required this.saleLines,
     required this.profile,
     required this.preferences,
   });
 
-  factory _BackupData.fromJson(Map<String, Object?> json) {
+  factory _BackupData.fromJson(
+    Map<String, Object?> json, {
+    required int archiveVersion,
+  }) {
     final productValues = _asList(json['products'], 'products');
     final sellingUnitValues = _asList(json['sellingUnits'], 'selling units');
+    final saleValues = archiveVersion >= 3
+        ? _asList(json['sales'], 'sales')
+        : const <Object?>[];
+    final saleLineValues = archiveVersion >= 3
+        ? _asList(json['saleLines'], 'sale lines')
+        : const <Object?>[];
     if (productValues.length > CatalogBackupService._maximumProducts ||
-        sellingUnitValues.length > CatalogBackupService._maximumSellingUnits) {
+        sellingUnitValues.length > CatalogBackupService._maximumSellingUnits ||
+        saleValues.length > CatalogBackupService._maximumSales ||
+        saleLineValues.length > CatalogBackupService._maximumSaleLines) {
       throw const _BackupException(
         CatalogTransferFailureCode.archiveTooLarge,
         'This backup contains too many catalog records.',
@@ -1455,6 +1812,12 @@ final class _BackupData {
             (item) => _BackupSellingUnit.fromJson(_asMap(item, 'selling unit')),
           )
           .toList(growable: false),
+      sales: saleValues
+          .map((item) => _BackupSale.fromJson(_asMap(item, 'sale')))
+          .toList(growable: false),
+      saleLines: saleLineValues
+          .map((item) => _BackupSaleLine.fromJson(_asMap(item, 'sale line')))
+          .toList(growable: false),
       profile: _BackupProfile.fromJson(
         _asMap(json['storeProfile'], 'store profile'),
       ),
@@ -1466,6 +1829,8 @@ final class _BackupData {
 
   final List<_BackupProduct> products;
   final List<_BackupSellingUnit> sellingUnits;
+  final List<_BackupSale> sales;
+  final List<_BackupSaleLine> saleLines;
   final _BackupProfile profile;
   final _BackupPreferences preferences;
 }
@@ -1604,6 +1969,125 @@ final class _BackupSellingUnit {
   final DateTime updatedAt;
 }
 
+final class _BackupSale {
+  const _BackupSale({
+    required this.id,
+    required this.completedAt,
+    required this.storeNameSnapshot,
+    required this.storeAddressSnapshot,
+    required this.storeContactSnapshot,
+    required this.footerMessageSnapshot,
+    required this.cashReceivedCentavos,
+  });
+
+  factory _BackupSale.fromJson(Map<String, Object?> json) {
+    final rawCash = json['cashReceivedCentavos'];
+    final cash = rawCash == null ? null : _integer(rawCash, 'cash received');
+    if (cash != null && cash < 0) {
+      throw const FormatException('Cash received must not be negative.');
+    }
+    return _BackupSale(
+      id: _nonEmptyString(json['id'], 'sale ID'),
+      completedAt: _dateTime(json['completedAt'], 'sale completion date'),
+      storeNameSnapshot: _nonEmptyString(
+        json['storeNameSnapshot'],
+        'sale store name',
+      ),
+      storeAddressSnapshot: _optionalString(
+        json['storeAddressSnapshot'],
+        'sale store address',
+      ),
+      storeContactSnapshot: _optionalString(
+        json['storeContactSnapshot'],
+        'sale store contact',
+      ),
+      footerMessageSnapshot: _optionalString(
+        json['footerMessageSnapshot'],
+        'sale receipt footer',
+      ),
+      cashReceivedCentavos: cash,
+    );
+  }
+
+  final String id;
+  final DateTime completedAt;
+  final String storeNameSnapshot;
+  final String? storeAddressSnapshot;
+  final String? storeContactSnapshot;
+  final String? footerMessageSnapshot;
+  final int? cashReceivedCentavos;
+}
+
+final class _BackupSaleLine {
+  const _BackupSaleLine({
+    required this.saleId,
+    required this.position,
+    required this.productIdSnapshot,
+    required this.sellingUnitIdSnapshot,
+    required this.barcodeSnapshot,
+    required this.nameSnapshot,
+    required this.brandSnapshot,
+    required this.unitLabelSnapshot,
+    required this.imageReference,
+    required this.unitPriceCentavos,
+    required this.quantity,
+  });
+
+  factory _BackupSaleLine.fromJson(Map<String, Object?> json) {
+    final position = _integer(json['position'], 'sale-line position');
+    final unitPrice = _integer(
+      json['unitPriceCentavos'],
+      'sale-line unit price',
+    );
+    final quantity = _integer(json['quantity'], 'sale-line quantity');
+    if (position < 0 || unitPrice < 0 || quantity <= 0) {
+      throw const FormatException(
+        'A completed-sale line has invalid numeric values.',
+      );
+    }
+    return _BackupSaleLine(
+      saleId: _nonEmptyString(json['saleId'], 'sale-line sale ID'),
+      position: position,
+      productIdSnapshot: _optionalString(
+        json['productIdSnapshot'],
+        'sale-line product ID',
+      ),
+      sellingUnitIdSnapshot: _optionalString(
+        json['sellingUnitIdSnapshot'],
+        'sale-line selling-unit ID',
+      ),
+      barcodeSnapshot: _optionalString(
+        json['barcodeSnapshot'],
+        'sale-line barcode',
+      ),
+      nameSnapshot: _nonEmptyString(json['nameSnapshot'], 'sale-line name'),
+      brandSnapshot: _optionalString(json['brandSnapshot'], 'sale-line brand'),
+      unitLabelSnapshot: _optionalString(
+        json['unitLabelSnapshot'],
+        'sale-line unit label',
+      ),
+      imageReference: _optionalString(
+        json['imageReference'],
+        'sale-line image',
+      ),
+      unitPriceCentavos: unitPrice,
+      quantity: quantity,
+    );
+  }
+
+  final String saleId;
+  final int position;
+  final String? productIdSnapshot;
+  final String? sellingUnitIdSnapshot;
+  final String? barcodeSnapshot;
+  final String nameSnapshot;
+  final String? brandSnapshot;
+  final String? unitLabelSnapshot;
+  final String? imageReference;
+  final int unitPriceCentavos;
+  final int quantity;
+}
+
 final class _BackupProfile {
   const _BackupProfile({
     required this.storeName,
@@ -1632,6 +2116,7 @@ final class _BackupPreferences {
   const _BackupPreferences({
     required this.themeMode,
     required this.storeSetupComplete,
+    required this.customCategories,
   });
 
   factory _BackupPreferences.fromJson(Map<String, Object?> json) {
@@ -1639,17 +2124,43 @@ final class _BackupPreferences {
     if (theme != null && !{'system', 'light', 'dark'}.contains(theme)) {
       throw const FormatException('The backup theme setting is invalid.');
     }
+    final customCategories = _parseCustomCategories(json['customCategories']);
     return _BackupPreferences(
       themeMode: theme,
       storeSetupComplete: _boolean(
         json['storeSetupComplete'],
         'setup preference',
       ),
+      customCategories: customCategories,
     );
   }
 
   final String? themeMode;
   final bool storeSetupComplete;
+  final List<String> customCategories;
+}
+
+List<String> _parseCustomCategories(Object? value) {
+  // Backups created before custom categories did not include this field.
+  if (value == null) return const <String>[];
+  final values = _asList(value, 'custom categories');
+  if (values.length > maxCustomCatalogCategories) {
+    throw const FormatException('The backup has too many custom categories.');
+  }
+  final categories = <String>[];
+  final normalizedNames = <String>{};
+  for (final value in values) {
+    final category = normalizeCatalogCategoryName(
+      _nonEmptyString(value, 'custom category'),
+    );
+    if (category.length > maxCatalogCategoryNameLength ||
+        isStarterCatalogCategory(category) ||
+        !normalizedNames.add(category.toLowerCase())) {
+      throw const FormatException('The backup custom categories are invalid.');
+    }
+    categories.add(category);
+  }
+  return distinctCatalogCategories(categories);
 }
 
 /// Counts bytes emitted by every decompressor instead of trusting ZIP header
@@ -1798,6 +2309,13 @@ DateTime _dateTime(Object? value, String label) {
   final parsed = DateTime.tryParse(_string(value, label));
   if (parsed == null) throw FormatException('$label is invalid.');
   return parsed.toUtc();
+}
+
+bool _isRemoteImageReference(String value) {
+  final uri = Uri.tryParse(value);
+  return uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty;
 }
 
 DateTime? _optionalDateTime(Object? value, String label) =>

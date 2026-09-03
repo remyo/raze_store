@@ -6,6 +6,16 @@ enum CatalogTransferAction {
   csvImport,
 }
 
+/// Controls how an offline catalog pack handles products already on the
+/// device. Neither mode deletes products that are absent from the pack.
+enum CatalogPackImportMode {
+  /// Add missing products while preserving store-owned values on matches.
+  keepExisting,
+
+  /// Add missing products and replace supported catalog fields on matches.
+  overwriteMatching,
+}
+
 enum CatalogTransferFailureCode {
   unavailable,
   cancelled,

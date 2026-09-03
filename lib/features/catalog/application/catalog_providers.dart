@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_provider.dart';
 import '../../../core/storage/product_photo_services.dart';
+import 'custom_catalog_categories_controller.dart';
 import '../data/local_catalog_repository.dart';
 import '../domain/catalog_categories.dart';
 import '../domain/catalog_product.dart';
@@ -44,6 +45,7 @@ final catalogStoredCategoriesProvider = StreamProvider<List<String>>((ref) {
 });
 
 final catalogCategorySuggestionsProvider = Provider<List<String>>((ref) {
+  final customCategories = ref.watch(customCatalogCategoriesProvider);
   final storedCategories = ref
       .watch(catalogStoredCategoriesProvider)
       .when(
@@ -51,7 +53,10 @@ final catalogCategorySuggestionsProvider = Provider<List<String>>((ref) {
         error: (_, _) => const <String>[],
         loading: () => const <String>[],
       );
-  return mergeCatalogCategories(storedCategories: storedCategories);
+  return mergeCatalogCategories(
+    customCategories: customCategories,
+    storedCategories: storedCategories,
+  );
 });
 
 final catalogProductProvider = StreamProvider.family<StoreProduct?, String>((

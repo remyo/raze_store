@@ -28,7 +28,7 @@ void main() {
 
     expect(
       find.text(
-        'Backup files are not encrypted. They contain prices, store details, and copies of product photos, so keep them private.',
+        'Backup files are not encrypted. They contain prices, completed transactions and payment amounts, store details, and copies of product photos, so keep them private.',
       ),
       findsOneWidget,
     );
@@ -36,23 +36,24 @@ void main() {
 
     expect(find.text('Offline catalog pack'), findsOneWidget);
     expect(
-      find.textContaining('Your product details, selling prices'),
+      find.textContaining('Choose whether matching catalog details'),
       findsOneWidget,
     );
     await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
     await tester.pumpAndSettle();
-    expect(find.text('Import offline catalog pack?'), findsOneWidget);
+    expect(find.text('Import offline catalog pack'), findsOneWidget);
     expect(operations.packImportCalls, 0);
     await tester.tap(find.text('Choose pack and import'));
     await tester.pumpAndSettle();
     expect(operations.packImportCalls, 1);
+    expect(operations.lastPackImportMode, CatalogPackImportMode.keepExisting);
 
     await tester.ensureVisible(find.text('Restore backup'));
     await tester.tap(find.text('Restore backup'));
     await tester.pumpAndSettle();
-    expect(find.text('Replace this catalog?'), findsOneWidget);
+    expect(find.text('Replace local store data?'), findsOneWidget);
     expect(operations.restoreCalls, 0);
-    await tester.tap(find.text('Choose file and replace'));
+    await tester.tap(find.text('Choose backup and replace'));
     await tester.pumpAndSettle();
     expect(operations.restoreCalls, 1);
 
@@ -72,6 +73,41 @@ void main() {
     await tester.tap(find.text('Choose CSV and import'));
     await tester.pumpAndSettle();
     expect(operations.importCalls, 1);
+  });
+
+  testWidgets('can update matching pack products while adding new ones', (
+    tester,
+  ) async {
+    final operations = _FakeTransferOperations();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogTransferCoordinatorProvider.overrideWithValue(operations),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: SingleChildScrollView(child: CatalogDataSection()),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
+    await tester.pumpAndSettle();
+    expect(find.text('Keep existing (recommended)'), findsOneWidget);
+    expect(find.text('Update matching and add new'), findsOneWidget);
+
+    await tester.tap(find.text('Update matching and add new'));
+    await tester.pump();
+    await tester.tap(find.text('Choose pack and import'));
+    await tester.pumpAndSettle();
+
+    expect(operations.packImportCalls, 1);
+    expect(
+      operations.lastPackImportMode,
+      CatalogPackImportMode.overwriteMatching,
+    );
   });
 
   testWidgets('confirmation dialogs scroll at large text sizes', (
@@ -126,11 +162,11 @@ void main() {
 
     await expectScrollableDialog(
       trigger: find.byKey(const ValueKey('import-catalog-pack')),
-      title: 'Import offline catalog pack?',
+      title: 'Import offline catalog pack',
     );
     await expectScrollableDialog(
       trigger: find.text('Restore backup'),
-      title: 'Replace this catalog?',
+      title: 'Replace local store data?',
     );
     await expectScrollableDialog(
       trigger: find.text('Import CSV'),
@@ -141,6 +177,7 @@ void main() {
 
 final class _FakeTransferOperations implements CatalogTransferOperations {
   var packImportCalls = 0;
+  CatalogPackImportMode? lastPackImportMode;
   var restoreCalls = 0;
   var importCalls = 0;
 
@@ -163,8 +200,11 @@ final class _FakeTransferOperations implements CatalogTransferOperations {
   }
 
   @override
-  Future<CatalogTransferResult> importCatalogPackMerging() async {
+  Future<CatalogTransferResult> importCatalogPackMerging({
+    CatalogPackImportMode mode = CatalogPackImportMode.keepExisting,
+  }) async {
     packImportCalls++;
+    lastPackImportMode = mode;
     return const CatalogTransferSuccess(
       action: CatalogTransferAction.catalogPackImport,
       message: 'Catalog pack imported.',

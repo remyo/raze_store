@@ -4,6 +4,7 @@ import 'package:raze_store/core/database/database_provider.dart';
 import 'package:raze_store/core/storage/product_photo_services.dart';
 import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
+import 'package:raze_store/features/catalog/application/custom_catalog_categories_controller.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_coordinator.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_csv_service.dart';
@@ -25,6 +26,7 @@ final catalogBackupServiceProvider = Provider<CatalogBackupService>((ref) {
       ref.invalidate(cartDraftProvider);
       ref.invalidate(storeProfileProvider);
       ref.invalidate(themeModeProvider);
+      ref.invalidate(customCatalogCategoriesProvider);
       ref.invalidate(onboardingControllerProvider);
     },
   );

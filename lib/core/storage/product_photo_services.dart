@@ -60,7 +60,7 @@ final class OnDeviceProductBackgroundRemover
     this.maximumInputBytes = 15 * 1024 * 1024,
     this.maximumOutputBytes = 30 * 1024 * 1024,
     this.maximumSourcePixels = 40 * 1000 * 1000,
-    this.targetLongestSide = 1600,
+    this.targetLongestSide = 768,
   }) : _temporaryRoot = temporaryRoot,
        _uuid = uuid;
 
@@ -91,8 +91,13 @@ final class OnDeviceProductBackgroundRemover
         targetLongestSide: targetLongestSide,
       );
       await _ensureInitialized();
+      // Edge enhancement creates another full-resolution nested mask in this
+      // plugin. The model already produces a smooth mask, so retaining mask
+      // smoothing while skipping that extra pass keeps memory bounded on
+      // lower-end phones without changing the on-device/privacy behavior.
       final outputBytes = await BackgroundRemover.instance.removeBgBytes(
         preparedBytes,
+        enhanceEdges: false,
       );
       if (outputBytes.isEmpty || outputBytes.length > maximumOutputBytes) {
         throw const ProductBackgroundRemovalException(
@@ -114,6 +119,15 @@ final class OnDeviceProductBackgroundRemover
     } on ProductBackgroundRemovalException {
       rethrow;
     } catch (_) {
+      // The dependency owns a process-wide ONNX session. Reset it after a
+      // failed inference so a retry does not reuse a broken session or a
+      // stale completed initialization future.
+      _initialization = null;
+      try {
+        await BackgroundRemover.instance.dispose();
+      } catch (_) {
+        // Preserve the useful, user-facing background-removal error below.
+      }
       throw const ProductBackgroundRemovalException(
         'The background could not be removed from this photo.',
       );
@@ -157,12 +171,13 @@ final class OnDeviceProductBackgroundRemover
 
 /// Reads image dimensions without decoding the full bitmap, rejects extreme
 /// sources, then asks Flutter's native codec for a bounded image before ONNX
-/// processing. Gallery/camera picks are already capped at 1600 px, while this
-/// also protects restored or previously imported photos.
+/// processing. Gallery/camera picks are capped before storage; background
+/// removal uses a smaller default working copy to bound the plugin's nested
+/// mask allocations on lower-memory phones.
 Future<Uint8List> prepareProductPhotoBytesForBackgroundRemoval(
   Uint8List sourceBytes, {
   int maximumSourcePixels = 40 * 1000 * 1000,
-  int targetLongestSide = 1600,
+  int targetLongestSide = 768,
 }) async {
   if (sourceBytes.isEmpty ||
       maximumSourcePixels <= 0 ||

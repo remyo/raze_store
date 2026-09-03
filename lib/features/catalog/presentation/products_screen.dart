@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,8 +19,14 @@ class ProductsScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductsScreenState extends ConsumerState<ProductsScreen> {
+  static const _searchDebounceDuration = Duration(milliseconds: 250);
+  static const _pageSize = 30;
+
   late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  Timer? _searchDebounce;
   String? _selectedCategory;
+  int _visibleProductLimit = _pageSize;
 
   @override
   void initState() {
@@ -26,12 +34,42 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     _searchController = TextEditingController(
       text: ref.read(catalogSearchQueryProvider),
     );
+    _searchFocusNode = FocusNode();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    if (_selectedCategory != null) {
+      setState(() {
+        _selectedCategory = null;
+        _visibleProductLimit = _pageSize;
+      });
+    }
+    _searchDebounce = Timer(_searchDebounceDuration, () {
+      if (!mounted) return;
+      setState(() => _visibleProductLimit = _pageSize);
+      ref.read(catalogSearchQueryProvider.notifier).update(value);
+    });
+  }
+
+  void _selectCategory(String? category) {
+    setState(() {
+      _selectedCategory = category;
+      _visibleProductLimit = _pageSize;
+    });
+  }
+
+  void _showNextPage() {
+    if (!mounted) return;
+    setState(() => _visibleProductLimit += _pageSize);
   }
 
   @override
@@ -49,7 +87,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         ),
         IconButton(
           onPressed: () => context.push('/products/quick-add'),
-          tooltip: 'Quick add product',
+          tooltip: 'Add product',
           icon: const Icon(Icons.add_rounded),
         ),
         IconButton(
@@ -60,6 +98,11 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       ],
       padBody: false,
       body: products.when(
+        // A search query rebuilds the stream provider. Keep the current
+        // catalog on screen while the filtered stream starts so the search
+        // field is not removed from the tree (which would dismiss its
+        // keyboard after every character).
+        skipLoadingOnReload: true,
         loading: () => const AppLoadingState(),
         error: (error, _) => AppErrorState(
           message: 'Your saved products could not be loaded.',
@@ -70,15 +113,12 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           query: query,
           selectedCategory: _selectedCategory,
           searchController: _searchController,
-          onSearch: (value) {
-            ref.read(catalogSearchQueryProvider.notifier).update(value);
-            if (_selectedCategory != null) {
-              setState(() => _selectedCategory = null);
-            }
-          },
-          onCategorySelected: (category) {
-            setState(() => _selectedCategory = category);
-          },
+          searchFocusNode: _searchFocusNode,
+          isSearching: products.isLoading,
+          visibleProductLimit: _visibleProductLimit,
+          onSearch: _onSearchChanged,
+          onCategorySelected: _selectCategory,
+          onLoadMore: _showNextPage,
           onOpen: (product) async {
             final added = await showProductQuickView(context, product: product);
             if (added == true && context.mounted) {
@@ -101,8 +141,12 @@ class _ProductsBody extends StatelessWidget {
     required this.query,
     required this.selectedCategory,
     required this.searchController,
+    required this.searchFocusNode,
+    required this.isSearching,
+    required this.visibleProductLimit,
     required this.onSearch,
     required this.onCategorySelected,
+    required this.onLoadMore,
     required this.onOpen,
     required this.onAddFirst,
     required this.onScan,
@@ -112,8 +156,12 @@ class _ProductsBody extends StatelessWidget {
   final String query;
   final String? selectedCategory;
   final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final bool isSearching;
+  final int visibleProductLimit;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onCategorySelected;
+  final VoidCallback onLoadMore;
   final ValueChanged<StoreProduct> onOpen;
   final VoidCallback onAddFirst;
   final VoidCallback onScan;
@@ -138,11 +186,27 @@ class _ProductsBody extends StatelessWidget {
                     product.category?.trim().toLowerCase() == selectedKey,
               )
               .toList(growable: false);
+    final shownProducts = visible
+        .take(visibleProductLimit)
+        .toList(growable: false);
+    final hasMore = shownProducts.length < visible.length;
+    final resultItemCount = visible.isEmpty
+        ? 1
+        : shownProducts.length + (hasMore ? 1 : 0);
 
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: ResponsiveContent(
+    return ListView.builder(
+      key: const ValueKey('products-list'),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xxxl + AppSpacing.xl,
+      ),
+      itemCount: 1 + resultItemCount,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return _BoundedListItem(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -150,8 +214,19 @@ class _ProductsBody extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 AppSearchField(
                   controller: searchController,
+                  focusNode: searchFocusNode,
                   hintText: 'Search products or barcode',
                   onChanged: onSearch,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                SizedBox(
+                  height: 2,
+                  child: isSearching
+                      ? const LinearProgressIndicator(
+                          key: ValueKey('product-search-progress'),
+                          minHeight: 2,
+                        )
+                      : null,
                 ),
                 if (categories.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.sm),
@@ -182,65 +257,117 @@ class _ProductsBody extends StatelessWidget {
                   subtitle:
                       '${visible.length} ${visible.length == 1 ? 'product' : 'products'}',
                 ),
+                const SizedBox(height: AppSpacing.sm),
               ],
             ),
+          );
+        }
+
+        if (visible.isEmpty) {
+          return _BoundedListItem(
+            child: SizedBox(
+              height: 320,
+              child: AppEmptyState(
+                icon: products.isEmpty && query.isEmpty
+                    ? Icons.shelves
+                    : Icons.search_off_rounded,
+                title: products.isEmpty && query.isEmpty
+                    ? 'Your store list is empty'
+                    : 'No matching products',
+                message: products.isEmpty && query.isEmpty
+                    ? 'Add the products your family sells. They stay available even when the phone is offline.'
+                    : activeCategory != null
+                    ? 'There are no products left in this category.'
+                    : 'Try a different name, brand, barcode, or category.',
+                actionLabel: products.isEmpty && query.isEmpty
+                    ? 'Add first product'
+                    : null,
+                onAction: products.isEmpty && query.isEmpty ? onAddFirst : null,
+              ),
+            ),
+          );
+        }
+
+        final productIndex = index - 1;
+        if (productIndex < shownProducts.length) {
+          final product = shownProducts[productIndex];
+          return _BoundedListItem(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _ProductCard(
+                key: ValueKey('product-list-item-${product.id}'),
+                product: product,
+                onTap: () => onOpen(product),
+              ),
+            ),
+          );
+        }
+
+        return _BoundedListItem(
+          child: _NextPageLoader(
+            key: ValueKey('product-page-${shownProducts.length}'),
+            onVisible: onLoadMore,
           ),
+        );
+      },
+    );
+  }
+}
+
+class _BoundedListItem extends StatelessWidget {
+  const _BoundedListItem({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: AppBreakpoints.contentMaxWidth,
         ),
-        if (visible.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: AppEmptyState(
-              icon: products.isEmpty && query.isEmpty
-                  ? Icons.shelves
-                  : Icons.search_off_rounded,
-              title: products.isEmpty && query.isEmpty
-                  ? 'Your store list is empty'
-                  : 'No matching products',
-              message: products.isEmpty && query.isEmpty
-                  ? 'Add the products your family sells. They stay available even when the phone is offline.'
-                  : activeCategory != null
-                  ? 'There are no products left in this category.'
-                  : 'Try a different name, brand, barcode, or category.',
-              actionLabel: products.isEmpty && query.isEmpty
-                  ? 'Add first product'
-                  : null,
-              onAction: products.isEmpty && query.isEmpty ? onAddFirst : null,
+        child: SizedBox(width: double.infinity, child: child),
+      ),
+    );
+  }
+}
+
+class _NextPageLoader extends StatefulWidget {
+  const _NextPageLoader({super.key, required this.onVisible});
+
+  final VoidCallback onVisible;
+
+  @override
+  State<_NextPageLoader> createState() => _NextPageLoaderState();
+}
+
+class _NextPageLoaderState extends State<_NextPageLoader> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onVisible();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      key: ValueKey('product-page-loader'),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          )
-        else
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              0,
-              AppSpacing.md,
-              AppSpacing.xxxl + AppSpacing.xl,
-            ),
-            sliver: SliverLayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.crossAxisExtent;
-                final columns = switch (width) {
-                  < 520 => 2,
-                  < 820 => 3,
-                  < 1120 => 4,
-                  _ => 5,
-                };
-                return SliverGrid.builder(
-                  itemCount: visible.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    crossAxisSpacing: AppSpacing.sm,
-                    mainAxisSpacing: AppSpacing.sm,
-                    childAspectRatio: width < 520 ? 0.67 : 0.72,
-                  ),
-                  itemBuilder: (context, index) => _ProductCard(
-                    product: visible[index],
-                    onTap: () => onOpen(visible[index]),
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
+            SizedBox(height: AppSpacing.xs),
+            Text('Loading more products…'),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -304,7 +431,7 @@ class _ScanCallout extends StatelessWidget {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, required this.onTap});
+  const _ProductCard({super.key, required this.product, required this.onTap});
 
   final StoreProduct product;
   final VoidCallback onTap;
@@ -321,56 +448,59 @@ class _ProductCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ProductImage(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ProductImage(
                 product: product,
-                width: double.infinity,
-                height: double.infinity,
-                borderRadius: BorderRadius.zero,
+                width: AppSize.largeThumbnail,
+                height: AppSize.largeThumbnail,
+                borderRadius: AppRadius.control,
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (detail.isNotEmpty)
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      detail,
-                      maxLines: 1,
+                      product.name,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  const SizedBox(height: AppSpacing.xs),
-                  PriceText(
-                    centavos: product.priceCentavos,
-                    size: PriceTextSize.regular,
-                  ),
-                  if (product.sellingUnits.isNotEmpty)
-                    Text(
-                      '+${product.sellingUnits.length} other ${product.sellingUnits.length == 1 ? 'unit price' : 'unit prices'}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w700,
+                    if (detail.isNotEmpty)
+                      Text(
+                        detail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
+                    const SizedBox(height: AppSpacing.xs),
+                    PriceText(
+                      centavos: product.priceCentavos,
+                      size: PriceTextSize.regular,
                     ),
-                ],
+                    if (product.sellingUnits.isNotEmpty)
+                      Text(
+                        '+${product.sellingUnits.length} other ${product.sellingUnits.length == 1 ? 'unit price' : 'unit prices'}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.xs),
+              Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );

@@ -18,11 +18,11 @@ typedef ReceiptImageShareCallback =
       Rect? sharePositionOrigin,
     );
 
-/// Previews a temporary cart receipt and exports the rendered customer copy.
+/// Previews a receipt snapshot and exports the rendered customer copy.
 ///
 /// The screen only receives an immutable [ReceiptDraft]. It neither depends on
-/// a router nor knows about the cart/database, so saving or sharing cannot mark
-/// items sold or clear the cart.
+/// a router nor knows whether the snapshot came from a cart preview or a saved
+/// sale, so saving and sharing never mutate business data.
 class ReceiptPreviewScreen extends StatefulWidget {
   const ReceiptPreviewScreen({
     super.key,
@@ -99,7 +99,7 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'This creates an image only. Your cart stays unchanged and no sale is recorded.',
+                            'Saving or sharing this receipt image does not change your cart or sales history.',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: colors.onSecondaryContainer,

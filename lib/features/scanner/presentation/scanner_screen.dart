@@ -298,6 +298,25 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
       if (result.kind == CatalogLookupKind.local) {
         final product = result.localProduct!;
+        if (product.sellingUnits.isNotEmpty) {
+          final added = await showProductQuickView(context, product: product);
+          if (fromCamera) {
+            _guardCameraRepeat(barcode.value);
+          } else {
+            _manualController.clear();
+          }
+          if (added == true &&
+              mounted &&
+              generation == _lookupGeneration &&
+              _branchVisible == true &&
+              _routeForeground == true &&
+              _appActive) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${product.name} added to cart.')),
+            );
+          }
+          return;
+        }
         if (product.priceCentavos <= 0) {
           if (fromCamera) {
             _guardCameraRepeat(barcode.value);

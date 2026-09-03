@@ -79,7 +79,7 @@ void main() {
     expect(find.text('Receipt preview'), findsOneWidget);
     expect(
       find.text(
-        'This creates an image only. Your cart stays unchanged and no sale is recorded.',
+        'Saving or sharing this receipt image does not change your cart or sales history.',
       ),
       findsOneWidget,
     );

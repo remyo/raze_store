@@ -11,6 +11,8 @@ import 'package:raze_store/core/widgets/bounded_network_image.dart';
 import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/cart/domain/cart.dart';
 import 'package:raze_store/features/receipt/receipt.dart';
+import 'package:raze_store/features/sales/application/sales_providers.dart';
+import 'package:raze_store/features/sales/domain/sales_repository.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -25,6 +27,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   final Set<String> _busyLines = {};
   bool _clearing = false;
   bool _preparingReceipt = false;
+  bool _completingSale = false;
 
   @override
   void initState() {
@@ -51,7 +54,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       actions: [
         if (cart.value?.isNotEmpty == true)
           IconButton(
-            onPressed: _clearing ? null : _confirmClear,
+            key: const ValueKey('clear-cart'),
+            onPressed: _clearing || _completingSale || _busyLines.isNotEmpty
+                ? null
+                : _confirmClear,
             tooltip: 'Clear cart',
             icon: const Icon(Icons.delete_sweep_outlined),
           ),
@@ -78,9 +84,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 busyLines: _busyLines,
                 clearing: _clearing,
                 preparingReceipt: _preparingReceipt,
+                completingSale: _completingSale,
                 onQuantityChanged: _changeQuantity,
                 onRemove: _remove,
                 onPreviewReceipt: () => _previewReceipt(draft),
+                onCompleteSale: _completeSale,
                 onClear: _confirmClear,
               ),
       ),
@@ -88,7 +96,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _changeQuantity(CartItem item, int quantity) async {
-    if (_busyLines.contains(item.lineId)) return;
+    if (_busyLines.contains(item.lineId) || _clearing || _completingSale) {
+      return;
+    }
     setState(() => _busyLines.add(item.lineId));
     try {
       await ref
@@ -106,7 +116,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _remove(CartItem item) async {
-    if (_busyLines.contains(item.lineId)) return;
+    if (_busyLines.contains(item.lineId) || _clearing || _completingSale) {
+      return;
+    }
     setState(() => _busyLines.add(item.lineId));
     try {
       await ref.read(cartRepositoryProvider).removeProduct(item.lineId);
@@ -122,6 +134,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _confirmClear() async {
+    if (_busyLines.isNotEmpty || _clearing || _completingSale) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -158,6 +171,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _previewReceipt(CartDraft cart) async {
+    if (_busyLines.isNotEmpty ||
+        _clearing ||
+        _preparingReceipt ||
+        _completingSale) {
+      return;
+    }
     final cashText = _cashController.text.trim();
     final cashReceived = cashText.isEmpty
         ? null
@@ -168,7 +187,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
       return;
     }
-    if (_preparingReceipt) return;
     setState(() => _preparingReceipt = true);
     try {
       final profile = await ref
@@ -206,6 +224,63 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (mounted) setState(() => _preparingReceipt = false);
     }
   }
+
+  Future<void> _completeSale() async {
+    final cashText = _cashController.text.trim();
+    final cashReceived = cashText.isEmpty
+        ? null
+        : tryParsePesoCentavos(cashText);
+    if (cashText.isNotEmpty && cashReceived == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid cash amount first.')),
+      );
+      return;
+    }
+    if (_completingSale ||
+        _clearing ||
+        _preparingReceipt ||
+        _busyLines.isNotEmpty) {
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _completingSale = true);
+    try {
+      final sale = await ref
+          .read(salesRepositoryProvider)
+          .completeCurrentCart(cashReceivedCentavos: cashReceived);
+      if (!mounted) return;
+      _cashController.clear();
+      try {
+        await context.push<void>('/receipt', extra: sale.toReceiptDraft());
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Sale saved, but the receipt could not be opened. You can reopen it from Sales.',
+              ),
+            ),
+          );
+        }
+      }
+    } on EmptyCartSaleException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('The cart is already empty.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not complete the sale. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _completingSale = false);
+    }
+  }
 }
 
 class _CartBody extends StatelessWidget {
@@ -215,9 +290,11 @@ class _CartBody extends StatelessWidget {
     required this.busyLines,
     required this.clearing,
     required this.preparingReceipt,
+    required this.completingSale,
     required this.onQuantityChanged,
     required this.onRemove,
     required this.onPreviewReceipt,
+    required this.onCompleteSale,
     required this.onClear,
   });
 
@@ -226,9 +303,11 @@ class _CartBody extends StatelessWidget {
   final Set<String> busyLines;
   final bool clearing;
   final bool preparingReceipt;
+  final bool completingSale;
   final void Function(CartItem item, int quantity) onQuantityChanged;
   final ValueChanged<CartItem> onRemove;
   final VoidCallback onPreviewReceipt;
+  final VoidCallback onCompleteSale;
   final VoidCallback onClear;
 
   @override
@@ -265,7 +344,10 @@ class _CartBody extends StatelessWidget {
                       ) ...[
                         _CartLineTile(
                           item: draft.items[index],
-                          busy: busyLines.contains(draft.items[index].lineId),
+                          busy:
+                              busyLines.contains(draft.items[index].lineId) ||
+                              clearing ||
+                              completingSale,
                           onQuantityChanged: (quantity) =>
                               onQuantityChanged(draft.items[index], quantity),
                           onRemove: () => onRemove(draft.items[index]),
@@ -301,7 +383,7 @@ class _CartBody extends StatelessWidget {
                 const AppSectionHeader(
                   title: 'Cash and change',
                   subtitle:
-                      'Optional calculator only. The amount is not saved as a sale.',
+                      'Optional. The amount is saved when you complete the sale.',
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
@@ -350,7 +432,33 @@ class _CartBody extends StatelessWidget {
                 ],
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton.icon(
-                  onPressed: preparingReceipt ? null : onPreviewReceipt,
+                  key: const ValueKey('complete-sale'),
+                  onPressed:
+                      completingSale ||
+                          preparingReceipt ||
+                          clearing ||
+                          busyLines.isNotEmpty
+                      ? null
+                      : onCompleteSale,
+                  icon: completingSale
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_circle_outline_rounded),
+                  label: Text(
+                    completingSale ? 'Completing sale…' : 'Complete sale',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed:
+                      preparingReceipt ||
+                          completingSale ||
+                          clearing ||
+                          busyLines.isNotEmpty
+                      ? null
+                      : onPreviewReceipt,
                   icon: preparingReceipt
                       ? const SizedBox.square(
                           dimension: 18,
@@ -363,7 +471,7 @@ class _CartBody extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'You can save the receipt as an image or send it using your phone’s share menu.',
+                  'Complete sale records this transaction, clears the cart, and opens a receipt you can save or send.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -371,7 +479,9 @@ class _CartBody extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 OutlinedButton.icon(
-                  onPressed: clearing ? null : onClear,
+                  onPressed: clearing || completingSale || busyLines.isNotEmpty
+                      ? null
+                      : onClear,
                   icon: const Icon(Icons.person_add_alt_1_outlined),
                   label: Text(clearing ? 'Clearing…' : 'New customer'),
                 ),
@@ -437,6 +547,8 @@ class _CartLineTile extends StatelessWidget {
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
+                        cacheWidth: 192,
+                        cacheHeight: 192,
                         errorBuilder: (_, _, _) => imageFallback,
                       ),
               ),

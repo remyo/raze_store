@@ -117,3 +117,51 @@ class StoreProfiles extends Table {
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
+
+/// One finalized customer transaction.
+///
+/// Store details are copied here so an old receipt can be reconstructed even
+/// after the user edits their profile. The transaction deliberately has no
+/// foreign key to the catalog: completed sales remain valid when products are
+/// edited or removed.
+@TableIndex(name: 'sales_completed_at_idx', columns: {#completedAt})
+class Sales extends Table {
+  TextColumn get id => text()();
+  DateTimeColumn get completedAt => dateTime()();
+  TextColumn get storeNameSnapshot => text()();
+  TextColumn get storeAddressSnapshot => text().nullable()();
+  TextColumn get storeContactSnapshot => text().nullable()();
+  TextColumn get footerMessageSnapshot => text().nullable()();
+  IntColumn get cashReceivedCentavos => integer()
+      .check(const CustomExpression<bool>('cash_received_centavos >= 0'))
+      .nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Receipt-safe product snapshots belonging to a completed [Sales] row.
+///
+/// Product and selling-unit IDs are retained only as historical metadata.
+/// They are nullable and intentionally are not foreign keys.
+class SaleLines extends Table {
+  TextColumn get saleId =>
+      text().references(Sales, #id, onDelete: KeyAction.cascade)();
+  IntColumn get position =>
+      integer().check(const CustomExpression<bool>('position >= 0'))();
+  TextColumn get productIdSnapshot => text().nullable()();
+  TextColumn get sellingUnitIdSnapshot => text().nullable()();
+  TextColumn get barcodeSnapshot => text().nullable()();
+  TextColumn get nameSnapshot => text()();
+  TextColumn get brandSnapshot => text().nullable()();
+  TextColumn get unitLabelSnapshot => text().nullable()();
+  TextColumn get imagePathSnapshot => text().nullable()();
+  IntColumn get unitPriceCentavos => integer().check(
+    const CustomExpression<bool>('unit_price_centavos >= 0'),
+  )();
+  IntColumn get quantity =>
+      integer().check(const CustomExpression<bool>('quantity > 0'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {saleId, position};
+}

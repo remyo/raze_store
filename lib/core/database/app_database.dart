@@ -7,7 +7,14 @@ import 'tables.dart';
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [StoreProducts, ProductSellingUnits, DraftCartItems, StoreProfiles],
+  tables: [
+    StoreProducts,
+    ProductSellingUnits,
+    DraftCartItems,
+    StoreProfiles,
+    Sales,
+    SaleLines,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase({String name = 'raze_store'}) : super(driftDatabase(name: name));
@@ -15,7 +22,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -102,6 +109,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 5) {
         await migrator.addColumn(storeProducts, storeProducts.catalogImagePath);
         await migrator.addColumn(storeProducts, storeProducts.sourceUpdatedAt);
+      }
+      if (from < 6) {
+        await migrator.createTable(sales);
+        await migrator.createTable(saleLines);
       }
     },
   );

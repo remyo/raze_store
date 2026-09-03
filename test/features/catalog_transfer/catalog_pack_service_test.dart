@@ -11,6 +11,7 @@ import 'package:raze_store/features/cart/data/local_cart_repository.dart';
 import 'package:raze_store/features/catalog/data/local_catalog_repository.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/settings/data/local_settings_repository.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
 
@@ -179,6 +180,162 @@ void main() {
       final profile = await LocalSettingsRepository(database).getStoreProfile();
       expect(profile.storeName, 'Owner Store');
       expect(profile.receiptFooter, 'Owner footer');
+    },
+  );
+
+  test(
+    'overwrite mode updates matching catalog fields and adds new products safely',
+    () async {
+      final ownerPhotoSource = File('${testRoot.path}/owner-overwrite.png');
+      await ownerPhotoSource.writeAsBytes(_pngBytes(10));
+      final ownerPhoto = await imageStore.persistFile(ownerPhotoSource);
+      final oldCatalogSource = File('${testRoot.path}/old-catalog.png');
+      await oldCatalogSource.writeAsBytes(_pngBytes(11));
+      final oldCatalogImage = await imageStore.persistFile(oldCatalogSource);
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      final original = await catalog.createProduct(
+        ProductDraft(
+          id: 'matching-local-id',
+          barcode: '111',
+          source: 'raze_store_api',
+          sourceProductId: 'matching-shared-id',
+          sourceUpdatedAt: DateTime.utc(2025),
+          name: 'Owner Name',
+          brand: 'Owner Brand',
+          category: 'Owner Category',
+          unitLabel: 'Owner Unit',
+          remoteImageUrl: 'https://owner.test/product.png',
+          localImagePath: ownerPhoto,
+          catalogImagePath: oldCatalogImage,
+          priceCentavos: 4321,
+          sellingUnits: [
+            SellingUnitDraft(
+              id: 'owner-piece',
+              label: 'Owner Piece',
+              priceCentavos: 321,
+            ),
+          ],
+        ),
+      );
+      await LocalCartRepository(database).addProduct(original);
+      await LocalSettingsRepository(
+        database,
+      ).saveStoreProfile(const StoreProfile(storeName: 'Owner Store'));
+      await catalog.createProduct(
+        ProductDraft(
+          id: 'not-in-pack',
+          barcode: '999',
+          name: 'Keep Me',
+          priceCentavos: 700,
+        ),
+      );
+      final packUpdatedAt = DateTime.utc(2026, 9, 3);
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'matching-shared-id',
+            barcode: '222',
+            name: 'Updated Pack Name',
+            updatedAt: packUpdatedAt,
+            priceCentavos: 9999,
+            image: 'images/matching.png',
+          ),
+          _product(
+            id: 'new-shared-id',
+            barcode: '333',
+            name: 'New From Pack',
+            updatedAt: packUpdatedAt,
+            priceCentavos: 1250,
+          ),
+        ],
+        images: {'images/matching.png': _pngBytes(12)},
+      );
+
+      final result = await service.importMerging(
+        pack.path,
+        mode: CatalogPackImportMode.overwriteMatching,
+      );
+
+      expect(result.success, isTrue);
+      expect(result.createdCount, 1);
+      expect(result.updatedCount, 1);
+      expect(result.imageCount, 1);
+      expect(result.message, contains('updated 1 existing products'));
+      final products = await catalog.searchProducts('');
+      expect(products, hasLength(3));
+      final updated = products.singleWhere(
+        (product) => product.id == original.id,
+      );
+      expect(updated.barcode, '222');
+      expect(updated.name, 'Updated Pack Name');
+      expect(updated.brand, 'Pack Brand');
+      expect(updated.category, 'Pack Category');
+      expect(updated.unitLabel, 'Pack');
+      expect(updated.remoteImageUrl, contains('matching-shared-id.png'));
+      expect(updated.priceCentavos, 9999);
+      expect(updated.sourceUpdatedAt, packUpdatedAt);
+      expect(updated.localImagePath, ownerPhoto);
+      expect(updated.sellingUnits.single.id, 'owner-piece');
+      expect(updated.sellingUnits.single.priceCentavos, 321);
+      expect(
+        await File(updated.catalogImagePath!).readAsBytes(),
+        _pngBytes(12),
+      );
+      expect(await File(oldCatalogImage).exists(), isFalse);
+      expect(
+        products.singleWhere((product) => product.id == 'not-in-pack').name,
+        'Keep Me',
+      );
+      expect(
+        products.singleWhere((product) => product.barcode == '333').name,
+        'New From Pack',
+      );
+      final cart = await LocalCartRepository(database).getDraft();
+      expect(cart.items.single.name, 'Owner Name');
+      expect(cart.items.single.unitPriceCentavos, 4321);
+      expect(
+        (await LocalSettingsRepository(database).getStoreProfile()).storeName,
+        'Owner Store',
+      );
+    },
+  );
+
+  test(
+    'overwrite mode keeps the current price when the pack has no SRP',
+    () async {
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      await catalog.createProduct(
+        ProductDraft(
+          id: 'priced-product',
+          barcode: '111',
+          name: 'Priced Product',
+          priceCentavos: 4321,
+        ),
+      );
+      final productWithoutPrice = _product(
+        id: 'priced-product-pack',
+        barcode: '111',
+        name: 'Updated Name',
+        updatedAt: DateTime.utc(2026),
+        priceCentavos: null,
+      )..remove('suggestedPriceCentavos');
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [productWithoutPrice],
+      );
+
+      final result = await service.importMerging(
+        pack.path,
+        mode: CatalogPackImportMode.overwriteMatching,
+      );
+
+      expect(result.success, isTrue);
+      final updated = (await catalog.searchProducts('')).single;
+      expect(updated.name, 'Updated Name');
+      expect(updated.priceCentavos, 4321);
     },
   );
 

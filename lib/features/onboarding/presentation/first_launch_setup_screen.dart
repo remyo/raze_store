@@ -479,7 +479,7 @@ class _SetupReady extends StatelessWidget {
           key: const ValueKey('setup-quick-add'),
           onPressed: busy ? null : onQuickAdd,
           icon: const Icon(Icons.add_box_outlined),
-          label: const Text('Quick add first product'),
+          label: const Text('Add first product'),
         ),
         const SizedBox(height: AppSpacing.sm),
         OutlinedButton.icon(

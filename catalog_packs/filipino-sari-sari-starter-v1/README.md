@@ -1,16 +1,21 @@
-# Filipino Sari-sari Starter Catalog v1
+# Filipino Sari-sari Starter Catalog
 
 This is a small, reviewed proof source for the app's offline `.razepack`
 workflow. It contains 20 packaged food and drink products and one optimized
 256 px image per product. It is intentionally not described as a complete
 Philippine catalog.
 
+Revision 2 normalizes the product filters to broad shelf categories such as
+`Canned Goods`, `Snacks`, `Biscuits`, and `Beverages`, rather than creating a
+separate category for every food subtype.
+
 Build it from the repository root:
 
 ```sh
 python3 tool/build_catalog_pack.py \
   catalog_packs/filipino-sari-sari-starter-v1/source.json \
-  outputs/filipino-sari-sari-starter-v1.razepack
+  outputs/filipino-sari-sari-starter-v1.razepack \
+  --overwrite
 ```
 
 Only three rows contain `suggestedPriceCentavos`. Those values are exact

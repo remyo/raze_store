@@ -4,9 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/app/theme_mode_controller.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/catalog/application/custom_catalog_categories_controller.dart';
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
+import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
+import 'package:raze_store/features/settings/presentation/storage_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -79,6 +82,10 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final customCategoryCount = ref
+        .watch(customCatalogCategoriesProvider)
+        .length;
+    final storageUsage = ref.watch(appStorageUsageProvider);
 
     return AppPageScaffold(
       title: 'Store settings',
@@ -175,6 +182,56 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const AppSectionHeader(
+                      title: 'Product categories',
+                      subtitle:
+                          'Choose broad shelf groups and add your own categories.',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        key: const ValueKey('manage-product-categories'),
+                        dense: true,
+                        leading: const Icon(Icons.category_outlined),
+                        title: const Text('Manage categories'),
+                        subtitle: Text(
+                          customCategoryCount == 0
+                              ? 'Built-in categories only'
+                              : '$customCategoryCount custom ${customCategoryCount == 1 ? 'category' : 'categories'}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.push('/settings/categories'),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppSectionHeader(
+                      title: 'Storage',
+                      subtitle:
+                          'See what is using space and safely clear temporary files.',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        key: const ValueKey('manage-app-storage'),
+                        dense: true,
+                        leading: const Icon(Icons.storage_rounded),
+                        title: const Text('Storage manager'),
+                        subtitle: Text(
+                          storageUsage.when(
+                            data: (usage) =>
+                                '${formatStorageBytes(usage.totalManagedBytes)} measured local data',
+                            loading: () => 'Measuring local data…',
+                            error: (error, stackTrace) =>
+                                'View storage details',
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: _openStorageManager,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppSectionHeader(
                       title: 'Appearance',
                       subtitle: 'Use the phone setting or choose a theme.',
                     ),
@@ -255,6 +312,13 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
         const SnackBar(content: Text('Could not save the store details.')),
       );
     }
+  }
+
+  Future<void> _openStorageManager() async {
+    ref.invalidate(appStorageUsageProvider);
+    await context.push('/settings/storage');
+    if (!mounted) return;
+    ref.invalidate(appStorageUsageProvider);
   }
 }
 

@@ -85,6 +85,76 @@ void main() {
     expect(repository.addCalls, 2);
   });
 
+  testWidgets(
+    'cart navigation waits for pending writes and blocks quantity changes',
+    (tester) async {
+      _useTallView(tester);
+      final gate = Completer<void>();
+      final repository = _RecordingCartRepository(
+        CartDraft([_stickCartItem(quantity: 1)]),
+        addGate: gate,
+      );
+      final router = GoRouter(
+        initialLocation: '/quick-sell',
+        routes: [
+          GoRoute(
+            path: '/quick-sell',
+            builder: (_, _) => const QuickSellScreen(),
+          ),
+          GoRoute(
+            path: '/cart',
+            builder: (_, _) => const Scaffold(body: Text('Cart destination')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            quickSellProductsProvider.overrideWith(
+              (ref) => Stream.value([_unitProduct]),
+            ),
+            cartDraftProvider.overrideWith((ref) => repository.watchDraft()),
+            cartRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final openCart = find.byKey(const ValueKey('quick-sell-open-cart'));
+      final viewCart = find.byKey(const ValueKey('quick-sell-view-cart'));
+      final addStick = find.byKey(
+        const ValueKey('quick-sell-add-cigarettes-stick'),
+      );
+      final staleOpenCartCallback = tester
+          .widget<IconButton>(openCart)
+          .onPressed!;
+
+      await tester.tap(addStick);
+      await tester.pump();
+
+      expect(repository.addCalls, 1);
+      expect(tester.widget<IconButton>(openCart).onPressed, isNull);
+      expect(tester.widget<FilledButton>(viewCart).onPressed, isNull);
+
+      staleOpenCartCallback();
+      await tester.pump();
+
+      expect(find.text('Cart destination'), findsNothing);
+      expect(tester.widget<IconButton>(addStick).onPressed, isNull);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cart destination'), findsOneWidget);
+      expect(repository.addCalls, 1);
+    },
+  );
+
   testWidgets('minus reduces the matching product and unit cart line', (
     tester,
   ) async {
@@ -244,6 +314,19 @@ final _regularProduct = StoreProduct(
   metadata: CatalogMetadata(name: 'Soap'),
   price: const Money.fromCentavos(2500),
   createdAt: DateTime.utc(2026, 9, 3),
+  updatedAt: DateTime.utc(2026, 9, 3),
+);
+
+CartItem _stickCartItem({required int quantity}) => CartItem(
+  lineId: 'saved-stick-line',
+  productId: _unitProduct.id,
+  sellingUnitId: 'stick',
+  barcode: _unitProduct.barcode,
+  nameSnapshot: _unitProduct.name,
+  unitLabelSnapshot: 'Stick',
+  unitPrice: const Money.fromCentavos(1000),
+  quantity: quantity,
+  addedAt: DateTime.utc(2026, 9, 3),
   updatedAt: DateTime.utc(2026, 9, 3),
 );
 

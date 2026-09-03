@@ -28,6 +28,11 @@ class AppShell extends ConsumerWidget {
         selectedIcon: _CartIcon(quantity: cartQuantity, selected: true),
         label: 'Cart',
       ),
+      const NavigationDestination(
+        icon: Icon(Icons.receipt_long_outlined),
+        selectedIcon: Icon(Icons.receipt_long_rounded),
+        label: 'Sales',
+      ),
     ];
 
     return AppShellBranchScope(
@@ -93,6 +98,11 @@ class AppShell extends ConsumerWidget {
                         ),
                         label: Text('Cart'),
                       ),
+                      const NavigationRailDestination(
+                        icon: Icon(Icons.receipt_long_outlined),
+                        selectedIcon: Icon(Icons.receipt_long_rounded),
+                        label: Text('Sales'),
+                      ),
                     ],
                   ),
                 ),
@@ -121,7 +131,7 @@ class AppShell extends ConsumerWidget {
 ///
 /// Route-level [TickerMode] also changes while dialogs and root routes are
 /// shown, so it cannot distinguish a deliberate scanner workflow from the
-/// user switching to Products or Cart.
+/// user switching to Products, Cart, or Sales.
 class AppShellBranchScope extends InheritedWidget {
   const AppShellBranchScope({
     super.key,

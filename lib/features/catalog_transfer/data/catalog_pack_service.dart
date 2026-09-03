@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:raze_store/core/barcode/barcode.dart';
 import 'package:raze_store/core/database/app_database.dart' as database;
 import 'package:raze_store/core/storage/local_product_image_store.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:uuid/uuid.dart';
 
 typedef CatalogPackImportRefresh = Future<void> Function();
@@ -50,8 +51,12 @@ final class CatalogImportResult {
   final Object? cause;
 }
 
-/// Imports a distributable, offline shared-catalog ZIP without replacing any
-/// store-owned prices, photos, sub-unit prices, cart rows, or settings.
+/// Imports a distributable, offline shared-catalog ZIP.
+///
+/// The default mode preserves store-owned values. An explicit overwrite can
+/// update matching catalog fields and the main selling price, while local
+/// photos, sub-unit prices, cart rows, settings, and products missing from the
+/// pack always remain untouched.
 final class CatalogPackService {
   CatalogPackService({
     required database.AppDatabase database,
@@ -98,7 +103,10 @@ final class CatalogPackService {
   final DateTime Function() _now;
   bool _operationRunning = false;
 
-  Future<CatalogImportResult> importMerging(String sourcePath) async {
+  Future<CatalogImportResult> importMerging(
+    String sourcePath, {
+    CatalogPackImportMode mode = CatalogPackImportMode.keepExisting,
+  }) async {
     if (_operationRunning) {
       return const CatalogImportResult(
         success: false,
@@ -137,7 +145,7 @@ final class CatalogPackService {
         archiveFile: archiveFile,
         staging: staging,
       );
-      final plan = await _buildMergePlan(validated.data, staging);
+      final plan = await _buildMergePlan(validated.data, staging, mode);
       final installedImages = <String, String>{};
       for (final item in plan.items) {
         final portableImage = item.imageToInstall;
@@ -149,7 +157,7 @@ final class CatalogPackService {
         newlyPersistedImages.add(savedPath);
       }
 
-      final summary = await _applyMerge(plan, installedImages);
+      final summary = await _applyMerge(plan, installedImages, mode);
       databaseCommitted = true;
       for (final oldPath in summary.supersededCatalogImages) {
         try {
@@ -165,9 +173,7 @@ final class CatalogPackService {
       }
       return CatalogImportResult(
         success: true,
-        message:
-            'Catalog pack imported ${summary.createdCount} new products'
-            '${summary.updatedCount == 0 ? '' : ' and repaired ${summary.updatedCount} existing products'}.',
+        message: _successMessage(summary, mode),
         productCount: validated.data.products.length,
         createdCount: summary.createdCount,
         updatedCount: summary.updatedCount,
@@ -209,6 +215,17 @@ final class CatalogPackService {
       _operationRunning = false;
       await _deleteDirectoryQuietly(staging);
     }
+  }
+
+  static String _successMessage(
+    _MergeSummary summary,
+    CatalogPackImportMode mode,
+  ) {
+    final updatedVerb = mode == CatalogPackImportMode.overwriteMatching
+        ? 'updated'
+        : 'repaired';
+    return 'Catalog pack imported ${summary.createdCount} new products'
+        '${summary.updatedCount == 0 ? '' : ' and $updatedVerb ${summary.updatedCount} existing products'}.';
   }
 
   /// Rejects unsupported ZIP features before the archive package has a chance
@@ -826,6 +843,7 @@ final class CatalogPackService {
   Future<_MergePlan> _buildMergePlan(
     _CatalogPackData data,
     Directory staging,
+    CatalogPackImportMode mode,
   ) async {
     final existingProducts = await _database
         .select(_database.storeProducts)
@@ -882,7 +900,11 @@ final class CatalogPackService {
           usableCatalogImage = resolved;
         }
       }
-      final imageToInstall = usableCatalogImage == null ? product.image : null;
+      final imageToInstall = switch (mode) {
+        CatalogPackImportMode.keepExisting =>
+          usableCatalogImage == null ? product.image : null,
+        CatalogPackImportMode.overwriteMatching => product.image,
+      };
       if (imageToInstall != null) {
         final stagedImage = _safeStageFile(staging, imageToInstall);
         if (!await stagedImage.exists()) {
@@ -909,6 +931,7 @@ final class CatalogPackService {
   Future<_MergeSummary> _applyMerge(
     _MergePlan plan,
     Map<String, String> installedImages,
+    CatalogPackImportMode mode,
   ) async {
     var createdCount = 0;
     var updatedCount = 0;
@@ -992,6 +1015,37 @@ final class CatalogPackService {
         final repairedPath = installedImage ?? item.existingUsableCatalogImage;
         final shouldRepairImage =
             repairedPath != null && repairedPath != existing.catalogImagePath;
+        if (mode == CatalogPackImportMode.overwriteMatching) {
+          await (_database.update(
+            _database.storeProducts,
+          )..where((table) => table.id.equals(item.targetId))).write(
+            database.StoreProductsCompanion(
+              barcode: Value(product.barcode),
+              source: Value(product.source),
+              sourceProductId: Value(product.sourceProductId),
+              name: Value(product.name),
+              brand: Value(product.brand),
+              unitLabel: Value(product.unitLabel),
+              category: Value(product.category),
+              remoteImageUrl: Value(product.remoteImageUrl),
+              catalogImagePath: shouldRepairImage
+                  ? Value(repairedPath)
+                  : const Value.absent(),
+              sourceUpdatedAt: Value(product.updatedAt),
+              priceCentavos: product.suggestedPriceCentavos == null
+                  ? const Value.absent()
+                  : Value(product.suggestedPriceCentavos!),
+              updatedAt: Value(now),
+            ),
+          );
+          if (installedImage != null &&
+              item.oldCatalogImage != null &&
+              item.oldCatalogImage != installedImage) {
+            supersededImages.add(item.oldCatalogImage!);
+          }
+          updatedCount++;
+          continue;
+        }
         if (!shouldLinkSource && !shouldRepairImage) continue;
 
         await (_database.update(

@@ -13,7 +13,9 @@ abstract interface class CatalogTransferOperations {
 
   Future<CatalogTransferResult> restoreBackupReplacing();
 
-  Future<CatalogTransferResult> importCatalogPackMerging();
+  Future<CatalogTransferResult> importCatalogPackMerging({
+    CatalogPackImportMode mode = CatalogPackImportMode.keepExisting,
+  });
 
   Future<CatalogTransferResult> exportCsv();
 
@@ -102,7 +104,9 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
   }
 
   @override
-  Future<CatalogTransferResult> importCatalogPackMerging() async {
+  Future<CatalogTransferResult> importCatalogPackMerging({
+    CatalogPackImportMode mode = CatalogPackImportMode.keepExisting,
+  }) async {
     try {
       final path = await _fileGateway.pickCatalogPack();
       if (path == null) {
@@ -118,7 +122,7 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
         );
       }
 
-      final imported = await _packService.importMerging(path);
+      final imported = await _packService.importMerging(path, mode: mode);
       if (!imported.success) {
         return CatalogTransferFailure(
           code: _packFailureCode(imported.failureCode),

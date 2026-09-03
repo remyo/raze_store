@@ -80,6 +80,8 @@ class ProductImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
+          cacheWidth: cacheSize,
+          cacheHeight: cacheSize,
           errorBuilder: (_, _, _) => catalogOrRemote(),
           semanticLabel: product.name,
         ),

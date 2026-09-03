@@ -49,7 +49,7 @@ void main() {
     expect(settings.profile.address, 'Quezon City');
     expect(find.text('Aling Nena Store is ready'), findsOneWidget);
     expect(find.text('Import offline catalog pack'), findsOneWidget);
-    expect(find.text('Quick add first product'), findsOneWidget);
+    expect(find.text('Add first product'), findsOneWidget);
     expect(find.text('Restore backup or import CSV'), findsOneWidget);
     expect(find.text('Continue to product list'), findsOneWidget);
   });
@@ -315,7 +315,9 @@ final class _FakeCatalogTransferOperations
   int packImportCalls = 0;
 
   @override
-  Future<CatalogTransferResult> importCatalogPackMerging() async {
+  Future<CatalogTransferResult> importCatalogPackMerging({
+    CatalogPackImportMode mode = CatalogPackImportMode.keepExisting,
+  }) async {
     packImportCalls++;
     return packImportResult;
   }

@@ -21,6 +21,14 @@ void main() {
     expect(dimensions, (80, 40));
   });
 
+  test('uses a phone-safe default working size', () async {
+    final source = await _solidPng(width: 900, height: 450);
+
+    final prepared = await prepareProductPhotoBytesForBackgroundRemoval(source);
+
+    expect(await _dimensions(prepared), (768, 384));
+  });
+
   test('rejects a source above the configured pixel safety limit', () async {
     final source = await _solidPng(width: 20, height: 10);
 
