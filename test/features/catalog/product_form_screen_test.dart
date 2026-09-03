@@ -229,6 +229,10 @@ final class _RecordingCatalogRepository implements CatalogRepository {
       throw UnimplementedError();
 
   @override
+  Future<StoreProduct?> findBySource(String source, String sourceProductId) =>
+      throw UnimplementedError();
+
+  @override
   Future<StoreProduct?> getProduct(String id) => throw UnimplementedError();
 
   @override

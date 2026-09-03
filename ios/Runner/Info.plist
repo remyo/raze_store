@@ -49,6 +49,13 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Raze Store uses the camera to scan product barcodes and take product photos.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Raze Store connects to a Raze product catalog running on your local network during setup and development.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Raze Store saves receipt images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

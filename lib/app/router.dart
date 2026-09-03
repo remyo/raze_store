@@ -5,6 +5,8 @@ import 'package:raze_store/features/cart/presentation/cart_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
 import 'package:raze_store/features/catalog/presentation/quick_add_product_screen.dart';
+import 'package:raze_store/features/catalog/presentation/remote_catalog_screen.dart';
+import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/onboarding/presentation/app_startup_gate.dart';
 import 'package:raze_store/features/onboarding/presentation/first_launch_setup_screen.dart';
 import 'package:raze_store/features/scanner/presentation/scanner_screen.dart';
@@ -58,8 +60,16 @@ final appRouter = GoRouter(
       parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => QuickAddProductScreen(
         initialBarcode: state.uri.queryParameters['barcode'],
+        initialMetadata: state.extra is CatalogMetadata
+            ? state.extra! as CatalogMetadata
+            : null,
         goToProductsAfterSave: state.uri.queryParameters['fromSetup'] == 'true',
       ),
+    ),
+    GoRoute(
+      path: '/catalog',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const RemoteCatalogScreen(),
     ),
     GoRoute(
       path: '/products/new',
@@ -68,6 +78,9 @@ final appRouter = GoRouter(
         initialBarcode: state.uri.queryParameters['barcode'],
         initialName: state.uri.queryParameters['name'],
         initialPrice: state.uri.queryParameters['price'],
+        initialMetadata: state.extra is CatalogMetadata
+            ? state.extra! as CatalogMetadata
+            : null,
         goToProductsAfterSave: state.uri.queryParameters['fromSetup'] == 'true',
       ),
     ),

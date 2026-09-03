@@ -6,6 +6,11 @@ import 'package:drift/drift.dart';
   unique: true,
 )
 @TableIndex(name: 'store_products_name_idx', columns: {#name})
+@TableIndex(
+  name: 'store_products_source_identity_unique_idx',
+  columns: {#source, #sourceProductId},
+  unique: true,
+)
 class StoreProducts extends Table {
   TextColumn get id => text()();
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/app/theme_mode_controller.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/catalog/application/catalog_api_providers.dart';
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
@@ -79,7 +80,6 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     return AppPageScaffold(
       title: 'Store settings',
@@ -222,34 +222,11 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     const SizedBox(height: AppSpacing.lg),
                     const AppSectionHeader(
                       title: 'Catalog connection',
-                      subtitle: 'Prepared for the future raze_store_api.',
+                      subtitle:
+                          'Shared product details from raze_store_api; your prices stay on this phone.',
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Card(
-                      color: scheme.secondaryContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.cloud_off_outlined,
-                              color: scheme.onSecondaryContainer,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                'Raze Store currently works fully offline. A later API can supply Philippine product names, brands, sizes, and images; this store’s selling prices will stay local and authoritative.',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: scheme.onSecondaryContainer,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    const _CatalogConnectionCard(),
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
@@ -286,6 +263,94 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not save the store details.')),
       );
+    }
+  }
+}
+
+class _CatalogConnectionCard extends ConsumerStatefulWidget {
+  const _CatalogConnectionCard();
+
+  @override
+  ConsumerState<_CatalogConnectionCard> createState() =>
+      _CatalogConnectionCardState();
+}
+
+class _CatalogConnectionCardState
+    extends ConsumerState<_CatalogConnectionCard> {
+  bool _checking = false;
+  bool? _connected;
+
+  @override
+  Widget build(BuildContext context) {
+    final repository = ref.watch(remoteCatalogRepositoryProvider);
+    final scheme = Theme.of(context).colorScheme;
+    final configured = repository.isConfigured;
+    final connected = _connected;
+    final icon = connected == true
+        ? Icons.cloud_done_outlined
+        : configured
+        ? Icons.cloud_outlined
+        : Icons.cloud_off_outlined;
+    final message = !configured
+        ? repository.configurationError ??
+              'No catalog endpoint was included in this release build.'
+        : connected == true
+        ? 'Connected to the shared Philippine product catalog.'
+        : connected == false
+        ? 'The endpoint could not be reached. Saved products remain available offline.'
+        : 'Ready to look up shared products at ${repository.baseUri}';
+
+    return Card(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: scheme.onSecondaryContainer),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (configured) ...[
+              const SizedBox(height: AppSpacing.md),
+              OutlinedButton.icon(
+                key: const ValueKey('test-catalog-connection'),
+                onPressed: _checking ? null : _testConnection,
+                icon: _checking
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync_rounded),
+                label: Text(_checking ? 'Checking…' : 'Test connection'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _testConnection() async {
+    setState(() => _checking = true);
+    try {
+      await ref.read(remoteCatalogRepositoryProvider).checkHealth();
+      if (mounted) setState(() => _connected = true);
+    } on Object {
+      if (mounted) setState(() => _connected = false);
+    } finally {
+      if (mounted) setState(() => _checking = false);
     }
   }
 }

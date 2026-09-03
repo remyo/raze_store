@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/core/widgets/bounded_network_image.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 
 class ProductImage extends StatelessWidget {
@@ -24,6 +25,15 @@ class ProductImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final localPath = product.localImagePath?.trim();
     final remoteUrl = product.remoteImageUrl?.trim();
+    final logicalCacheSize = width ?? height;
+    final cacheSize =
+        logicalCacheSize == null ||
+            !logicalCacheSize.isFinite ||
+            logicalCacheSize <= 0
+        ? 1024
+        : (logicalCacheSize * MediaQuery.devicePixelRatioOf(context))
+              .ceil()
+              .clamp(1, 1024);
     final fallback = ProductImagePlaceholder(
       width: width,
       height: height,
@@ -47,14 +57,14 @@ class ProductImage extends StatelessWidget {
     if (remoteUrl != null && remoteUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: borderRadius,
-        child: Image.network(
-          remoteUrl,
+        child: BoundedNetworkImage(
+          url: remoteUrl,
+          fallback: fallback,
           width: width,
           height: height,
           fit: fit,
-          errorBuilder: (_, _, _) => fallback,
-          loadingBuilder: (context, child, progress) =>
-              progress == null ? child : fallback,
+          cacheWidth: cacheSize,
+          cacheHeight: cacheSize,
           semanticLabel: product.name,
         ),
       );

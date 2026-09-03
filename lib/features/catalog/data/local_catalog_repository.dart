@@ -69,9 +69,28 @@ final class LocalCatalogRepository implements CatalogRepository {
   }
 
   @override
+  Future<StoreProduct?> findBySource(
+    String source,
+    String sourceProductId,
+  ) async {
+    final normalizedSource = _requiredId(source);
+    final normalizedSourceProductId = _requiredId(sourceProductId);
+    final row =
+        await (_database.select(_database.storeProducts)
+              ..where(
+                (table) =>
+                    table.source.equals(normalizedSource) &
+                    table.sourceProductId.equals(normalizedSourceProductId),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (row == null) return null;
+    return _mapRow(row, await _unitsFor(row.id));
+  }
+
+  @override
   Future<StoreProduct> createProduct(ProductDraft draft) async {
     final id = _draftId(draft.id);
-    await _ensureBarcodeAvailable(draft.barcode);
     final now = _now().toUtc();
     final companion = _companion(
       id: id,
@@ -80,6 +99,8 @@ final class LocalCatalogRepository implements CatalogRepository {
       updatedAt: now,
     );
     await _database.transaction(() async {
+      await _ensureBarcodeAvailable(draft.barcode);
+      await _ensureSourceAvailable(draft.source, draft.sourceProductId);
       await _database.into(_database.storeProducts).insert(companion);
       await _replaceSellingUnits(id, draft.sellingUnits, now);
     });
@@ -91,7 +112,6 @@ final class LocalCatalogRepository implements CatalogRepository {
     final normalizedId = _requiredId(id);
     final existing = await getProduct(normalizedId);
     if (existing == null) throw ProductNotFoundException(normalizedId);
-    await _ensureBarcodeAvailable(draft.barcode, excludingId: normalizedId);
 
     final companion = _companion(
       id: normalizedId,
@@ -100,6 +120,12 @@ final class LocalCatalogRepository implements CatalogRepository {
       updatedAt: _now().toUtc(),
     );
     await _database.transaction(() async {
+      await _ensureBarcodeAvailable(draft.barcode, excludingId: normalizedId);
+      await _ensureSourceAvailable(
+        draft.source,
+        draft.sourceProductId,
+        excludingId: normalizedId,
+      );
       await (_database.update(
         _database.storeProducts,
       )..where((table) => table.id.equals(normalizedId))).write(companion);
@@ -287,6 +313,26 @@ final class LocalCatalogRepository implements CatalogRepository {
     )..where((table) => table.barcode.equals(barcode))).getSingleOrNull();
     if (existing != null && existing.id != excludingId) {
       throw DuplicateBarcodeException(barcode);
+    }
+  }
+
+  Future<void> _ensureSourceAvailable(
+    String? source,
+    String? sourceProductId, {
+    String? excludingId,
+  }) async {
+    if (source == null || sourceProductId == null) return;
+    final existing =
+        await (_database.select(_database.storeProducts)
+              ..where(
+                (table) =>
+                    table.source.equals(source) &
+                    table.sourceProductId.equals(sourceProductId),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (existing != null && existing.id != excludingId) {
+      throw DuplicateCatalogProductException(source, sourceProductId);
     }
   }
 

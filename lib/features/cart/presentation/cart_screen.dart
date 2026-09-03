@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/money/money.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/core/widgets/bounded_network_image.dart';
 import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/cart/domain/cart.dart';
 import 'package:raze_store/features/receipt/receipt.dart';
@@ -406,9 +407,7 @@ class _CartLineTile extends StatelessWidget {
     ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' · ');
     final imagePath = item.imagePathSnapshot?.trim();
     final imageUri = imagePath == null ? null : Uri.tryParse(imagePath);
-    final isRemoteImage =
-        imageUri != null &&
-        (imageUri.scheme == 'https' || imageUri.scheme == 'http');
+    final isRemoteImage = imageUri != null && imageUri.hasScheme;
     const imageFallback = ProductImagePlaceholder(width: 64, height: 64);
 
     return Padding(
@@ -424,12 +423,14 @@ class _CartLineTile extends StatelessWidget {
                 child: imagePath == null || imagePath.isEmpty
                     ? imageFallback
                     : isRemoteImage
-                    ? Image.network(
-                        imagePath,
+                    ? BoundedNetworkImage(
+                        url: imagePath,
+                        fallback: imageFallback,
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => imageFallback,
+                        cacheWidth: 192,
+                        cacheHeight: 192,
                       )
                     : Image.file(
                         File(imagePath),

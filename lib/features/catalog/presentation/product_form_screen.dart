@@ -22,6 +22,7 @@ class ProductFormScreen extends ConsumerWidget {
     this.initialBarcode,
     this.initialName,
     this.initialPrice,
+    this.initialMetadata,
     this.goToProductsAfterSave = false,
   });
 
@@ -29,6 +30,7 @@ class ProductFormScreen extends ConsumerWidget {
   final String? initialBarcode;
   final String? initialName;
   final String? initialPrice;
+  final CatalogMetadata? initialMetadata;
   final bool goToProductsAfterSave;
 
   @override
@@ -39,6 +41,7 @@ class ProductFormScreen extends ConsumerWidget {
         initialBarcode: initialBarcode,
         initialName: initialName,
         initialPrice: initialPrice,
+        initialMetadata: initialMetadata,
         goToProductsAfterSave: goToProductsAfterSave,
       );
     }
@@ -78,6 +81,7 @@ class _ProductEditor extends ConsumerStatefulWidget {
     this.initialBarcode,
     this.initialName,
     this.initialPrice,
+    this.initialMetadata,
     this.goToProductsAfterSave = false,
   });
 
@@ -85,6 +89,7 @@ class _ProductEditor extends ConsumerStatefulWidget {
   final String? initialBarcode;
   final String? initialName;
   final String? initialPrice;
+  final CatalogMetadata? initialMetadata;
   final bool goToProductsAfterSave;
 
   @override
@@ -112,14 +117,28 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
     super.initState();
     final product = widget.product;
     _nameController = TextEditingController(
-      text: product?.name ?? widget.initialName ?? '',
+      text:
+          product?.name ??
+          widget.initialName ??
+          widget.initialMetadata?.name ??
+          '',
     );
-    _brandController = TextEditingController(text: product?.brand ?? '');
-    _unitController = TextEditingController(text: product?.unitLabel ?? '');
-    _categoryController = TextEditingController(text: product?.category ?? '');
+    _brandController = TextEditingController(
+      text: product?.brand ?? widget.initialMetadata?.brand ?? '',
+    );
+    _unitController = TextEditingController(
+      text: product?.unitLabel ?? widget.initialMetadata?.unitLabel ?? '',
+    );
+    _categoryController = TextEditingController(
+      text: product?.category ?? widget.initialMetadata?.category ?? '',
+    );
     _categoryFocusNode = FocusNode();
     _barcodeController = TextEditingController(
-      text: product?.barcode ?? widget.initialBarcode ?? '',
+      text:
+          product?.barcode ??
+          widget.initialBarcode ??
+          widget.initialMetadata?.barcode ??
+          '',
     );
     _priceController = TextEditingController(
       text: product == null
@@ -152,7 +171,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final categorySuggestions = ref.watch(catalogCategorySuggestionsProvider);
     return PopScope(
-      canPop: !widget.goToProductsAfterSave,
+      canPop: !_busy && !widget.goToProductsAfterSave,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && widget.goToProductsAfterSave && !_busy) {
           context.go('/products');
@@ -166,7 +185,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                 tooltip: 'Close product form',
                 icon: const Icon(Icons.close_rounded),
               )
-            : const BackButton(),
+            : IconButton(
+                onPressed: _busy ? null : () => context.pop(),
+                tooltip: 'Back',
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
         padBody: false,
         bottomNavigationBar: SafeArea(
           top: false,
@@ -198,6 +221,26 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (!_editing && widget.initialMetadata != null) ...[
+                    Card(
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      child: const Padding(
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        child: Row(
+                          children: [
+                            Icon(Icons.cloud_done_outlined),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Product details were prefilled from the shared Raze catalog. Your selling price and selling units remain local.',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                   const AppSectionHeader(
                     title: 'Product photo',
                     subtitle: 'Optional, but helpful for family members.',
@@ -356,6 +399,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextFormField(
+                    key: const ValueKey('product-barcode-field'),
                     controller: _barcodeController,
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.done,
@@ -495,6 +539,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
       final localImagePath =
           savedPhotoPath ?? (_removeExistingPhoto ? null : oldPhotoPath);
       final existing = widget.product;
+      final initialMetadata = widget.initialMetadata;
       final draft = ProductDraft(
         id: existing?.id,
         barcode: _barcodeController.text,
@@ -502,9 +547,12 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
         brand: _brandController.text,
         unitLabel: _unitController.text,
         category: _categoryController.text,
-        remoteImageUrl: existing?.remoteImageUrl,
-        source: existing?.metadata.source,
-        sourceProductId: existing?.metadata.sourceProductId,
+        remoteImageUrl:
+            existing?.remoteImageUrl ?? initialMetadata?.remoteImageUrl,
+        source: existing?.metadata.source ?? initialMetadata?.source,
+        sourceProductId:
+            existing?.metadata.sourceProductId ??
+            initialMetadata?.sourceProductId,
         localImagePath: localImagePath,
         priceCentavos: tryParsePesoCentavos(_priceController.text)!,
         sellingUnits: [
@@ -517,10 +565,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
         ],
       );
       final repository = ref.read(catalogRepositoryProvider);
+      final StoreProduct savedProduct;
       if (existing == null) {
-        await repository.createProduct(draft);
+        savedProduct = await repository.createProduct(draft);
       } else {
-        await repository.updateProduct(existing.id, draft);
+        savedProduct = await repository.updateProduct(existing.id, draft);
       }
       if ((savedPhotoPath != null || _removeExistingPhoto) &&
           oldPhotoPath != null &&
@@ -538,7 +587,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
       if (widget.goToProductsAfterSave) {
         context.go('/products');
       } else {
-        context.pop(true);
+        context.pop(savedProduct);
       }
     } on DuplicateBarcodeException catch (error) {
       if (savedPhotoPath != null) {
@@ -551,6 +600,21 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Barcode ${error.barcode} is already in your store.'),
+        ),
+      );
+    } on DuplicateCatalogProductException {
+      if (savedPhotoPath != null) {
+        await ref
+            .read(localProductImageStoreProvider)
+            .deleteIfManaged(savedPhotoPath);
+      }
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This shared catalog product is already in your store.',
+          ),
         ),
       );
     } catch (_) {

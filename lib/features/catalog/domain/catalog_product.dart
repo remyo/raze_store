@@ -177,6 +177,11 @@ final class ProductDraft {
         'Must not be negative.',
       );
     }
+    if ((this.source == null) != (this.sourceProductId == null)) {
+      throw ArgumentError(
+        'Source and sourceProductId must either both be set or both be empty.',
+      );
+    }
     if (this.sellingUnits.isNotEmpty && this.barcode == null) {
       throw ArgumentError.value(
         barcode,

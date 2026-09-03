@@ -237,6 +237,7 @@ final class CatalogCsvService {
     final products = <_CsvProduct>[];
     final productIds = <String>{};
     final barcodes = <String>{};
+    final sourceIdentities = <(String, String)>{};
     final sellingUnitIds = <String>{};
     var totalSellingUnits = 0;
     for (var rowIndex = 1; rowIndex < table.length; rowIndex++) {
@@ -287,7 +288,7 @@ final class CatalogCsvService {
       );
       final defaultUnit = _optionalCsvText(
         valueAt(row, 'default_unit_label'),
-        maximum: 80,
+        maximum: 120,
         row: displayRow,
         label: 'default unit',
       );
@@ -315,6 +316,28 @@ final class CatalogCsvService {
           );
         }
       }
+      final source = _optionalCsvText(
+        valueAt(row, 'source'),
+        maximum: 64,
+        row: displayRow,
+        label: 'source',
+      );
+      final sourceProductId = _optionalCsvText(
+        valueAt(row, 'source_product_id'),
+        maximum: 160,
+        row: displayRow,
+        label: 'source product ID',
+      );
+      if ((source == null) != (sourceProductId == null)) {
+        throw _CsvValidationException(
+          'CSV row $displayRow must include both source and source product ID.',
+        );
+      }
+      if (source != null && !sourceIdentities.add((source, sourceProductId!))) {
+        throw _CsvValidationException(
+          'CSV row $displayRow repeats a shared catalog product.',
+        );
+      }
       products.add(
         _CsvProduct(
           sourceRow: displayRow,
@@ -329,7 +352,7 @@ final class CatalogCsvService {
           ),
           category: _optionalCsvText(
             valueAt(row, 'category'),
-            maximum: 120,
+            maximum: 240,
             row: displayRow,
             label: 'category',
           ),
@@ -338,22 +361,12 @@ final class CatalogCsvService {
           sellingUnits: sellingUnits,
           remoteImageUrl: _optionalCsvText(
             valueAt(row, 'remote_image_url'),
-            maximum: 2000,
+            maximum: 2048,
             row: displayRow,
             label: 'remote image URL',
           ),
-          source: _optionalCsvText(
-            valueAt(row, 'source'),
-            maximum: 240,
-            row: displayRow,
-            label: 'source',
-          ),
-          sourceProductId: _optionalCsvText(
-            valueAt(row, 'source_product_id'),
-            maximum: 240,
-            row: displayRow,
-            label: 'source product ID',
-          ),
+          source: source,
+          sourceProductId: sourceProductId,
         ),
       );
       if (products.length > _maximumProducts) {
@@ -454,6 +467,11 @@ final class CatalogCsvService {
         for (final product in existingProducts)
           if (product.barcode != null) product.barcode!: product,
       };
+      final bySourceIdentity = {
+        for (final product in existingProducts)
+          if (product.source != null && product.sourceProductId != null)
+            (product.source!, product.sourceProductId!): product,
+      };
       final existingUnits = await _database
           .select(_database.productSellingUnits)
           .get();
@@ -465,14 +483,20 @@ final class CatalogCsvService {
         final barcodeMatch = product.barcode == null
             ? null
             : byBarcode[product.barcode];
-        if (idMatch != null &&
-            barcodeMatch != null &&
-            idMatch.id != barcodeMatch.id) {
+        final sourceMatch = product.source == null
+            ? null
+            : bySourceIdentity[(product.source!, product.sourceProductId!)];
+        final matchedIds = {
+          if (idMatch != null) idMatch.id,
+          if (barcodeMatch != null) barcodeMatch.id,
+          if (sourceMatch != null) sourceMatch.id,
+        };
+        if (matchedIds.length > 1) {
           throw _CsvValidationException(
             'CSV row ${product.sourceRow} identifies two different existing products.',
           );
         }
-        final existing = idMatch ?? barcodeMatch;
+        final existing = idMatch ?? barcodeMatch ?? sourceMatch;
         final targetId = existing?.id ?? product.id ?? _uuid.v4();
         if (!claimedTargetIds.add(targetId)) {
           throw _CsvValidationException(

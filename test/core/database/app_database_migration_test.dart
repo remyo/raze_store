@@ -63,7 +63,7 @@ void main() {
     addTearDown(database.close);
     final draft = await LocalCartRepository(database).getDraft();
 
-    expect(database.schemaVersion, 3);
+    expect(database.schemaVersion, 4);
     expect(draft.items, hasLength(1));
     expect(draft.items.single.lineId, 'main:coffee');
     expect(draft.items.single.productId, 'coffee');
@@ -81,6 +81,21 @@ void main() {
         file,
         setup: (sqlite) {
           sqlite.execute('''
+            CREATE TABLE store_products (
+              id TEXT NOT NULL PRIMARY KEY,
+              barcode TEXT,
+              source TEXT,
+              source_product_id TEXT,
+              name TEXT NOT NULL,
+              brand TEXT,
+              unit_label TEXT,
+              category TEXT,
+              remote_image_url TEXT,
+              local_image_path TEXT,
+              price_centavos INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            );
             CREATE TABLE draft_cart_items (
               line_id TEXT NOT NULL PRIMARY KEY,
               product_id TEXT NOT NULL,
@@ -119,4 +134,65 @@ void main() {
       buildCartLineId('coffee', 'stick'),
     });
   });
+
+  test(
+    'v3 migration keeps duplicate products but detaches extra API links',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('raze_store_v3_');
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/migration.sqlite');
+      final database = AppDatabase.forTesting(
+        NativeDatabase(
+          file,
+          setup: (sqlite) {
+            sqlite.execute('''
+            CREATE TABLE store_products (
+              id TEXT NOT NULL PRIMARY KEY,
+              barcode TEXT,
+              source TEXT,
+              source_product_id TEXT,
+              name TEXT NOT NULL,
+              brand TEXT,
+              unit_label TEXT,
+              category TEXT,
+              remote_image_url TEXT,
+              local_image_path TEXT,
+              price_centavos INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            );
+            INSERT INTO store_products VALUES (
+              'first', '111', 'raze_store_api', 'remote-id', 'First',
+              NULL, NULL, NULL, NULL, NULL, 100, 1, 1
+            );
+            INSERT INTO store_products VALUES (
+              'second', '222', 'raze_store_api', 'remote-id', 'Second',
+              NULL, NULL, NULL, NULL, NULL, 200, 2, 2
+            );
+            INSERT INTO store_products VALUES (
+              'partial', '333', 'raze_store_api', NULL, 'Partial',
+              NULL, NULL, NULL, NULL, NULL, 300, 3, 3
+            );
+            PRAGMA user_version = 3;
+          ''');
+          },
+        ),
+      );
+      addTearDown(database.close);
+
+      final products = await database.select(database.storeProducts).get();
+      final linked = products
+          .where((product) => product.sourceProductId == 'remote-id')
+          .toList();
+
+      expect(database.schemaVersion, 4);
+      expect(products, hasLength(3));
+      expect(linked, hasLength(1));
+      expect(linked.single.id, 'first');
+      expect(
+        products.singleWhere((product) => product.id == 'partial').source,
+        isNull,
+      );
+    },
+  );
 }

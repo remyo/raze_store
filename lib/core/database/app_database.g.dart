@@ -1609,7 +1609,7 @@ class $DraftCartItemsTable extends DraftCartItems
 
 class DraftCartItem extends DataClass implements Insertable<DraftCartItem> {
   /// Stable identity for a particular product + selling-unit selection.
-  /// Existing version-1 rows migrate with `lineId == productId`.
+  /// Existing version-1 rows migrate with a `main:`-prefixed product ID.
   final String lineId;
   final String productId;
   final String? sellingUnitId;
@@ -2437,6 +2437,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'store_products_name_idx',
     'CREATE INDEX store_products_name_idx ON store_products (name)',
   );
+  late final Index storeProductsSourceIdentityUniqueIdx = Index(
+    'store_products_source_identity_unique_idx',
+    'CREATE UNIQUE INDEX store_products_source_identity_unique_idx ON store_products (source, source_product_id)',
+  );
   late final Index productSellingUnitsProductPositionIdx = Index(
     'product_selling_units_product_position_idx',
     'CREATE INDEX product_selling_units_product_position_idx ON product_selling_units (product_id, position)',
@@ -2452,6 +2456,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     storeProfiles,
     storeProductsBarcodeUniqueIdx,
     storeProductsNameIdx,
+    storeProductsSourceIdentityUniqueIdx,
     productSellingUnitsProductPositionIdx,
   ];
   @override

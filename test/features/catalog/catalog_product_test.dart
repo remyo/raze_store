@@ -2,6 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 
 void main() {
+  test('requires a complete shared catalog identity', () {
+    expect(
+      () => ProductDraft(
+        name: 'Incomplete API product',
+        source: 'raze_store_api',
+        priceCentavos: 100,
+      ),
+      throwsArgumentError,
+    );
+  });
+
   group('ProductDraft selling-unit labels', () {
     test('rejects a sub-unit matching the named main unit', () {
       expect(

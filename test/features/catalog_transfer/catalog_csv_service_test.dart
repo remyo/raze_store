@@ -89,6 +89,47 @@ void main() {
     },
   );
 
+  test('CSV merges the same API product saved under another barcode', () async {
+    const source = 'raze_store_api';
+    const sourceProductId = 'f71ea24a-41f2-422f-9aeb-24efa48e7a5d';
+    await LocalCatalogRepository(sourceDatabase).createProduct(
+      ProductDraft(
+        id: 'device-a-id',
+        barcode: 'ALIAS+BLUE',
+        name: 'Updated API product',
+        source: source,
+        sourceProductId: sourceProductId,
+        priceCentavos: 1400,
+      ),
+    );
+    final document = await CatalogCsvService(sourceDatabase).buildDocument();
+    final csvFile = File('${testRoot.path}/api-product.csv');
+    await csvFile.writeAsString(document.contents);
+
+    final targetCatalog = LocalCatalogRepository(targetDatabase);
+    await targetCatalog.createProduct(
+      ProductDraft(
+        id: 'device-b-id',
+        barcode: '4800012345678',
+        name: 'Old API product',
+        source: source,
+        sourceProductId: sourceProductId,
+        priceCentavos: 1200,
+      ),
+    );
+
+    final result = await CatalogCsvService(
+      targetDatabase,
+    ).importMerging(sourcePath: csvFile.path);
+
+    expect(result, isA<CatalogTransferSuccess>());
+    final products = await targetCatalog.searchProducts('');
+    expect(products, hasLength(1));
+    expect(products.single.id, 'device-b-id');
+    expect(products.single.barcode, 'ALIAS+BLUE');
+    expect(products.single.name, 'Updated API product');
+  });
+
   test('invalid CSV changes nothing', () async {
     final catalog = LocalCatalogRepository(targetDatabase);
     await catalog.createProduct(

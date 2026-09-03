@@ -904,12 +904,26 @@ final class CatalogBackupService {
       for (final product in data.products) product.id: product.barcode,
     };
     final barcodes = <String>{};
+    final sourceIdentities = <(String, String)>{};
     final referencedPhotos = <String>{};
     for (final product in data.products) {
       if (product.barcode != null && !barcodes.add(product.barcode!)) {
         throw const _BackupException(
           CatalogTransferFailureCode.validationFailed,
           'The backup contains duplicate product barcodes.',
+        );
+      }
+      if ((product.source == null) != (product.sourceProductId == null)) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.validationFailed,
+          'A backup product has an incomplete shared catalog identity.',
+        );
+      }
+      if (product.source != null &&
+          !sourceIdentities.add((product.source!, product.sourceProductId!))) {
+        throw const _BackupException(
+          CatalogTransferFailureCode.validationFailed,
+          'The backup contains duplicate shared catalog products.',
         );
       }
       final photo = product.localPhoto;
@@ -1340,10 +1354,23 @@ final class _BackupData {
         'This backup contains too many catalog records.',
       );
     }
+    final parsedProducts = productValues
+        .map((item) => _BackupProduct.fromJson(_asMap(item, 'product')))
+        .toList(growable: false);
+    final sourceIdentities = <(String, String)>{};
+    final products = [
+      for (final product in parsedProducts)
+        if (product.source == null ||
+            sourceIdentities.add((product.source!, product.sourceProductId!)))
+          product
+        else
+          // Backups created before local API identity uniqueness may contain
+          // two independently priced rows for the same shared product. Keep
+          // both rows and detach the later link instead of losing store data.
+          product.withoutCatalogIdentity(),
+    ];
     return _BackupData(
-      products: productValues
-          .map((item) => _BackupProduct.fromJson(_asMap(item, 'product')))
-          .toList(growable: false),
+      products: products,
       sellingUnits: sellingUnitValues
           .map(
             (item) => _BackupSellingUnit.fromJson(_asMap(item, 'selling unit')),
@@ -1391,14 +1418,19 @@ final class _BackupProduct {
     }
     final price = _integer(json['priceCentavos'], 'product price');
     if (price < 0) throw const FormatException('A product price is negative.');
+    final source = _optionalString(json['source'], 'product source');
+    final sourceProductId = _optionalString(
+      json['sourceProductId'],
+      'source product ID',
+    );
+    final hasCompleteSourceIdentity = source != null && sourceProductId != null;
     return _BackupProduct(
       id: _nonEmptyString(json['id'], 'product ID'),
       barcode: parsedBarcode?.value,
-      source: _optionalString(json['source'], 'product source'),
-      sourceProductId: _optionalString(
-        json['sourceProductId'],
-        'source product ID',
-      ),
+      // Legacy backups allowed either half to be absent. Detaching that
+      // incomplete link keeps the product restorable under the v4 invariant.
+      source: hasCompleteSourceIdentity ? source : null,
+      sourceProductId: hasCompleteSourceIdentity ? sourceProductId : null,
       name: _nonEmptyString(json['name'], 'product name'),
       brand: _optionalString(json['brand'], 'product brand'),
       unitLabel: _optionalString(json['unitLabel'], 'product unit'),
@@ -1413,6 +1445,22 @@ final class _BackupProduct {
       updatedAt: _dateTime(json['updatedAt'], 'product update date'),
     );
   }
+
+  _BackupProduct withoutCatalogIdentity() => _BackupProduct(
+    id: id,
+    barcode: barcode,
+    source: null,
+    sourceProductId: null,
+    name: name,
+    brand: brand,
+    unitLabel: unitLabel,
+    category: category,
+    remoteImageUrl: remoteImageUrl,
+    localPhoto: localPhoto,
+    priceCentavos: priceCentavos,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
 
   final String id;
   final String? barcode;

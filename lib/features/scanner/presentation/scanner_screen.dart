@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/barcode/barcode.dart' as store_barcode;
 import 'package:raze_store/core/widgets/app_widgets.dart';
-import 'package:raze_store/features/catalog/application/catalog_providers.dart';
+import 'package:raze_store/features/catalog/application/catalog_lookup_providers.dart';
+import 'package:raze_store/features/catalog/application/catalog_lookup_service.dart';
+import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/product_quick_view.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
@@ -23,6 +26,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   late final TextEditingController _manualController;
   late final FocusNode _manualFocusNode;
   bool _handling = false;
+  bool? _branchVisible;
+  bool? _routeForeground;
+  bool _appActive = true;
+  int _lookupGeneration = 0;
 
   @override
   void initState() {
@@ -42,16 +49,63 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = AppShellBranchScope.of(context) == 1;
+    final routeForeground = TickerMode.of(context);
+    final wasVisible = _branchVisible;
+    final wasRouteForeground = _routeForeground;
+    _branchVisible = visible;
+    _routeForeground = routeForeground;
+    if (wasVisible == null || wasRouteForeground == null) {
+      if (!visible || !routeForeground) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && (_branchVisible != true || _routeForeground != true)) {
+            unawaited(_scannerController.stop());
+          }
+        });
+      }
+      return;
+    }
+
+    if (wasVisible && !visible) {
+      _lookupGeneration++;
+      _handling = false;
+      unawaited(_scannerController.stop());
+    } else if (!routeForeground) {
+      unawaited(_scannerController.stop());
+    } else if (visible && _appActive && !_handling) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            _branchVisible == true &&
+            _routeForeground == true &&
+            _appActive &&
+            !_handling) {
+          unawaited(_scannerController.start());
+        }
+      });
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_scannerController.value.hasCameraPermission) return;
     switch (state) {
       case AppLifecycleState.resumed:
-        if (!_handling) unawaited(_scannerController.start());
+        _appActive = true;
+        if (_scannerController.value.hasCameraPermission &&
+            _branchVisible != false &&
+            _routeForeground != false &&
+            !_handling) {
+          unawaited(_scannerController.start());
+        }
       case AppLifecycleState.inactive:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
-        unawaited(_scannerController.stop());
+        _appActive = false;
+        if (_scannerController.value.hasCameraPermission) {
+          unawaited(_scannerController.stop());
+        }
     }
   }
 
@@ -198,7 +252,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   Future<void> _handleBarcode(String rawValue) async {
     final barcode = store_barcode.Barcode.tryParse(rawValue);
-    if (_handling || barcode == null) {
+    if (_branchVisible == false ||
+        _routeForeground == false ||
+        !_appActive ||
+        _handling ||
+        barcode == null) {
       if (barcode == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Enter a barcode to look it up.')),
@@ -208,27 +266,77 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     }
 
     setState(() => _handling = true);
+    final generation = ++_lookupGeneration;
     await _scannerController.stop();
     try {
-      final product = await ref
-          .read(catalogRepositoryProvider)
+      final result = await ref
+          .read(catalogLookupServiceProvider)
           .findByBarcode(barcode.value);
-      if (!mounted) return;
+      if (!mounted ||
+          _branchVisible == false ||
+          _routeForeground == false ||
+          !_appActive ||
+          generation != _lookupGeneration) {
+        return;
+      }
 
-      if (product != null) {
+      if (result.kind == CatalogLookupKind.local) {
+        final product = result.localProduct!;
         final added = await showProductQuickView(
           context,
           product: product,
           allowEdit: false,
         );
-        if (added == true && mounted) {
+        if (added == true &&
+            mounted &&
+            generation == _lookupGeneration &&
+            _branchVisible == true &&
+            _routeForeground == true &&
+            _appActive) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${product.name} added to cart.')),
           );
         }
+      } else if (result.kind == CatalogLookupKind.remote) {
+        final remote = result.remoteProduct!;
+        final routeResult = await context.push<Object?>(
+          '/products/quick-add',
+          extra: remote.metadata,
+        );
+        final created = routeResult is StoreProduct ? routeResult : null;
+        if (created != null &&
+            mounted &&
+            generation == _lookupGeneration &&
+            _branchVisible == true &&
+            _routeForeground == true &&
+            _appActive) {
+          final added = await showProductQuickView(
+            context,
+            product: created,
+            allowEdit: false,
+          );
+          if (added == true &&
+              mounted &&
+              generation == _lookupGeneration &&
+              _branchVisible == true &&
+              _routeForeground == true &&
+              _appActive) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${created.name} added to cart.')),
+            );
+          }
+        }
       } else {
-        final shouldCreate = await _showUnknownBarcode(barcode.value);
-        if (shouldCreate == true && mounted) {
+        final shouldCreate = await _showUnknownBarcode(
+          barcode.value,
+          catalogUnavailable: result.kind == CatalogLookupKind.unavailable,
+        );
+        if (shouldCreate == true &&
+            mounted &&
+            generation == _lookupGeneration &&
+            _branchVisible == true &&
+            _routeForeground == true &&
+            _appActive) {
           await context.push(
             Uri(
               path: '/products/quick-add',
@@ -238,21 +346,33 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         }
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted &&
+          generation == _lookupGeneration &&
+          _branchVisible == true &&
+          _routeForeground == true &&
+          _appActive) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not look up this barcode.')),
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && generation == _lookupGeneration) {
         setState(() => _handling = false);
         await Future<void>.delayed(const Duration(milliseconds: 350));
-        if (mounted) unawaited(_scannerController.start());
+        if (mounted &&
+            _branchVisible == true &&
+            _routeForeground == true &&
+            _appActive) {
+          unawaited(_scannerController.start());
+        }
       }
     }
   }
 
-  Future<bool?> _showUnknownBarcode(String barcode) {
+  Future<bool?> _showUnknownBarcode(
+    String barcode, {
+    bool catalogUnavailable = false,
+  }) {
     return showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -288,6 +408,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
+            if (catalogUnavailable) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'The shared catalog is unavailable right now. You can still add the product manually and keep selling offline.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),

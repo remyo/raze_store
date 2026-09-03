@@ -32,11 +32,41 @@ Flutter screen
     -> Drift / SQLite on the device
 ```
 
-The future `raze_store_api` service will supply shared Philippine product
+The separate `raze_store_api` service supplies shared Philippine product
 metadata such as barcode, name, brand, size, category, and image. Each store's
 selling price remains local and authoritative because prices differ by store.
-The local repository is already separated from presentation code so a remote
-catalog source can be added without replacing the app screens.
+Scanning checks Drift first and calls the API only after a local miss. A shared
+catalog result must be given a local selling price before it can enter the cart.
+If the API resolves an alternate barcode, the app saves the code that was
+actually scanned so that package works offline on the next scan. Storing every
+alternate barcode for one product is a later local-schema enhancement; another
+alias still needs the API connection.
+
+## Shared catalog API
+
+Debug builds connect to a local API automatically:
+
+- Android emulator: `http://10.0.2.2:8000/api/v1/`
+- iOS simulator: `http://127.0.0.1:8000/api/v1/`
+
+For a physical phone, bind Django to `0.0.0.0:8000`, add the Mac's LAN address
+to `DJANGO_ALLOWED_HOSTS`, and provide that address when running Flutter:
+
+```sh
+/Users/rem/fvm/default/bin/flutter run \
+  --dart-define=RAZE_STORE_API_BASE_URL=http://192.168.x.x:8000/api/v1/
+```
+
+Release builds intentionally have no default endpoint and require HTTPS:
+
+```sh
+/Users/rem/fvm/default/bin/flutter build ipa --release \
+  --dart-define=RAZE_STORE_API_BASE_URL=https://api.example.com/api/v1/
+```
+
+The app calls only public read endpoints: health, category suggestions,
+paginated product search, and barcode lookup. Never put Django staff
+credentials in the Flutter build.
 
 ## Products, units, and categories
 

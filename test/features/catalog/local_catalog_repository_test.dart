@@ -148,6 +148,37 @@ void main() {
     );
   });
 
+  test('finds and rejects duplicate shared API identities', () async {
+    await repository.createProduct(
+      ProductDraft(
+        id: 'first',
+        barcode: '4800012345678',
+        name: 'API product',
+        source: 'raze_store_api',
+        sourceProductId: 'remote-id',
+        priceCentavos: 100,
+      ),
+    );
+
+    expect(
+      (await repository.findBySource('raze_store_api', 'remote-id'))?.id,
+      'first',
+    );
+    expect(
+      () => repository.createProduct(
+        ProductDraft(
+          id: 'second',
+          barcode: 'ALIAS+BLUE',
+          name: 'Same API product',
+          source: 'raze_store_api',
+          sourceProductId: 'remote-id',
+          priceCentavos: 200,
+        ),
+      ),
+      throwsA(isA<DuplicateCatalogProductException>()),
+    );
+  });
+
   test('repairs a relocated managed product photo path on read', () async {
     const fileName = '123e4567-e89b-12d3-a456-426614174000.jpg';
     final root = await Directory.systemTemp.createTemp('raze_store_photos_');

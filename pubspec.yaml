@@ -50,6 +50,7 @@ dependencies:
   archive: ^4.0.9
   crypto: ^3.0.7
   flutter_file_dialog: 3.0.3
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

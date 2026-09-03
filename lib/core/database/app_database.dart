@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -70,6 +70,34 @@ class AppDatabase extends _$AppDatabase {
         await customStatement('DROP TABLE draft_cart_items_v1');
       } else if (from < 3) {
         await _upgradeVersion2CartLineIds(migrator);
+      }
+      if (from < 4) {
+        // Source identity was previously advisory. Preserve every product but
+        // detach duplicate legacy rows before enforcing one local row per
+        // shared-catalog product.
+        await customStatement('''
+          UPDATE store_products
+          SET source = NULL, source_product_id = NULL
+          WHERE (source IS NULL AND source_product_id IS NOT NULL)
+             OR (source IS NOT NULL AND source_product_id IS NULL)
+        ''');
+        await customStatement('''
+          UPDATE store_products
+          SET source = NULL, source_product_id = NULL
+          WHERE source IS NOT NULL
+            AND source_product_id IS NOT NULL
+            AND rowid NOT IN (
+              SELECT MIN(rowid)
+              FROM store_products
+              WHERE source IS NOT NULL AND source_product_id IS NOT NULL
+              GROUP BY source, source_product_id
+            )
+        ''');
+        await customStatement('''
+          CREATE UNIQUE INDEX IF NOT EXISTS
+            store_products_source_identity_unique_idx
+          ON store_products (source, source_product_id)
+        ''');
       }
     },
   );

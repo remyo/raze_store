@@ -14,10 +14,12 @@ class QuickAddProductScreen extends ConsumerStatefulWidget {
   const QuickAddProductScreen({
     super.key,
     this.initialBarcode,
+    this.initialMetadata,
     this.goToProductsAfterSave = false,
   });
 
   final String? initialBarcode;
+  final CatalogMetadata? initialMetadata;
   final bool goToProductsAfterSave;
 
   @override
@@ -35,8 +37,10 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
   @override
   void initState() {
     super.initState();
-    _barcodeController = TextEditingController(text: widget.initialBarcode);
-    _nameController = TextEditingController();
+    _barcodeController = TextEditingController(
+      text: widget.initialBarcode ?? widget.initialMetadata?.barcode,
+    );
+    _nameController = TextEditingController(text: widget.initialMetadata?.name);
     _priceController = TextEditingController();
   }
 
@@ -51,7 +55,7 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !widget.goToProductsAfterSave,
+      canPop: !_saving && !widget.goToProductsAfterSave,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && widget.goToProductsAfterSave && !_saving) {
           context.go('/products');
@@ -100,13 +104,21 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (widget.initialMetadata != null) ...[
+                        _ApiProductNotice(metadata: widget.initialMetadata!),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
                       Text(
-                        'Only the essentials',
+                        widget.initialMetadata == null
+                            ? 'Only the essentials'
+                            : 'Set your store price',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'Enter a name and selling price. A barcode is optional for loose or repacked items.',
+                        widget.initialMetadata == null
+                            ? 'Enter a name and selling price. A barcode is optional for loose or repacked items.'
+                            : 'Product details came from the shared catalog. Confirm the name and enter the price charged by this store.',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -134,7 +146,7 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
                       TextFormField(
                         key: const ValueKey('quick-add-name'),
                         controller: _nameController,
-                        autofocus: true,
+                        autofocus: widget.initialMetadata == null,
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(
@@ -221,6 +233,12 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
             ProductDraft(
               barcode: _barcodeController.text,
               name: _nameController.text,
+              brand: widget.initialMetadata?.brand,
+              unitLabel: widget.initialMetadata?.unitLabel,
+              category: widget.initialMetadata?.category,
+              remoteImageUrl: widget.initialMetadata?.remoteImageUrl,
+              source: widget.initialMetadata?.source,
+              sourceProductId: widget.initialMetadata?.sourceProductId,
               priceCentavos: tryParsePesoCentavos(_priceController.text)!,
             ),
           );
@@ -231,7 +249,7 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
         ).showSnackBar(SnackBar(content: Text('${product.name} was added.')));
         context.go('/products');
       } else {
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(product);
       }
     } on DuplicateBarcodeException catch (error) {
       if (!mounted) return;
@@ -239,6 +257,16 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Barcode ${error.barcode} is already in your store.'),
+        ),
+      );
+    } on DuplicateCatalogProductException {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This shared catalog product is already in your store.',
+          ),
         ),
       );
     } catch (_) {
@@ -250,7 +278,7 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
     }
   }
 
-  void _openDetailedForm() {
+  Future<void> _openDetailedForm() async {
     final barcode = _barcodeController.text.trim();
     final name = _nameController.text.trim();
     final price = _priceController.text.trim();
@@ -260,19 +288,84 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
       if (price.isNotEmpty) 'price': price,
       if (widget.goToProductsAfterSave) 'fromSetup': 'true',
     };
-    context.pushReplacement(
+    final original = widget.initialMetadata;
+    final handoffMetadata = original == null || name.isEmpty
+        ? null
+        : CatalogMetadata(
+            barcode: barcode,
+            name: name,
+            brand: original.brand,
+            unitLabel: original.unitLabel,
+            category: original.category,
+            remoteImageUrl: original.remoteImageUrl,
+            source: original.source,
+            sourceProductId: original.sourceProductId,
+          );
+    final result = await context.push<Object?>(
       Uri(
         path: '/products/new',
         queryParameters: queryParameters.isEmpty ? null : queryParameters,
       ).toString(),
+      extra: handoffMetadata,
     );
+    if (!mounted || widget.goToProductsAfterSave) return;
+    if (result is StoreProduct) Navigator.of(context).pop(result);
   }
 
   void _close() {
     if (widget.goToProductsAfterSave) {
       context.go('/products');
     } else {
-      Navigator.of(context).pop(false);
+      Navigator.of(context).pop();
     }
+  }
+}
+
+class _ApiProductNotice extends StatelessWidget {
+  const _ApiProductNotice({required this.metadata});
+
+  final CatalogMetadata metadata;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final details = [
+      metadata.brand,
+      metadata.unitLabel,
+      metadata.category,
+    ].whereType<String>().join(' · ');
+    return Card(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.cloud_done_outlined, color: scheme.onSecondaryContainer),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Found in the Raze catalog',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: scheme.onSecondaryContainer,
+                    ),
+                  ),
+                  if (details.isNotEmpty)
+                    Text(
+                      details,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSecondaryContainer,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

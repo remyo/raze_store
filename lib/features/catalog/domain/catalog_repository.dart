@@ -11,6 +11,8 @@ abstract interface class CatalogRepository {
 
   Future<StoreProduct?> findByBarcode(String rawBarcode);
 
+  Future<StoreProduct?> findBySource(String source, String sourceProductId);
+
   Future<StoreProduct> createProduct(ProductDraft draft);
 
   Future<StoreProduct> updateProduct(String id, ProductDraft draft);
@@ -25,6 +27,17 @@ final class DuplicateBarcodeException implements Exception {
 
   @override
   String toString() => 'A product with barcode $barcode already exists.';
+}
+
+final class DuplicateCatalogProductException implements Exception {
+  const DuplicateCatalogProductException(this.source, this.sourceProductId);
+
+  final String source;
+  final String sourceProductId;
+
+  @override
+  String toString() =>
+      'Catalog product $source/$sourceProductId already exists.';
 }
 
 final class ProductNotFoundException implements Exception {
