@@ -178,11 +178,15 @@ To import it on a phone:
 4. Choose the downloaded file. No products are added yet: review the **New
    products** and **Existing products** tabs, search the list, and check only
    the rows you want. **Select shown** selects only the currently visible
-   filtered page, never hidden search results.
-5. Under **Choose details to import**, uncheck any field you do not trust, then
-   press **Apply** and verify the exact new/existing counts in the confirmation.
-   A pack suggestion can fill a ₱0 price but never replaces a non-zero store
-   price.
+   filtered page, never hidden search results. Each compact row shows an
+   available preview image, product name, barcode, and price with the selection
+   checkbox on the right. Existing rows use the current phone identity so an
+   incoming rename cannot disguise the product being updated; tap a row to
+   compare everything.
+5. Open the collapsed **Choose details to import** section only when you want
+   to change which fields are allowed. Then press **Apply** and verify the exact
+   new/existing counts in the confirmation. A pack suggestion can fill a ₱0
+   price but never replaces a non-zero store price.
 6. Open **Home** to check the imported starting prices. If the wrong rows
    were applied, use **Profile → Settings → Catalog files → Undo last import**
    before editing those products.

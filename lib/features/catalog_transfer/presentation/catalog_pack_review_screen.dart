@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/core/widgets/product_image_placeholder.dart';
 import 'package:raze_store/core/widgets/responsive_page.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
@@ -395,100 +397,169 @@ final class _ReviewProductTabState extends State<_ReviewProductTab>
         .take(shownCount)
         .toList(growable: false);
     final hasMore = shownCount < filteredProducts.length;
-    final itemCount =
-        1 +
-        (filteredProducts.isEmpty ? 1 : shownProducts.length) +
-        (hasMore ? 1 : 0);
-
-    return ListView.builder(
-      key: ValueKey<String>('catalog-review-${widget.kind.noun}-list'),
-      controller: _scrollController,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.zero,
-      cacheExtent: 600,
-      itemCount: itemCount,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _ReviewHeader(
-            kind: widget.kind,
-            packId: widget.packId,
-            revision: widget.revision,
-            searchController: _searchController,
-            query: _query,
-            totalCount: widget.products.length,
-            selectedCount: widget.selectedCount,
-            filteredCount: filteredProducts.length,
-            shownProducts: shownProducts,
-            selectedProductIds: widget.selectedProductIds,
-            selectedFields: widget.selectedFields,
-            blocked: widget.blocked,
-            onSearchChanged: _scheduleSearch,
-            onProductsChanged: widget.onProductsChanged,
-            onFieldChanged: widget.onFieldChanged,
-          );
-        }
-
-        if (filteredProducts.isEmpty) {
-          return _EmptyReviewResults(
-            title: widget.kind.emptyTitle,
-            hasQuery: _query.isNotEmpty,
-          );
-        }
-
-        final productIndex = index - 1;
-        if (productIndex < shownProducts.length) {
-          final product = shownProducts[productIndex];
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              productIndex == 0 ? AppSpacing.sm : 0,
-              AppSpacing.md,
-              AppSpacing.sm,
-            ),
-            child: _ReviewProductCard(
-              product: product,
-              selected: widget.selectedProductIds.contains(product.targetId),
-              blocked: widget.blocked,
-              onChanged: (selected) =>
-                  widget.onProductChanged(product.targetId, selected),
-            ),
-          );
-        }
-
-        return Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Semantics(
-            liveRegion: true,
-            label: 'Loading more ${widget.kind.noun} products',
-            child: Center(
-              child: SizedBox.square(
-                key: ValueKey<String>(
-                  'catalog-review-${widget.kind.noun}-loader',
-                ),
-                dimension: 24,
-                child: const CircularProgressIndicator(strokeWidth: 2.5),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final listHeight = _reviewProductListHeight(
+          context: context,
+          availableHeight: constraints.maxHeight,
+          itemCount: shownProducts.length,
+          hasLoader: hasMore,
+        );
+        return SingleChildScrollView(
+          key: ValueKey<String>('catalog-review-${widget.kind.noun}-page'),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ReviewHeader(
+                kind: widget.kind,
+                packId: widget.packId,
+                revision: widget.revision,
+                searchController: _searchController,
+                query: _query,
+                totalCount: widget.products.length,
+                selectedCount: widget.selectedCount,
+                filteredCount: filteredProducts.length,
+                shownProducts: shownProducts,
+                selectedProductIds: widget.selectedProductIds,
+                selectedFields: widget.selectedFields,
+                blocked: widget.blocked,
+                onSearchChanged: _scheduleSearch,
+                onProductsChanged: widget.onProductsChanged,
+                onFieldChanged: widget.onFieldChanged,
               ),
-            ),
+              const SizedBox(height: AppSpacing.sm),
+              if (filteredProducts.isEmpty)
+                _EmptyReviewResults(
+                  title: widget.kind.emptyTitle,
+                  hasQuery: _query.isNotEmpty,
+                )
+              else
+                SizedBox(
+                  key: ValueKey<String>(
+                    'catalog-review-${widget.kind.noun}-viewport',
+                  ),
+                  height: listHeight,
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    interactive: true,
+                    child: ListView.builder(
+                      key: ValueKey<String>(
+                        'catalog-review-${widget.kind.noun}-list',
+                      ),
+                      controller: _scrollController,
+                      primary: false,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                      cacheExtent: 360,
+                      addAutomaticKeepAlives: false,
+                      itemCount: shownProducts.length + (hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index < shownProducts.length) {
+                          final product = shownProducts[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.xs,
+                            ),
+                            child: _ReviewProductCard(
+                              product: product,
+                              selected: widget.selectedProductIds.contains(
+                                product.targetId,
+                              ),
+                              selectedFields: widget.selectedFields,
+                              blocked: widget.blocked,
+                              onChanged: (selected) => widget.onProductChanged(
+                                product.targetId,
+                                selected,
+                              ),
+                            ),
+                          );
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Semantics(
+                            liveRegion: true,
+                            label: 'Loading more ${widget.kind.noun} products',
+                            child: Center(
+                              child: SizedBox.square(
+                                key: ValueKey<String>(
+                                  'catalog-review-${widget.kind.noun}-loader',
+                                ),
+                                dimension: 24,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
     );
   }
 
+  double _reviewProductListHeight({
+    required BuildContext context,
+    required double availableHeight,
+    required int itemCount,
+    required bool hasLoader,
+  }) {
+    final media = MediaQuery.of(context);
+    final usableScreenHeight =
+        media.size.height - media.padding.vertical - media.viewInsets.bottom;
+    final boundedAvailable = availableHeight.isFinite
+        ? availableHeight
+        : usableScreenHeight;
+    final upperBound = math
+        .min(720, math.min(usableScreenHeight * 0.6, boundedAvailable))
+        .clamp(1.0, 720.0)
+        .toDouble();
+    final lowerBound = math.min(160, upperBound).toDouble();
+    final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+    final estimatedRowHeight = 72 + ((textScale - 1) * 36);
+    final estimatedHeight =
+        (itemCount * (estimatedRowHeight + AppSpacing.xs)) +
+        (hasLoader ? 64 : 0);
+    return estimatedHeight.clamp(lowerBound, upperBound).toDouble();
+  }
+
+  Iterable<String?> _searchValues(CatalogPackProductDetails details) sync* {
+    yield details.name;
+    yield details.brand;
+    yield details.barcode;
+    yield details.category;
+    yield details.unitLabel;
+  }
+
+  String _searchText(CatalogPackReviewProduct product) => [
+    ..._searchValues(product.incoming),
+    if (product.existing case final existing?) ..._searchValues(existing),
+  ].whereType<String>().join('\n').toLowerCase();
+
+  void _resetProductScroll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.jumpTo(0);
+    });
+  }
+
   List<CatalogPackReviewProduct> get _filteredProducts {
     if (_query.isEmpty) return widget.products;
     return widget.products
-        .where((product) {
-          final details = product.incoming;
-          final searchable = <String?>[
-            details.name,
-            details.brand,
-            details.barcode,
-            details.category,
-            details.unitLabel,
-          ].whereType<String>().join('\n').toLowerCase();
-          return searchable.contains(_query);
-        })
+        .where((product) => _searchText(product).contains(_query))
         .toList(growable: false);
   }
 
@@ -502,6 +573,7 @@ final class _ReviewProductTabState extends State<_ReviewProductTab>
         _loadingMore = false;
         _filterRevision++;
       });
+      _resetProductScroll();
     });
   }
 
@@ -585,7 +657,7 @@ final class _ReviewHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
+            padding: const EdgeInsets.all(AppSpacing.xs),
             decoration: BoxDecoration(
               color: scheme.secondaryContainer,
               borderRadius: AppRadius.control,
@@ -593,14 +665,18 @@ final class _ReviewHeader extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.policy_outlined, color: scheme.onSecondaryContainer),
-                const SizedBox(width: AppSpacing.sm),
+                Icon(
+                  Icons.policy_outlined,
+                  size: 20,
+                  color: scheme.onSecondaryContainer,
+                ),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    'Nothing is imported yet. File safety and structure were '
-                    'checked, but the author and product details cannot be '
-                    'verified. Review what you trust from $packId revision '
-                    '$revision.',
+                    'Nothing imported yet · File checked · Author and details '
+                    'unverified\n$packId · revision $revision',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: scheme.onSecondaryContainer,
                     ),
@@ -683,10 +759,7 @@ final class _ReviewHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            kind == _ReviewKind.newProducts
-                ? 'Selected rows will be added as new products.'
-                : 'Open a row to compare the current phone value with the '
-                      'incoming pack value.',
+            'Tap a product to view all details.',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
@@ -714,15 +787,18 @@ final class _ImportFieldSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      key: ValueKey<String>('catalog-review-${kind.noun}-fields'),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
-        key: ValueKey<String>('catalog-review-${kind.noun}-fields'),
-        initiallyExpanded: true,
+        key: PageStorageKey<String>('catalog-review-${kind.noun}-fields-state'),
+        initiallyExpanded: false,
+        dense: true,
+        visualDensity: VisualDensity.compact,
         leading: const Icon(Icons.tune_rounded),
         title: const Text('Choose details to import'),
         subtitle: Text(
-          '${selectedFields.length} of ${CatalogPackImportField.values.length} details allowed',
+          '${selectedFields.length}/${CatalogPackImportField.values.length} allowed · both tabs',
         ),
         children: [
           Padding(
@@ -776,117 +852,261 @@ final class _ReviewProductCard extends StatelessWidget {
   const _ReviewProductCard({
     required this.product,
     required this.selected,
+    required this.selectedFields,
     required this.blocked,
     required this.onChanged,
   });
 
   final CatalogPackReviewProduct product;
   final bool selected;
+  final Set<CatalogPackImportField> selectedFields;
   final bool blocked;
   final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final incoming = product.incoming;
+    final existing = product.existing;
+    final primary = existing ?? incoming;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       key: ValueKey<String>('catalog-review-product-${product.targetId}'),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          CheckboxListTile(
-            key: ValueKey<String>(
-              'catalog-review-product-check-${product.targetId}',
-            ),
-            value: selected,
-            enabled: !blocked,
-            onChanged: blocked ? null : (value) => onChanged(value ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            title: Text(incoming.name),
-            subtitle: Text(_compactDescription(incoming)),
-            secondary: product.isNew
-                ? const Icon(Icons.add_box_outlined)
-                : const Icon(Icons.sync_alt_rounded),
+      color: selected ? scheme.primaryContainer.withValues(alpha: 0.42) : null,
+      child: ExpansionTile(
+        key: PageStorageKey<String>(
+          'catalog-review-product-expansion-${product.targetId}',
+        ),
+        initiallyExpanded: false,
+        maintainState: false,
+        minTileHeight: 72,
+        tilePadding: const EdgeInsets.fromLTRB(
+          AppSpacing.sm,
+          AppSpacing.xxs,
+          AppSpacing.xs,
+          AppSpacing.xxs,
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        leading: _ReviewProductThumbnail(
+          key: ValueKey<String>(
+            'catalog-review-product-image-${product.targetId}',
           ),
-          if (product.existing case final existing?) ...[
-            const Divider(height: 1),
-            ExpansionTile(
-              key: ValueKey<String>(
-                'catalog-review-product-compare-${product.targetId}',
-              ),
-              title: const Text('Current → incoming details'),
-              childrenPadding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                0,
-                AppSpacing.md,
-                AppSpacing.sm,
-              ),
-              children: [
-                _ComparisonRow(
-                  label: 'Product name',
-                  current: existing.name,
-                  incoming: incoming.name,
-                ),
-                _ComparisonRow(
-                  label: 'Barcode',
-                  current: _displayValue(existing.barcode),
-                  incoming: _displayValue(incoming.barcode),
-                ),
-                _ComparisonRow(
-                  label: 'Brand',
-                  current: _displayValue(existing.brand),
-                  incoming: _displayValue(incoming.brand),
-                ),
-                _ComparisonRow(
-                  label: 'Category',
-                  current: _displayValue(existing.category),
-                  incoming: _displayValue(incoming.category),
-                ),
-                _ComparisonRow(
-                  label: 'Size / unit',
-                  current: _displayValue(existing.unitLabel),
-                  incoming: _displayValue(incoming.unitLabel),
-                ),
-                _ComparisonRow(
-                  label: 'Suggested price',
-                  current: _formatPrice(existing.priceCentavos),
-                  incoming: _formatPrice(incoming.priceCentavos),
-                ),
-                _ComparisonRow(
-                  label: 'Image',
-                  current: existing.hasImage ? 'Available' : 'None',
-                  incoming: product.hasBundledImage
-                      ? 'Bundled in pack'
-                      : incoming.hasImage
-                      ? 'Image reference'
-                      : 'None',
-                ),
-              ],
+          imagePath: product.primaryImagePath,
+          productName: primary.name,
+        ),
+        title: KeyedSubtree(
+          key: ValueKey<String>(
+            'catalog-review-product-compare-${product.targetId}',
+          ),
+          child: Text(
+            primary.name,
+            key: ValueKey<String>(
+              'catalog-review-product-name-${product.targetId}',
             ),
-          ] else ...[
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+        subtitle: _CompactProductSummary(
+          barcode: primary.barcode,
+          priceCentavos: primary.priceCentavos,
+        ),
+        trailing: SizedBox.square(
+          dimension: AppSize.minimumTouchTarget,
+          child: Tooltip(
+            message: selected ? 'Do not import this product' : 'Import product',
+            child: Checkbox(
+              key: ValueKey<String>(
+                'catalog-review-product-check-${product.targetId}',
+              ),
+              value: selected,
+              visualDensity: VisualDensity.compact,
+              onChanged: blocked ? null : (value) => onChanged(value ?? false),
+            ),
+          ),
+        ),
+        children: [
+          const Divider(height: 1),
+          if (existing != null) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                0,
-                AppSpacing.md,
-                AppSpacing.sm,
-              ),
-              child: Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xxs,
-                children: [
-                  Text('Category: ${_displayValue(incoming.category)}'),
-                  Text('Price: ${_formatPrice(incoming.priceCentavos)}'),
-                  Text(
-                    'Image: ${product.hasBundledImage ? 'Bundled' : 'None'}',
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Current phone value → incoming pack value',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
+                ),
               ),
+            ),
+            _ComparisonRow(
+              label: 'Product name',
+              current: existing.name,
+              incoming: incoming.name,
+              note: _fieldChoice(CatalogPackImportField.name),
+            ),
+            _ComparisonRow(
+              label: 'Barcode',
+              current: _displayValue(existing.barcode),
+              incoming: _displayValue(incoming.barcode),
+              note: _fieldChoice(CatalogPackImportField.barcode),
+            ),
+            _ComparisonRow(
+              label: 'Brand',
+              current: _displayValue(existing.brand),
+              incoming: _displayValue(incoming.brand),
+              note: _fieldChoice(CatalogPackImportField.brand),
+            ),
+            _ComparisonRow(
+              label: 'Category',
+              current: _displayValue(existing.category),
+              incoming: _displayValue(incoming.category),
+              note: _fieldChoice(CatalogPackImportField.category),
+            ),
+            _ComparisonRow(
+              label: 'Size / unit',
+              current: _displayValue(existing.unitLabel),
+              incoming: _displayValue(incoming.unitLabel),
+              note: _fieldChoice(CatalogPackImportField.unitLabel),
+            ),
+            _ComparisonRow(
+              label: 'Suggested price',
+              current: _formatPrice(existing.priceCentavos),
+              incoming: _formatPrice(incoming.priceCentavos),
+              note:
+                  !selectedFields.contains(
+                    CatalogPackImportField.suggestedPrice,
+                  )
+                  ? 'Not selected'
+                  : existing.priceCentavos > 0
+                  ? 'Current price is protected'
+                  : 'Fills the zero price',
+            ),
+            _ComparisonRow(
+              label: 'Image',
+              current: existing.hasImage ? 'Available' : 'None',
+              incoming: product.hasBundledImage
+                  ? 'Bundled in pack'
+                  : incoming.hasImage
+                  ? 'Image reference'
+                  : 'None',
+              note: _fieldChoice(CatalogPackImportField.image),
+            ),
+            if (existing.hasImage || incoming.hasImage)
+              _ReviewImageComparison(
+                currentPath: product.existingImagePath,
+                incomingPath: product.incomingImagePath,
+                currentHasReference: existing.hasImage,
+                incomingHasReference: incoming.hasImage,
+                productName: primary.name,
+              ),
+          ] else ...[
+            _PackDetailRow(
+              label: 'Product name',
+              value: incoming.name,
+              note: 'Required for a new product',
+            ),
+            _PackDetailRow(
+              label: 'Barcode',
+              value: _displayValue(incoming.barcode),
+              note: _fieldChoice(CatalogPackImportField.barcode),
+            ),
+            _PackDetailRow(
+              label: 'Brand',
+              value: _displayValue(incoming.brand),
+              note: _fieldChoice(CatalogPackImportField.brand),
+            ),
+            _PackDetailRow(
+              label: 'Category',
+              value: _displayValue(incoming.category),
+              note: _fieldChoice(CatalogPackImportField.category),
+            ),
+            _PackDetailRow(
+              label: 'Size / unit',
+              value: _displayValue(incoming.unitLabel),
+              note: _fieldChoice(CatalogPackImportField.unitLabel),
+            ),
+            _PackDetailRow(
+              label: 'Suggested price',
+              value: _formatPrice(incoming.priceCentavos),
+              note: _fieldChoice(CatalogPackImportField.suggestedPrice),
+            ),
+            _PackDetailRow(
+              label: 'Image',
+              value: product.hasBundledImage
+                  ? 'Bundled in pack'
+                  : incoming.hasImage
+                  ? 'Image reference only'
+                  : 'None',
+              note: _fieldChoice(CatalogPackImportField.image),
             ),
           ],
         ],
       ),
+    );
+  }
+
+  String _fieldChoice(CatalogPackImportField field) =>
+      selectedFields.contains(field) ? 'Selected to import' : 'Not selected';
+}
+
+final class _CompactProductSummary extends StatelessWidget {
+  const _CompactProductSummary({
+    required this.barcode,
+    required this.priceCentavos,
+  });
+
+  final String? barcode;
+  final int priceCentavos;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final barcodeWidget = Text(
+      _displayBarcode(barcode),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+    );
+    final priceWidget = Text(
+      _formatPrice(priceCentavos),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: scheme.primary,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        if (constraints.maxWidth < 168 || textScale > 1.4) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [barcodeWidget, priceWidget],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: barcodeWidget),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(child: priceWidget),
+          ],
+        );
+      },
     );
   }
 }
@@ -896,11 +1116,13 @@ final class _ComparisonRow extends StatelessWidget {
     required this.label,
     required this.current,
     required this.incoming,
+    required this.note,
   });
 
   final String label;
   final String current;
   final String incoming;
+  final String note;
 
   @override
   Widget build(BuildContext context) {
@@ -917,26 +1139,215 @@ final class _ComparisonRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: current),
-                  const TextSpan(text: '  →  '),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
                   TextSpan(
-                    text: incoming,
-                    style: changed
-                        ? TextStyle(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w600,
-                          )
-                        : TextStyle(color: scheme.onSurfaceVariant),
+                    children: [
+                      TextSpan(text: current),
+                      const TextSpan(text: '  →  '),
+                      TextSpan(
+                        text: incoming,
+                        style: changed
+                            ? TextStyle(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w600,
+                              )
+                            : TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  note,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: note == 'Not selected'
+                        ? scheme.outline
+                        : scheme.primary,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+final class _PackDetailRow extends StatelessWidget {
+  const _PackDetailRow({
+    required this.label,
+    required this.value,
+    required this.note,
+  });
+
+  final String label;
+  final String value;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 112,
+            child: Text(label, style: Theme.of(context).textTheme.labelMedium),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value),
+                const SizedBox(height: 2),
+                Text(
+                  note,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: note == 'Not selected'
+                        ? scheme.outline
+                        : scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _ReviewProductThumbnail extends StatelessWidget {
+  const _ReviewProductThumbnail({
+    super.key,
+    required this.imagePath,
+    required this.productName,
+    this.size = 48,
+  });
+
+  final String? imagePath;
+  final String productName;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = ProductImagePlaceholder(
+      width: size,
+      height: size,
+      semanticLabel: 'No local preview for $productName',
+      borderRadius: BorderRadius.circular(10),
+    );
+    final path = imagePath?.trim();
+    if (path == null || path.isEmpty) return fallback;
+    final cacheSize = (size * MediaQuery.devicePixelRatioOf(context))
+        .ceil()
+        .clamp(1, 512);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.file(
+        File(path),
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        cacheWidth: cacheSize,
+        cacheHeight: cacheSize,
+        filterQuality: FilterQuality.low,
+        semanticLabel: 'Product image for $productName',
+        errorBuilder: (_, _, _) => fallback,
+      ),
+    );
+  }
+}
+
+final class _ReviewImageComparison extends StatelessWidget {
+  const _ReviewImageComparison({
+    required this.currentPath,
+    required this.incomingPath,
+    required this.currentHasReference,
+    required this.incomingHasReference,
+    required this.productName,
+  });
+
+  final String? currentPath;
+  final String? incomingPath;
+  final bool currentHasReference;
+  final bool incomingHasReference;
+  final String productName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _LabeledReviewImage(
+              label: 'Current image',
+              imagePath: currentPath,
+              hasReference: currentHasReference,
+              productName: productName,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _LabeledReviewImage(
+              label: 'Incoming image',
+              imagePath: incomingPath,
+              hasReference: incomingHasReference,
+              productName: productName,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+final class _LabeledReviewImage extends StatelessWidget {
+  const _LabeledReviewImage({
+    required this.label,
+    required this.imagePath,
+    required this.hasReference,
+    required this.productName,
+  });
+
+  final String label;
+  final String? imagePath;
+  final bool hasReference;
+  final String productName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _ReviewProductThumbnail(
+          imagePath: imagePath,
+          productName: productName,
+          size: 72,
+        ),
+        const SizedBox(height: AppSpacing.xxs),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+        if (hasReference && imagePath == null)
+          Text(
+            'Reference only',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -991,14 +1402,9 @@ String _displayValue(String? value) {
   return clean == null || clean.isEmpty ? 'None' : clean;
 }
 
-String _compactDescription(CatalogPackProductDetails details) {
-  final values = <String?>[
-    details.brand,
-    details.barcode,
-    details.category,
-    details.unitLabel,
-  ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
-  return values.isEmpty ? 'No optional details' : values.join(' • ');
+String _displayBarcode(String? value) {
+  final clean = value?.trim();
+  return clean == null || clean.isEmpty ? 'No barcode' : clean;
 }
 
 String _productCountLabel(int count) =>

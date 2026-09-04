@@ -171,6 +171,10 @@ final class CatalogPackService {
                   ? null
                   : _reviewDetailsFromRow(item.existing!),
               hasBundledImage: item.product.image != null,
+              incomingImagePath: item.imageToInstall == null
+                  ? null
+                  : _safeStageFile(staging, item.imageToInstall!).path,
+              existingImagePath: item.existingPreviewImage,
             ),
         ]),
       );
@@ -319,7 +323,12 @@ final class CatalogPackService {
         }
       }
       _operationRunning = false;
-      await _discardActiveReview(expectedReviewId: reviewId);
+      // Keep a failed review available so the screen can still show its
+      // validated previews and the owner can change the selection or cancel.
+      // A committed import has finished with the staged files and closes it.
+      if (databaseCommitted) {
+        await _discardActiveReview(expectedReviewId: reviewId);
+      }
     }
   }
 
@@ -1265,14 +1274,13 @@ final class CatalogPackService {
         );
       }
 
-      String? usableCatalogImage;
+      final usableOwnerImage = await _resolveUsableManagedImage(
+        existing?.localImagePath,
+      );
+      final usableCatalogImage = await _resolveUsableManagedImage(
+        existing?.catalogImagePath,
+      );
       final oldCatalogImage = existing?.catalogImagePath?.trim();
-      if (oldCatalogImage != null && oldCatalogImage.isNotEmpty) {
-        final resolved = await _imageStore.resolveManagedPath(oldCatalogImage);
-        if (resolved != null && await File(resolved).exists()) {
-          usableCatalogImage = resolved;
-        }
-      }
       final imageToInstall = switch (mode) {
         CatalogPackImportMode.keepExisting =>
           usableCatalogImage == null ? product.image : null,
@@ -1294,11 +1302,19 @@ final class CatalogPackService {
           existing: existing,
           imageToInstall: imageToInstall,
           existingUsableCatalogImage: usableCatalogImage,
+          existingPreviewImage: usableOwnerImage ?? usableCatalogImage,
           oldCatalogImage: oldCatalogImage,
         ),
       );
     }
     return _MergePlan(items);
+  }
+
+  Future<String?> _resolveUsableManagedImage(String? rawPath) async {
+    final path = _usablePath(rawPath);
+    if (path == null) return null;
+    final resolved = await _imageStore.resolveManagedPath(path);
+    return resolved != null && await File(resolved).exists() ? resolved : null;
   }
 
   Future<_MergeSummary> _applyMerge(
@@ -2115,6 +2131,7 @@ final class _MergePlanItem {
     required this.existing,
     required this.imageToInstall,
     required this.existingUsableCatalogImage,
+    required this.existingPreviewImage,
     required this.oldCatalogImage,
   });
 
@@ -2123,6 +2140,7 @@ final class _MergePlanItem {
   final database.StoreProduct? existing;
   final String? imageToInstall;
   final String? existingUsableCatalogImage;
+  final String? existingPreviewImage;
   final String? oldCatalogImage;
 }
 

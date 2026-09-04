@@ -33,6 +33,8 @@ final class CatalogPackReviewProduct {
     required this.incoming,
     required this.existing,
     required this.hasBundledImage,
+    this.incomingImagePath,
+    this.existingImagePath,
   });
 
   /// Stable identifier used by the apply selection. It is an existing local
@@ -43,7 +45,15 @@ final class CatalogPackReviewProduct {
   final CatalogPackProductDetails? existing;
   final bool hasBundledImage;
 
+  /// Validated, local-only preview files. Remote image URLs are deliberately
+  /// not loaded while reviewing an untrusted shared pack.
+  final String? incomingImagePath;
+  final String? existingImagePath;
+
   bool get isNew => existing == null;
+
+  String? get primaryImagePath =>
+      isNew ? incomingImagePath : existingImagePath ?? incomingImagePath;
 }
 
 final class CatalogPackProductDetails {

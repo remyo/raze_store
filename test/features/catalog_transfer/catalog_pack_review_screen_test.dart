@@ -58,15 +58,39 @@ void main() {
       expect(find.text('New products'), findsOneWidget);
       expect(find.text('Existing products'), findsOneWidget);
       expect(
-        find.textContaining(
-          'File safety and structure were checked, but the author and product details cannot be verified.',
-        ),
+        find.textContaining('Author and details unverified'),
         findsOneWidget,
       );
       expect(
         find.text('0 of 2 new products selected. Showing 2 of 2.'),
         findsOneWidget,
       );
+      expect(
+        find
+            .byKey(const ValueKey('catalog-review-product-new-mango'))
+            .hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.text('Drinks'), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey('catalog-review-product-compare-new-mango')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Drinks'), findsOneWidget);
+      expect(
+        tester
+            .widget<Checkbox>(
+              find.byKey(
+                const ValueKey('catalog-review-product-check-new-mango'),
+              ),
+            )
+            .value,
+        isFalse,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('catalog-review-product-compare-new-mango')),
+      );
+      await tester.pumpAndSettle();
       expect(
         tester
             .widget<FilledButton>(
@@ -109,10 +133,15 @@ void main() {
       );
 
       tester.testTextInput.hide();
+      final fields = find.byKey(const ValueKey('catalog-review-new-fields'));
       final brandField = find.byKey(
         const ValueKey('catalog-review-new-field-brand'),
       );
-      await tester.ensureVisible(brandField);
+      expect(brandField, findsNothing);
+      await tester.ensureVisible(fields);
+      await tester.tap(fields);
+      await tester.pumpAndSettle();
+      expect(brandField, findsOneWidget);
       await tester.tap(brandField);
       await tester.pump();
       expect(tester.widget<CheckboxListTile>(brandField).value, isFalse);
@@ -185,30 +214,62 @@ void main() {
     await tester.tap(find.text('Existing products'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Choose details to import'));
-    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('catalog-review-existing-search')),
+      'store brand',
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(
+      find.text('0 of 1 existing products selected. Showing 1 of 1 matches.'),
+      findsOneWidget,
+    );
+    tester.testTextInput.hide();
+
     final existingList = find.byKey(
       const ValueKey('catalog-review-existing-list'),
     );
-    await tester.drag(existingList, const Offset(0, -500));
+    await tester.ensureVisible(existingList);
     await tester.pumpAndSettle();
     final comparison = find.byKey(
       const ValueKey('catalog-review-product-compare-existing-chips'),
     );
+    expect(find.text('Old Chips'), findsOneWidget);
+    expect(find.text('Pack Chips'), findsNothing);
+    expect(find.text('4800000000000'), findsOneWidget);
+    expect(find.text('₱12.00'), findsOneWidget);
+    final image = find.byKey(
+      const ValueKey('catalog-review-product-image-existing-chips'),
+    );
+    final checkbox = find.byKey(
+      const ValueKey('catalog-review-product-check-existing-chips'),
+    );
+    expect(image, findsOneWidget);
+    expect(checkbox, findsOneWidget);
+    expect(tester.getCenter(image).dx, lessThan(tester.getCenter(checkbox).dx));
+    final name = tester.widget<Text>(
+      find.byKey(const ValueKey('catalog-review-product-name-existing-chips')),
+    );
+    expect(name.maxLines, 2);
+    expect(name.overflow, TextOverflow.ellipsis);
+
     expect(comparison, findsOneWidget);
     await tester.tap(comparison);
     await tester.pumpAndSettle();
-    expect(find.text('Current → incoming details'), findsOneWidget);
     expect(
-      find.textContaining('Old Chips', findRichText: true),
+      find.text('Current phone value → incoming pack value'),
       findsOneWidget,
     );
+    expect(find.text('Current price is protected'), findsOneWidget);
+    expect(find.textContaining('Old Chips', findRichText: true), findsWidgets);
     expect(find.textContaining('Pack Chips', findRichText: true), findsWidgets);
 
-    await tester.tap(
-      find.byKey(const ValueKey('catalog-review-product-check-existing-chips')),
-    );
+    await tester.ensureVisible(checkbox);
+    await tester.tap(checkbox);
     await tester.pump();
+    expect(
+      find.text('Current phone value → incoming pack value'),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('catalog-review-apply')));
     await tester.pumpAndSettle();
     await tester.tap(
@@ -248,12 +309,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
-    final fields = find.byKey(const ValueKey('catalog-review-new-fields'));
-    await tester.ensureVisible(fields);
-    await tester.pumpAndSettle();
-    await tester.tap(fields);
-    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('catalog-review-new-field-brand')),
+      findsNothing,
+    );
+    final viewport = find.byKey(const ValueKey('catalog-review-new-viewport'));
+    expect(viewport, findsOneWidget);
+    expect(tester.getSize(viewport).height, inInclusiveRange(160, 360));
     final list = find.byKey(const ValueKey('catalog-review-new-list'));
+    await tester.ensureVisible(list);
+    await tester.pumpAndSettle();
     await tester.dragUntilVisible(
       find.byKey(const ValueKey('catalog-review-new-loader')),
       list,

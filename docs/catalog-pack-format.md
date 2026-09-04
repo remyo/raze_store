@@ -125,6 +125,12 @@ Every row begins unchecked. The owner chooses the trusted products and the
 fields the pack may contribute: barcode, name, brand, category, main unit,
 suggested price, and image. Applying the review is one atomic database change;
 an invalid file, stale review, or conflicting local edit changes nothing.
+Existing-product search covers both current phone values and incoming pack
+values. Compact existing rows show the current name, barcode, and price. Their
+leading preview prefers the current local image and otherwise uses the
+validated bundled preview; the owner opens a row to inspect all
+current-to-incoming differences. The shared field selector is collapsed
+initially and applies to both tabs.
 
 Selected new rows are created with their required product name. Their optional
 details are populated only when the corresponding field was allowed. Selected

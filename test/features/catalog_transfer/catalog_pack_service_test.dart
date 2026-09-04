@@ -890,6 +890,10 @@ void main() {
       expect(prepared.review!.newProducts, hasLength(1));
       expect(prepared.review!.existingProducts, hasLength(1));
       expect(prepared.review!.newProducts.single.incoming.name, 'Incoming New');
+      final stagedPreview =
+          prepared.review!.newProducts.single.incomingImagePath;
+      expect(stagedPreview, isNotNull);
+      expect(await File(stagedPreview!).exists(), isTrue);
       expect(
         prepared.review!.existingProducts.single.existing!.name,
         'Local Product',
@@ -900,6 +904,8 @@ void main() {
         isTrue,
       );
       expect(await service.getLastImportUndoSummary(), isNull);
+      await service.discardReview(prepared.review!.reviewId);
+      expect(await File(stagedPreview).exists(), isFalse);
     },
   );
 
