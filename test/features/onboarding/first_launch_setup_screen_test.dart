@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_coordinator.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/onboarding/application/onboarding_providers.dart';
 import 'package:raze_store/features/onboarding/domain/onboarding_repository.dart';
@@ -110,6 +111,7 @@ void main() {
         photoCount: 240,
       ),
     );
+    final reviewTransfers = _FakeCatalogPackReviewOperations();
     final router = GoRouter(
       initialLocation: '/setup',
       routes: [
@@ -130,6 +132,9 @@ void main() {
           settingsRepositoryProvider.overrideWithValue(settings),
           onboardingRepositoryProvider.overrideWithValue(onboarding),
           catalogTransferCoordinatorProvider.overrideWithValue(transfers),
+          catalogPackReviewCoordinatorProvider.overrideWithValue(
+            reviewTransfers,
+          ),
         ],
         child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
       ),
@@ -144,8 +149,19 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('setup-import-catalog-pack')));
     await tester.pumpAndSettle();
+    expect(find.text('Review catalog pack'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('catalog-review-new-select-shown')),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('catalog-review-apply')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('catalog-review-confirm-apply')),
+    );
+    await tester.pumpAndSettle();
 
-    expect(transfers.packImportCalls, 1);
+    expect(reviewTransfers.applyCalls, 1);
     expect(onboarding.complete, isTrue);
     expect(find.text('Product list'), findsOneWidget);
   });
@@ -336,5 +352,61 @@ final class _FakeCatalogTransferOperations
 
   @override
   Future<CatalogTransferResult> restoreBackupReplacing() =>
+      throw UnimplementedError();
+}
+
+final class _FakeCatalogPackReviewOperations
+    implements CatalogPackReviewOperations {
+  var applyCalls = 0;
+
+  late final CatalogPackReview review = CatalogPackReview(
+    reviewId: 'setup-review',
+    packId: 'starter',
+    revision: 1,
+    createdAt: DateTime.utc(2026, 9, 4),
+    products: [
+      const CatalogPackReviewProduct(
+        targetId: 'new-product',
+        catalogProductId: 'shared-new-product',
+        incoming: CatalogPackProductDetails(
+          barcode: '4800000000000',
+          name: 'Starter Product',
+          brand: 'Brand',
+          unitLabel: 'Pack',
+          category: 'Snacks',
+          priceCentavos: 1000,
+          hasImage: false,
+        ),
+        existing: null,
+        hasBundledImage: false,
+      ),
+    ],
+  );
+
+  @override
+  Future<CatalogPackReviewChoiceResult> chooseCatalogPackForReview() async =>
+      CatalogPackReviewReady(review);
+
+  @override
+  Future<CatalogTransferResult> applyCatalogPackReview(
+    CatalogPackReview review,
+    CatalogPackApplySelection selection,
+  ) async {
+    applyCalls++;
+    return const CatalogTransferSuccess(
+      action: CatalogTransferAction.catalogPackImport,
+      message: 'Added starter product.',
+      productCount: 1,
+    );
+  }
+
+  @override
+  Future<void> discardCatalogPackReview(CatalogPackReview review) async {}
+
+  @override
+  Future<CatalogPackUndoSummary?> getLastCatalogImportUndo() async => null;
+
+  @override
+  Future<CatalogTransferResult> undoLastCatalogImport() =>
       throw UnimplementedError();
 }

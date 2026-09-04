@@ -53,6 +53,42 @@ class StoreProducts extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// Metadata for the single catalog-pack import that can still be undone.
+///
+/// Keeping this checkpoint in SQLite makes creation of the checkpoint and the
+/// catalog changes one atomic transaction. A later successful import replaces
+/// row `1`; complete backup restore and bulk catalog deletion clear it.
+class CatalogImportUndoBatches extends Table {
+  IntColumn get id => integer().withDefault(const Constant(1))();
+  TextColumn get packId => text()();
+  IntColumn get revision => integer()();
+  DateTimeColumn get importedAt => dateTime()();
+  IntColumn get createdCount => integer()();
+  IntColumn get updatedCount => integer()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Before/after snapshots used to safely undo one catalog-pack import.
+///
+/// The after snapshot is checked before undoing, so a product edited by the
+/// owner after import is never silently overwritten by an old checkpoint.
+class CatalogImportUndoProducts extends Table {
+  IntColumn get batchId => integer().references(
+    CatalogImportUndoBatches,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
+  TextColumn get productId => text()();
+  BoolColumn get createdByImport => boolean()();
+  TextColumn get beforeJson => text().nullable()();
+  TextColumn get afterJson => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {batchId, productId};
+}
+
 /// Additional ways a store can sell a product whose package owns the barcode.
 ///
 /// For example, a scanned cigarette pack can keep its package price on

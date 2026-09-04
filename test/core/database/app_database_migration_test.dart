@@ -63,7 +63,7 @@ void main() {
     addTearDown(database.close);
     final draft = await LocalCartRepository(database).getDraft();
 
-    expect(database.schemaVersion, 6);
+    expect(database.schemaVersion, 7);
     expect(draft.items, hasLength(1));
     expect(draft.items.single.lineId, 'main:coffee');
     expect(draft.items.single.productId, 'coffee');
@@ -185,7 +185,7 @@ void main() {
           .where((product) => product.sourceProductId == 'remote-id')
           .toList();
 
-      expect(database.schemaVersion, 6);
+      expect(database.schemaVersion, 7);
       expect(products, hasLength(3));
       expect(linked, hasLength(1));
       expect(linked.single.id, 'first');
@@ -242,7 +242,7 @@ void main() {
 
       final product = await database.select(database.storeProducts).getSingle();
 
-      expect(database.schemaVersion, 6);
+      expect(database.schemaVersion, 7);
       expect(product.id, 'kept');
       expect(product.name, 'Kept Product');
       expect(product.priceCentavos, 4321);

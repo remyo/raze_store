@@ -1294,6 +1294,10 @@ final class CatalogBackupService {
     Map<(String, int), String> saleLineImagePaths,
   ) async {
     await _database.transaction(() async {
+      // A complete replacement invalidates the one-level catalog-import undo
+      // checkpoint; that checkpoint belongs to the catalog being replaced.
+      await _database.delete(_database.catalogImportUndoProducts).go();
+      await _database.delete(_database.catalogImportUndoBatches).go();
       await _database.delete(_database.draftCartItems).go();
       await _database.delete(_database.saleLines).go();
       await _database.delete(_database.sales).go();
@@ -1498,12 +1502,33 @@ final class CatalogBackupService {
     final paths = await _database.transaction(() async {
       final products = await _database.select(_database.storeProducts).get();
       final saleLines = await _database.select(_database.saleLines).get();
+      final undoRows = await _database
+          .select(_database.catalogImportUndoProducts)
+          .get();
+      final undoPaths = <String?>[];
+      for (final row in undoRows) {
+        for (final encoded in [row.beforeJson, row.afterJson]) {
+          if (encoded == null) continue;
+          try {
+            final value = jsonDecode(encoded);
+            if (value is Map) {
+              undoPaths
+                ..add(value['localImagePath'] as String?)
+                ..add(value['catalogImagePath'] as String?);
+            }
+          } catch (_) {
+            // A malformed internal undo checkpoint is disposable during a
+            // complete restore and must not block a valid backup.
+          }
+        }
+      }
       return <String?>[
         for (final row in products) ...[
           row.localImagePath?.trim(),
           row.catalogImagePath?.trim(),
         ],
         for (final row in saleLines) row.imagePathSnapshot?.trim(),
+        ...undoPaths,
       ];
     });
     return paths

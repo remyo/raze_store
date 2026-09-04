@@ -118,33 +118,36 @@ and mismatched image extensions are rejected.
 
 ## Import and revision semantics
 
-The app validates the complete pack, then matches a row by
-`(source, sourceProductId)` or canonical barcode. A missing row is created with
-the suggested price, or zero when none is supplied. Import always keeps
-products absent from the pack, settings, receipt data, and the cart. For a
-matched row, both import modes preserve any nonzero store price. A suggested
-price fills the main price only when its saved value is zero.
+The app validates and stages the complete pack before changing local data, then
+matches each row by `(source, sourceProductId)` or canonical barcode. It shows
+matches under **Existing products** and unmatched rows under **New products**.
+Every row begins unchecked. The owner chooses the trusted products and the
+fields the pack may contribute: barcode, name, brand, category, main unit,
+suggested price, and image. Applying the review is one atomic database change;
+an invalid file, stale review, or conflicting local edit changes nothing.
 
-The importer offers two explicit conflict modes:
+Selected new rows are created with their required product name. Their optional
+details are populated only when the corresponding field was allowed. Selected
+existing rows keep their local ID, owner photo, selling units, and every
+non-zero main price. A selected suggested price may fill a zero main price but
+cannot replace a non-zero one. Products absent from the pack, unselected rows,
+settings, receipt data, sales, and the unfinished cart are not changed by the
+import. Shared source identity is linked for selected rows so future revisions
+can match them reliably.
 
-- **Keep existing** (default) is additive and repair-only. A matched row keeps
-  its product details, confirmed main price, selling units, and owner photo. The
-  importer may fill a zero main price from the pack suggestion, link
-  shared-source metadata, or repair a missing pack-owned image, and it never
-  moves the stored source timestamp backward.
-- **Update matching and add new** replaces a matched row's barcode, name,
-  brand, category, main unit label, remote image URL, bundled catalog image,
-  and source timestamp. It uses a pack suggestion only when the saved main price
-  is zero. It preserves the row ID, every nonzero main price, owner-selected
-  photo, and all sub-unit prices.
+An import that changes at least one product creates a one-level local undo
+checkpoint. Undo removes newly imported products and their unfinished-cart
+rows, and restores updated products exactly. It refuses to run if an affected
+product changed afterward. A later changing import replaces that checkpoint;
+a no-change import retains it, and bulk product deletion clears it because
+replaying the older checkpoint would be unsafe.
 
 Use one stable `packId` and monotonically increasing revisions for a release
-line. The current app checks that `revision` is positive but does not store it
-or use it to block older packs. Keep-existing mode remains safe even if an older
-pack is selected. Update-matching mode is an explicit overwrite, so publishers
-and users should apply releases in revision order. If a release grows too
-large, create stable category packs instead of changing identities or relying
-on deletion.
+line. The app records the applied revision for undo metadata but does not use it
+to block an older pack, so owners should still review every proposed detail and
+publishers should distribute releases in order. If a release grows too large,
+create stable category packs instead of changing identities or relying on
+deletion.
 
 ## Provenance and licensing
 

@@ -90,7 +90,7 @@ void main() {
     );
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 6);
+    expect(database.schemaVersion, 7);
     final product = await database.select(database.storeProducts).getSingle();
     expect(product.id, 'coffee');
     expect(product.priceCentavos, 12000);
@@ -110,5 +110,13 @@ void main() {
     expect(profile.receiptFooter, 'Salamat po!');
     expect(await database.select(database.sales).get(), isEmpty);
     expect(await database.select(database.saleLines).get(), isEmpty);
+    expect(
+      await database.select(database.catalogImportUndoBatches).get(),
+      isEmpty,
+    );
+    expect(
+      await database.select(database.catalogImportUndoProducts).get(),
+      isEmpty,
+    );
   });
 }

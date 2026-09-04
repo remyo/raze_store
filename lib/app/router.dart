@@ -16,6 +16,7 @@ import 'package:raze_store/features/sales/presentation/sale_detail_screen.dart';
 import 'package:raze_store/features/sales/presentation/sales_screen.dart';
 import 'package:raze_store/features/settings/presentation/settings_screen.dart';
 import 'package:raze_store/features/settings/presentation/catalog_category_settings_screen.dart';
+import 'package:raze_store/features/settings/presentation/bulk_product_deletion_screen.dart';
 import 'package:raze_store/features/settings/presentation/storage_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -127,6 +128,11 @@ final appRouter = GoRouter(
       path: '/settings/storage',
       parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) => const StorageScreen(),
+    ),
+    GoRoute(
+      path: '/settings/products/delete',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const BulkProductDeletionScreen(),
     ),
     GoRoute(
       path: '/receipt',

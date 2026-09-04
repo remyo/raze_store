@@ -36,6 +36,7 @@ void main() {
     expect(paths, contains('/sales'));
     expect(paths, contains(':id'));
     expect(paths, contains('/settings/storage'));
+    expect(paths, contains('/settings/products/delete'));
   });
 }
 

@@ -32,8 +32,10 @@ review simple sales history without turning the app into an inventory system.
 - Review database, product-image, and temporary-file sizes in Storage Manager
 - Create/restore a complete `.razestore` backup, including sales and photos
 - Receive weekly or monthly in-app backup reminders, or turn them off
-- Import a `.razepack` by keeping matches or updating matches and adding new
-  products
+- Review `.razepack` files in separate New and Existing lists, then import
+  only checked products and details
+- Undo the most recently reviewed catalog-pack import without rolling back
+  later sales or settings
 - Export/import a merge-only product CSV for spreadsheet editing
 
 Sales history is intentionally lightweight. Completing a sale stores an
@@ -61,14 +63,24 @@ selling unit by default. Turn off **Add main unit automatically** in **Profile �
 Settings → Barcode scanner** when the seller should choose pack, piece,
 stick, or another configured unit after each scan.
 
-Pack import is always non-deleting and offers two modes. **Keep existing** is
-the recommended default: it adds missing products without replacing matches.
-**Update matching and add new** replaces matching catalog details. In both
-modes, an existing non-zero main price always wins; a pack suggestion is used
-only for a new product or to fill an existing ₱0 price. Both modes preserve the
-owner's selected photo, sub-unit prices, products missing from the pack, receipt
-settings, and the unfinished cart. Reference prices are starting values rather
-than a promise of the price charged by every store.
+Pack import is always non-deleting and uses a review-before-apply flow. The app
+fully validates and stages the file first without changing the catalog, then
+separates **New products** from **Existing products**. Product rows begin
+unchecked. The owner can search, select only trusted rows, and independently
+allow barcode, product name, brand, category, size/unit, suggested price, and
+catalog image details. An existing non-zero main price always wins; a pack
+suggestion is used only for a new product or to fill an existing ₱0 price. The
+owner's selected photo, sub-unit prices, products missing from the pack,
+receipt settings, and sales remain protected. Reference prices are starting
+values rather than a promise of the price charged by every store.
+
+A reviewed import that changes at least one product creates one device-local
+**Undo last import** checkpoint. Undo removes products created by that import,
+removes their unfinished-cart rows, and restores updated products without
+replacing later sales, settings, or the rest of the catalog. If an affected
+product was edited after import, undo stops without changing anything so the
+newer owner edit cannot be lost. A later import that changes products replaces
+the checkpoint; a no-change import keeps it. Bulk product deletion clears it.
 
 The earlier `raze_store_api` prototype remains in the repository for possible
 future catalog-building tools, but the Flutter app does not require or contact
@@ -108,6 +120,15 @@ without a database migration. Open **Profile → Settings → Product
 categories** to add or remove reusable custom choices. A custom category in use
 by a saved product cannot be deleted until those products are moved to another
 category.
+
+Open **Profile → Settings → Delete multiple products** to search the full
+catalog, select individual rows, or select every product matching the current
+filter. The app shows the exact count before deletion, clears only affected
+unfinished-cart rows, and never changes completed sales or their receipt
+snapshots. Managed images are removed only when no remaining product, cart row,
+or historical sale still references them. A successful bulk deletion also
+clears **Undo last import**, because its older checkpoint is no longer safe to
+apply. Restore a `.razestore` backup if products were deleted accidentally.
 
 ## Scanner and backup settings
 
@@ -152,22 +173,28 @@ To import it on a phone:
    Android. AirDrop can also place the file on an iPhone.
 2. For a new store, enter the store details, press **Save and continue**, then
    choose **Import offline catalog pack**.
-3. For an existing store, open **Profile → Settings → Catalog files →
-   Import catalog pack**.
-4. Choose **Keep existing** for a safe additive import, or **Update matching
-   and add new** to apply a newer catalog's details. In either mode, a pack
-   suggestion fills a ₱0 price but never replaces a non-zero store price. Choose
-   the downloaded file and wait for confirmation.
-5. Open **Products** to review the suggested prices for your store. You can
-   change any price before using it at checkout.
+3. For an existing store, open **Profile → Settings → Catalog files → Choose
+   and review catalog pack**.
+4. Choose the downloaded file. No products are added yet: review the **New
+   products** and **Existing products** tabs, search the list, and check only
+   the rows you want. **Select shown** selects only the currently visible
+   filtered page, never hidden search results.
+5. Under **Choose details to import**, uncheck any field you do not trust, then
+   press **Apply** and verify the exact new/existing counts in the confirmation.
+   A pack suggestion can fill a ₱0 price but never replaces a non-zero store
+   price.
+6. Open **Home** to check the imported starting prices. If the wrong rows
+   were applied, use **Profile → Settings → Catalog files → Undo last import**
+   before editing those products.
 
-Importing the same pack again does not duplicate its products. The recommended
-**Keep existing** mode does not overwrite locally edited product values. The
-explicit update mode can replace the name, barcode, brand, category, main unit,
-and remote/catalog image; it still keeps the owner's selected photo, sub-unit
-prices, and any non-zero main price. Both modes can initialize a ₱0 main price
-from a pack suggestion. A `.razepack` is shared starter data; use a private
-`.razestore` backup when moving one store's complete data to another phone.
+Importing the same pack again does not duplicate its products; matching rows
+appear under **Existing products** for an explicit decision. Checked fields can
+replace catalog name, barcode, brand, category, main unit, and image details,
+while the owner's photo, sub-unit prices, and non-zero main price stay. File
+checks prove that the archive is structurally safe and internally consistent,
+not that its author wrote trustworthy product details, so all rows start
+unchecked. A `.razepack` is shared starter data; use a private `.razestore`
+backup when moving one store's complete data to another phone.
 
 ### Build or update the starter catalog
 

@@ -9,6 +9,8 @@ part 'app_database.g.dart';
 @DriftDatabase(
   tables: [
     StoreProducts,
+    CatalogImportUndoBatches,
+    CatalogImportUndoProducts,
     ProductSellingUnits,
     DraftCartItems,
     StoreProfiles,
@@ -22,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -113,6 +115,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await migrator.createTable(sales);
         await migrator.createTable(saleLines);
+      }
+      if (from < 7) {
+        await migrator.createTable(catalogImportUndoBatches);
+        await migrator.createTable(catalogImportUndoProducts);
       }
     },
   );

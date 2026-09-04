@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/app_storage_usage.dart';
@@ -129,6 +130,7 @@ Future<void> _pumpSettings(WidgetTester tester) async {
         appPreferencesClockProvider.overrideWithValue(
           () => DateTime.utc(2026, 9, 4),
         ),
+        catalogPackUndoSummaryProvider.overrideWith((ref) async => null),
       ],
       child: MaterialApp(theme: AppTheme.light, home: const SettingsScreen()),
     ),

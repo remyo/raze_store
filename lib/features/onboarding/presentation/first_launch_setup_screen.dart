@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_coordinator.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
+import 'package:raze_store/features/catalog_transfer/presentation/catalog_pack_review_screen.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
 
@@ -234,21 +236,47 @@ class _FirstLaunchSetupScreenState
     await _runSetupCatalogAction(action);
   }
 
-  Future<void> _handleCatalogPackImport() =>
-      _runSetupCatalogAction(_SetupCatalogAction.importCatalogPack);
+  Future<void> _handleCatalogPackImport() async {
+    setState(() => _transferringCatalog = true);
+    final operations = ref.read(catalogPackReviewCoordinatorProvider);
+    final choice = await operations.chooseCatalogPackForReview();
+    if (!mounted) return;
+    setState(() => _transferringCatalog = false);
+    if (choice case CatalogPackReviewNotReady(:final result)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.message)));
+      return;
+    }
+    final review = (choice as CatalogPackReviewReady).review;
+    final result = await Navigator.of(context).push<CatalogTransferResult>(
+      MaterialPageRoute(
+        builder: (context) => CatalogPackReviewScreen(
+          review: review,
+          onApply: (selection) =>
+              operations.applyCatalogPackReview(review, selection),
+          onDiscard: () => operations.discardCatalogPackReview(review),
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    await _finishAfterTransfer(result);
+  }
 
   Future<void> _runSetupCatalogAction(_SetupCatalogAction action) async {
     setState(() => _transferringCatalog = true);
     final operations = ref.read(catalogTransferCoordinatorProvider);
     final result = switch (action) {
-      _SetupCatalogAction.importCatalogPack =>
-        await operations.importCatalogPackMerging(),
       _SetupCatalogAction.restoreBackup =>
         await operations.restoreBackupReplacing(),
       _SetupCatalogAction.importCsv => await operations.importCsvMerging(),
     };
     if (!mounted) return;
     setState(() => _transferringCatalog = false);
+    await _finishAfterTransfer(result);
+  }
+
+  Future<void> _finishAfterTransfer(CatalogTransferResult result) async {
     if (result is! CatalogTransferSuccess) {
       ScaffoldMessenger.of(
         context,
@@ -275,7 +303,7 @@ class _FirstLaunchSetupScreenState
   }
 }
 
-enum _SetupCatalogAction { importCatalogPack, restoreBackup, importCsv }
+enum _SetupCatalogAction { restoreBackup, importCsv }
 
 class _StoreDetailsForm extends StatelessWidget {
   const _StoreDetailsForm({

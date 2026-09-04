@@ -80,6 +80,48 @@ void main() {
     );
     expect(result.message, isNotEmpty);
   });
+
+  test('review picker cancellation never opens an import session', () async {
+    final imageStore = LocalProductImageStore(root: temporaryDirectory);
+    final coordinator = CatalogPackReviewCoordinator(
+      packService: CatalogPackService(
+        database: database,
+        imageStore: imageStore,
+      ),
+      fileGateway: const _FakeFileGateway(catalogPackPath: null),
+    );
+
+    final result = await coordinator.chooseCatalogPackForReview();
+
+    expect(result, isA<CatalogPackReviewNotReady>());
+    expect(
+      (result as CatalogPackReviewNotReady).result,
+      isA<CatalogTransferCancelled>(),
+    );
+  });
+
+  test('review picker rejects non-razepack files before validation', () async {
+    final imageStore = LocalProductImageStore(root: temporaryDirectory);
+    final coordinator = CatalogPackReviewCoordinator(
+      packService: CatalogPackService(
+        database: database,
+        imageStore: imageStore,
+      ),
+      fileGateway: _FakeFileGateway(
+        catalogPackPath: p.join(temporaryDirectory.path, 'catalog.zip'),
+      ),
+    );
+
+    final result = await coordinator.chooseCatalogPackForReview();
+
+    expect(result, isA<CatalogPackReviewNotReady>());
+    final failure = (result as CatalogPackReviewNotReady).result;
+    expect(failure, isA<CatalogTransferFailure>());
+    expect(
+      (failure as CatalogTransferFailure).code,
+      CatalogTransferFailureCode.invalidFile,
+    );
+  });
 }
 
 CatalogTransferCoordinator _coordinator(

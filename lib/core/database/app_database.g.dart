@@ -919,6 +919,809 @@ class StoreProductsCompanion extends UpdateCompanion<StoreProduct> {
   }
 }
 
+class $CatalogImportUndoBatchesTable extends CatalogImportUndoBatches
+    with TableInfo<$CatalogImportUndoBatchesTable, CatalogImportUndoBatche> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CatalogImportUndoBatchesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _packIdMeta = const VerificationMeta('packId');
+  @override
+  late final GeneratedColumn<String> packId = GeneratedColumn<String>(
+    'pack_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _importedAtMeta = const VerificationMeta(
+    'importedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> importedAt = GeneratedColumn<DateTime>(
+    'imported_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdCountMeta = const VerificationMeta(
+    'createdCount',
+  );
+  @override
+  late final GeneratedColumn<int> createdCount = GeneratedColumn<int>(
+    'created_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedCountMeta = const VerificationMeta(
+    'updatedCount',
+  );
+  @override
+  late final GeneratedColumn<int> updatedCount = GeneratedColumn<int>(
+    'updated_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    packId,
+    revision,
+    importedAt,
+    createdCount,
+    updatedCount,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'catalog_import_undo_batches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CatalogImportUndoBatche> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('pack_id')) {
+      context.handle(
+        _packIdMeta,
+        packId.isAcceptableOrUnknown(data['pack_id']!, _packIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packIdMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('imported_at')) {
+      context.handle(
+        _importedAtMeta,
+        importedAt.isAcceptableOrUnknown(data['imported_at']!, _importedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_importedAtMeta);
+    }
+    if (data.containsKey('created_count')) {
+      context.handle(
+        _createdCountMeta,
+        createdCount.isAcceptableOrUnknown(
+          data['created_count']!,
+          _createdCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdCountMeta);
+    }
+    if (data.containsKey('updated_count')) {
+      context.handle(
+        _updatedCountMeta,
+        updatedCount.isAcceptableOrUnknown(
+          data['updated_count']!,
+          _updatedCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedCountMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CatalogImportUndoBatche map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CatalogImportUndoBatche(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      packId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_id'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      importedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}imported_at'],
+      )!,
+      createdCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_count'],
+      )!,
+      updatedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_count'],
+      )!,
+    );
+  }
+
+  @override
+  $CatalogImportUndoBatchesTable createAlias(String alias) {
+    return $CatalogImportUndoBatchesTable(attachedDatabase, alias);
+  }
+}
+
+class CatalogImportUndoBatche extends DataClass
+    implements Insertable<CatalogImportUndoBatche> {
+  final int id;
+  final String packId;
+  final int revision;
+  final DateTime importedAt;
+  final int createdCount;
+  final int updatedCount;
+  const CatalogImportUndoBatche({
+    required this.id,
+    required this.packId,
+    required this.revision,
+    required this.importedAt,
+    required this.createdCount,
+    required this.updatedCount,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['pack_id'] = Variable<String>(packId);
+    map['revision'] = Variable<int>(revision);
+    map['imported_at'] = Variable<DateTime>(importedAt);
+    map['created_count'] = Variable<int>(createdCount);
+    map['updated_count'] = Variable<int>(updatedCount);
+    return map;
+  }
+
+  CatalogImportUndoBatchesCompanion toCompanion(bool nullToAbsent) {
+    return CatalogImportUndoBatchesCompanion(
+      id: Value(id),
+      packId: Value(packId),
+      revision: Value(revision),
+      importedAt: Value(importedAt),
+      createdCount: Value(createdCount),
+      updatedCount: Value(updatedCount),
+    );
+  }
+
+  factory CatalogImportUndoBatche.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CatalogImportUndoBatche(
+      id: serializer.fromJson<int>(json['id']),
+      packId: serializer.fromJson<String>(json['packId']),
+      revision: serializer.fromJson<int>(json['revision']),
+      importedAt: serializer.fromJson<DateTime>(json['importedAt']),
+      createdCount: serializer.fromJson<int>(json['createdCount']),
+      updatedCount: serializer.fromJson<int>(json['updatedCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'packId': serializer.toJson<String>(packId),
+      'revision': serializer.toJson<int>(revision),
+      'importedAt': serializer.toJson<DateTime>(importedAt),
+      'createdCount': serializer.toJson<int>(createdCount),
+      'updatedCount': serializer.toJson<int>(updatedCount),
+    };
+  }
+
+  CatalogImportUndoBatche copyWith({
+    int? id,
+    String? packId,
+    int? revision,
+    DateTime? importedAt,
+    int? createdCount,
+    int? updatedCount,
+  }) => CatalogImportUndoBatche(
+    id: id ?? this.id,
+    packId: packId ?? this.packId,
+    revision: revision ?? this.revision,
+    importedAt: importedAt ?? this.importedAt,
+    createdCount: createdCount ?? this.createdCount,
+    updatedCount: updatedCount ?? this.updatedCount,
+  );
+  CatalogImportUndoBatche copyWithCompanion(
+    CatalogImportUndoBatchesCompanion data,
+  ) {
+    return CatalogImportUndoBatche(
+      id: data.id.present ? data.id.value : this.id,
+      packId: data.packId.present ? data.packId.value : this.packId,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      importedAt: data.importedAt.present
+          ? data.importedAt.value
+          : this.importedAt,
+      createdCount: data.createdCount.present
+          ? data.createdCount.value
+          : this.createdCount,
+      updatedCount: data.updatedCount.present
+          ? data.updatedCount.value
+          : this.updatedCount,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CatalogImportUndoBatche(')
+          ..write('id: $id, ')
+          ..write('packId: $packId, ')
+          ..write('revision: $revision, ')
+          ..write('importedAt: $importedAt, ')
+          ..write('createdCount: $createdCount, ')
+          ..write('updatedCount: $updatedCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, packId, revision, importedAt, createdCount, updatedCount);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CatalogImportUndoBatche &&
+          other.id == this.id &&
+          other.packId == this.packId &&
+          other.revision == this.revision &&
+          other.importedAt == this.importedAt &&
+          other.createdCount == this.createdCount &&
+          other.updatedCount == this.updatedCount);
+}
+
+class CatalogImportUndoBatchesCompanion
+    extends UpdateCompanion<CatalogImportUndoBatche> {
+  final Value<int> id;
+  final Value<String> packId;
+  final Value<int> revision;
+  final Value<DateTime> importedAt;
+  final Value<int> createdCount;
+  final Value<int> updatedCount;
+  const CatalogImportUndoBatchesCompanion({
+    this.id = const Value.absent(),
+    this.packId = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.importedAt = const Value.absent(),
+    this.createdCount = const Value.absent(),
+    this.updatedCount = const Value.absent(),
+  });
+  CatalogImportUndoBatchesCompanion.insert({
+    this.id = const Value.absent(),
+    required String packId,
+    required int revision,
+    required DateTime importedAt,
+    required int createdCount,
+    required int updatedCount,
+  }) : packId = Value(packId),
+       revision = Value(revision),
+       importedAt = Value(importedAt),
+       createdCount = Value(createdCount),
+       updatedCount = Value(updatedCount);
+  static Insertable<CatalogImportUndoBatche> custom({
+    Expression<int>? id,
+    Expression<String>? packId,
+    Expression<int>? revision,
+    Expression<DateTime>? importedAt,
+    Expression<int>? createdCount,
+    Expression<int>? updatedCount,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (packId != null) 'pack_id': packId,
+      if (revision != null) 'revision': revision,
+      if (importedAt != null) 'imported_at': importedAt,
+      if (createdCount != null) 'created_count': createdCount,
+      if (updatedCount != null) 'updated_count': updatedCount,
+    });
+  }
+
+  CatalogImportUndoBatchesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? packId,
+    Value<int>? revision,
+    Value<DateTime>? importedAt,
+    Value<int>? createdCount,
+    Value<int>? updatedCount,
+  }) {
+    return CatalogImportUndoBatchesCompanion(
+      id: id ?? this.id,
+      packId: packId ?? this.packId,
+      revision: revision ?? this.revision,
+      importedAt: importedAt ?? this.importedAt,
+      createdCount: createdCount ?? this.createdCount,
+      updatedCount: updatedCount ?? this.updatedCount,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (packId.present) {
+      map['pack_id'] = Variable<String>(packId.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (importedAt.present) {
+      map['imported_at'] = Variable<DateTime>(importedAt.value);
+    }
+    if (createdCount.present) {
+      map['created_count'] = Variable<int>(createdCount.value);
+    }
+    if (updatedCount.present) {
+      map['updated_count'] = Variable<int>(updatedCount.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CatalogImportUndoBatchesCompanion(')
+          ..write('id: $id, ')
+          ..write('packId: $packId, ')
+          ..write('revision: $revision, ')
+          ..write('importedAt: $importedAt, ')
+          ..write('createdCount: $createdCount, ')
+          ..write('updatedCount: $updatedCount')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CatalogImportUndoProductsTable extends CatalogImportUndoProducts
+    with TableInfo<$CatalogImportUndoProductsTable, CatalogImportUndoProduct> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CatalogImportUndoProductsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _batchIdMeta = const VerificationMeta(
+    'batchId',
+  );
+  @override
+  late final GeneratedColumn<int> batchId = GeneratedColumn<int>(
+    'batch_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES catalog_import_undo_batches (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _productIdMeta = const VerificationMeta(
+    'productId',
+  );
+  @override
+  late final GeneratedColumn<String> productId = GeneratedColumn<String>(
+    'product_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdByImportMeta = const VerificationMeta(
+    'createdByImport',
+  );
+  @override
+  late final GeneratedColumn<bool> createdByImport = GeneratedColumn<bool>(
+    'created_by_import',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("created_by_import" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _beforeJsonMeta = const VerificationMeta(
+    'beforeJson',
+  );
+  @override
+  late final GeneratedColumn<String> beforeJson = GeneratedColumn<String>(
+    'before_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _afterJsonMeta = const VerificationMeta(
+    'afterJson',
+  );
+  @override
+  late final GeneratedColumn<String> afterJson = GeneratedColumn<String>(
+    'after_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    batchId,
+    productId,
+    createdByImport,
+    beforeJson,
+    afterJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'catalog_import_undo_products';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CatalogImportUndoProduct> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('batch_id')) {
+      context.handle(
+        _batchIdMeta,
+        batchId.isAcceptableOrUnknown(data['batch_id']!, _batchIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_batchIdMeta);
+    }
+    if (data.containsKey('product_id')) {
+      context.handle(
+        _productIdMeta,
+        productId.isAcceptableOrUnknown(data['product_id']!, _productIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_productIdMeta);
+    }
+    if (data.containsKey('created_by_import')) {
+      context.handle(
+        _createdByImportMeta,
+        createdByImport.isAcceptableOrUnknown(
+          data['created_by_import']!,
+          _createdByImportMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByImportMeta);
+    }
+    if (data.containsKey('before_json')) {
+      context.handle(
+        _beforeJsonMeta,
+        beforeJson.isAcceptableOrUnknown(data['before_json']!, _beforeJsonMeta),
+      );
+    }
+    if (data.containsKey('after_json')) {
+      context.handle(
+        _afterJsonMeta,
+        afterJson.isAcceptableOrUnknown(data['after_json']!, _afterJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_afterJsonMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {batchId, productId};
+  @override
+  CatalogImportUndoProduct map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CatalogImportUndoProduct(
+      batchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}batch_id'],
+      )!,
+      productId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_id'],
+      )!,
+      createdByImport: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}created_by_import'],
+      )!,
+      beforeJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}before_json'],
+      ),
+      afterJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}after_json'],
+      )!,
+    );
+  }
+
+  @override
+  $CatalogImportUndoProductsTable createAlias(String alias) {
+    return $CatalogImportUndoProductsTable(attachedDatabase, alias);
+  }
+}
+
+class CatalogImportUndoProduct extends DataClass
+    implements Insertable<CatalogImportUndoProduct> {
+  final int batchId;
+  final String productId;
+  final bool createdByImport;
+  final String? beforeJson;
+  final String afterJson;
+  const CatalogImportUndoProduct({
+    required this.batchId,
+    required this.productId,
+    required this.createdByImport,
+    this.beforeJson,
+    required this.afterJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['batch_id'] = Variable<int>(batchId);
+    map['product_id'] = Variable<String>(productId);
+    map['created_by_import'] = Variable<bool>(createdByImport);
+    if (!nullToAbsent || beforeJson != null) {
+      map['before_json'] = Variable<String>(beforeJson);
+    }
+    map['after_json'] = Variable<String>(afterJson);
+    return map;
+  }
+
+  CatalogImportUndoProductsCompanion toCompanion(bool nullToAbsent) {
+    return CatalogImportUndoProductsCompanion(
+      batchId: Value(batchId),
+      productId: Value(productId),
+      createdByImport: Value(createdByImport),
+      beforeJson: beforeJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(beforeJson),
+      afterJson: Value(afterJson),
+    );
+  }
+
+  factory CatalogImportUndoProduct.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CatalogImportUndoProduct(
+      batchId: serializer.fromJson<int>(json['batchId']),
+      productId: serializer.fromJson<String>(json['productId']),
+      createdByImport: serializer.fromJson<bool>(json['createdByImport']),
+      beforeJson: serializer.fromJson<String?>(json['beforeJson']),
+      afterJson: serializer.fromJson<String>(json['afterJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'batchId': serializer.toJson<int>(batchId),
+      'productId': serializer.toJson<String>(productId),
+      'createdByImport': serializer.toJson<bool>(createdByImport),
+      'beforeJson': serializer.toJson<String?>(beforeJson),
+      'afterJson': serializer.toJson<String>(afterJson),
+    };
+  }
+
+  CatalogImportUndoProduct copyWith({
+    int? batchId,
+    String? productId,
+    bool? createdByImport,
+    Value<String?> beforeJson = const Value.absent(),
+    String? afterJson,
+  }) => CatalogImportUndoProduct(
+    batchId: batchId ?? this.batchId,
+    productId: productId ?? this.productId,
+    createdByImport: createdByImport ?? this.createdByImport,
+    beforeJson: beforeJson.present ? beforeJson.value : this.beforeJson,
+    afterJson: afterJson ?? this.afterJson,
+  );
+  CatalogImportUndoProduct copyWithCompanion(
+    CatalogImportUndoProductsCompanion data,
+  ) {
+    return CatalogImportUndoProduct(
+      batchId: data.batchId.present ? data.batchId.value : this.batchId,
+      productId: data.productId.present ? data.productId.value : this.productId,
+      createdByImport: data.createdByImport.present
+          ? data.createdByImport.value
+          : this.createdByImport,
+      beforeJson: data.beforeJson.present
+          ? data.beforeJson.value
+          : this.beforeJson,
+      afterJson: data.afterJson.present ? data.afterJson.value : this.afterJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CatalogImportUndoProduct(')
+          ..write('batchId: $batchId, ')
+          ..write('productId: $productId, ')
+          ..write('createdByImport: $createdByImport, ')
+          ..write('beforeJson: $beforeJson, ')
+          ..write('afterJson: $afterJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(batchId, productId, createdByImport, beforeJson, afterJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CatalogImportUndoProduct &&
+          other.batchId == this.batchId &&
+          other.productId == this.productId &&
+          other.createdByImport == this.createdByImport &&
+          other.beforeJson == this.beforeJson &&
+          other.afterJson == this.afterJson);
+}
+
+class CatalogImportUndoProductsCompanion
+    extends UpdateCompanion<CatalogImportUndoProduct> {
+  final Value<int> batchId;
+  final Value<String> productId;
+  final Value<bool> createdByImport;
+  final Value<String?> beforeJson;
+  final Value<String> afterJson;
+  final Value<int> rowid;
+  const CatalogImportUndoProductsCompanion({
+    this.batchId = const Value.absent(),
+    this.productId = const Value.absent(),
+    this.createdByImport = const Value.absent(),
+    this.beforeJson = const Value.absent(),
+    this.afterJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CatalogImportUndoProductsCompanion.insert({
+    required int batchId,
+    required String productId,
+    required bool createdByImport,
+    this.beforeJson = const Value.absent(),
+    required String afterJson,
+    this.rowid = const Value.absent(),
+  }) : batchId = Value(batchId),
+       productId = Value(productId),
+       createdByImport = Value(createdByImport),
+       afterJson = Value(afterJson);
+  static Insertable<CatalogImportUndoProduct> custom({
+    Expression<int>? batchId,
+    Expression<String>? productId,
+    Expression<bool>? createdByImport,
+    Expression<String>? beforeJson,
+    Expression<String>? afterJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (batchId != null) 'batch_id': batchId,
+      if (productId != null) 'product_id': productId,
+      if (createdByImport != null) 'created_by_import': createdByImport,
+      if (beforeJson != null) 'before_json': beforeJson,
+      if (afterJson != null) 'after_json': afterJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CatalogImportUndoProductsCompanion copyWith({
+    Value<int>? batchId,
+    Value<String>? productId,
+    Value<bool>? createdByImport,
+    Value<String?>? beforeJson,
+    Value<String>? afterJson,
+    Value<int>? rowid,
+  }) {
+    return CatalogImportUndoProductsCompanion(
+      batchId: batchId ?? this.batchId,
+      productId: productId ?? this.productId,
+      createdByImport: createdByImport ?? this.createdByImport,
+      beforeJson: beforeJson ?? this.beforeJson,
+      afterJson: afterJson ?? this.afterJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (batchId.present) {
+      map['batch_id'] = Variable<int>(batchId.value);
+    }
+    if (productId.present) {
+      map['product_id'] = Variable<String>(productId.value);
+    }
+    if (createdByImport.present) {
+      map['created_by_import'] = Variable<bool>(createdByImport.value);
+    }
+    if (beforeJson.present) {
+      map['before_json'] = Variable<String>(beforeJson.value);
+    }
+    if (afterJson.present) {
+      map['after_json'] = Variable<String>(afterJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CatalogImportUndoProductsCompanion(')
+          ..write('batchId: $batchId, ')
+          ..write('productId: $productId, ')
+          ..write('createdByImport: $createdByImport, ')
+          ..write('beforeJson: $beforeJson, ')
+          ..write('afterJson: $afterJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ProductSellingUnitsTable extends ProductSellingUnits
     with TableInfo<$ProductSellingUnitsTable, ProductSellingUnit> {
   @override
@@ -3812,6 +4615,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $StoreProductsTable storeProducts = $StoreProductsTable(this);
+  late final $CatalogImportUndoBatchesTable catalogImportUndoBatches =
+      $CatalogImportUndoBatchesTable(this);
+  late final $CatalogImportUndoProductsTable catalogImportUndoProducts =
+      $CatalogImportUndoProductsTable(this);
   late final $ProductSellingUnitsTable productSellingUnits =
       $ProductSellingUnitsTable(this);
   late final $DraftCartItemsTable draftCartItems = $DraftCartItemsTable(this);
@@ -3844,6 +4651,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     storeProducts,
+    catalogImportUndoBatches,
+    catalogImportUndoProducts,
     productSellingUnits,
     draftCartItems,
     storeProfiles,
@@ -3857,6 +4666,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'catalog_import_undo_batches',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('catalog_import_undo_products', kind: UpdateKind.delete),
+      ],
+    ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'store_products',
@@ -4392,6 +5210,716 @@ typedef $$StoreProductsTableProcessedTableManager =
       (StoreProduct, $$StoreProductsTableReferences),
       StoreProduct,
       PrefetchHooks Function({bool productSellingUnitsRefs})
+    >;
+typedef $$CatalogImportUndoBatchesTableCreateCompanionBuilder =
+    CatalogImportUndoBatchesCompanion Function({
+      Value<int> id,
+      required String packId,
+      required int revision,
+      required DateTime importedAt,
+      required int createdCount,
+      required int updatedCount,
+    });
+typedef $$CatalogImportUndoBatchesTableUpdateCompanionBuilder =
+    CatalogImportUndoBatchesCompanion Function({
+      Value<int> id,
+      Value<String> packId,
+      Value<int> revision,
+      Value<DateTime> importedAt,
+      Value<int> createdCount,
+      Value<int> updatedCount,
+    });
+
+final class $$CatalogImportUndoBatchesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CatalogImportUndoBatchesTable,
+          CatalogImportUndoBatche
+        > {
+  $$CatalogImportUndoBatchesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<
+    $CatalogImportUndoProductsTable,
+    List<CatalogImportUndoProduct>
+  >
+  _catalogImportUndoProductsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.catalogImportUndoProducts,
+        aliasName: $_aliasNameGenerator(
+          db.catalogImportUndoBatches.id,
+          db.catalogImportUndoProducts.batchId,
+        ),
+      );
+
+  $$CatalogImportUndoProductsTableProcessedTableManager
+  get catalogImportUndoProductsRefs {
+    final manager = $$CatalogImportUndoProductsTableTableManager(
+      $_db,
+      $_db.catalogImportUndoProducts,
+    ).filter((f) => f.batchId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _catalogImportUndoProductsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$CatalogImportUndoBatchesTableFilterComposer
+    extends Composer<_$AppDatabase, $CatalogImportUndoBatchesTable> {
+  $$CatalogImportUndoBatchesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdCount => $composableBuilder(
+    column: $table.createdCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedCount => $composableBuilder(
+    column: $table.updatedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> catalogImportUndoProductsRefs(
+    Expression<bool> Function($$CatalogImportUndoProductsTableFilterComposer f)
+    f,
+  ) {
+    final $$CatalogImportUndoProductsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.catalogImportUndoProducts,
+          getReferencedColumn: (t) => t.batchId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CatalogImportUndoProductsTableFilterComposer(
+                $db: $db,
+                $table: $db.catalogImportUndoProducts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$CatalogImportUndoBatchesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CatalogImportUndoBatchesTable> {
+  $$CatalogImportUndoBatchesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get packId => $composableBuilder(
+    column: $table.packId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdCount => $composableBuilder(
+    column: $table.createdCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedCount => $composableBuilder(
+    column: $table.updatedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CatalogImportUndoBatchesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CatalogImportUndoBatchesTable> {
+  $$CatalogImportUndoBatchesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get packId =>
+      $composableBuilder(column: $table.packId, builder: (column) => column);
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdCount => $composableBuilder(
+    column: $table.createdCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedCount => $composableBuilder(
+    column: $table.updatedCount,
+    builder: (column) => column,
+  );
+
+  Expression<T> catalogImportUndoProductsRefs<T extends Object>(
+    Expression<T> Function($$CatalogImportUndoProductsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$CatalogImportUndoProductsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.catalogImportUndoProducts,
+          getReferencedColumn: (t) => t.batchId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CatalogImportUndoProductsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.catalogImportUndoProducts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$CatalogImportUndoBatchesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CatalogImportUndoBatchesTable,
+          CatalogImportUndoBatche,
+          $$CatalogImportUndoBatchesTableFilterComposer,
+          $$CatalogImportUndoBatchesTableOrderingComposer,
+          $$CatalogImportUndoBatchesTableAnnotationComposer,
+          $$CatalogImportUndoBatchesTableCreateCompanionBuilder,
+          $$CatalogImportUndoBatchesTableUpdateCompanionBuilder,
+          (CatalogImportUndoBatche, $$CatalogImportUndoBatchesTableReferences),
+          CatalogImportUndoBatche,
+          PrefetchHooks Function({bool catalogImportUndoProductsRefs})
+        > {
+  $$CatalogImportUndoBatchesTableTableManager(
+    _$AppDatabase db,
+    $CatalogImportUndoBatchesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CatalogImportUndoBatchesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CatalogImportUndoBatchesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CatalogImportUndoBatchesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> packId = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<DateTime> importedAt = const Value.absent(),
+                Value<int> createdCount = const Value.absent(),
+                Value<int> updatedCount = const Value.absent(),
+              }) => CatalogImportUndoBatchesCompanion(
+                id: id,
+                packId: packId,
+                revision: revision,
+                importedAt: importedAt,
+                createdCount: createdCount,
+                updatedCount: updatedCount,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String packId,
+                required int revision,
+                required DateTime importedAt,
+                required int createdCount,
+                required int updatedCount,
+              }) => CatalogImportUndoBatchesCompanion.insert(
+                id: id,
+                packId: packId,
+                revision: revision,
+                importedAt: importedAt,
+                createdCount: createdCount,
+                updatedCount: updatedCount,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CatalogImportUndoBatchesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({catalogImportUndoProductsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (catalogImportUndoProductsRefs) db.catalogImportUndoProducts,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (catalogImportUndoProductsRefs)
+                    await $_getPrefetchedData<
+                      CatalogImportUndoBatche,
+                      $CatalogImportUndoBatchesTable,
+                      CatalogImportUndoProduct
+                    >(
+                      currentTable: table,
+                      referencedTable: $$CatalogImportUndoBatchesTableReferences
+                          ._catalogImportUndoProductsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$CatalogImportUndoBatchesTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).catalogImportUndoProductsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.batchId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CatalogImportUndoBatchesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CatalogImportUndoBatchesTable,
+      CatalogImportUndoBatche,
+      $$CatalogImportUndoBatchesTableFilterComposer,
+      $$CatalogImportUndoBatchesTableOrderingComposer,
+      $$CatalogImportUndoBatchesTableAnnotationComposer,
+      $$CatalogImportUndoBatchesTableCreateCompanionBuilder,
+      $$CatalogImportUndoBatchesTableUpdateCompanionBuilder,
+      (CatalogImportUndoBatche, $$CatalogImportUndoBatchesTableReferences),
+      CatalogImportUndoBatche,
+      PrefetchHooks Function({bool catalogImportUndoProductsRefs})
+    >;
+typedef $$CatalogImportUndoProductsTableCreateCompanionBuilder =
+    CatalogImportUndoProductsCompanion Function({
+      required int batchId,
+      required String productId,
+      required bool createdByImport,
+      Value<String?> beforeJson,
+      required String afterJson,
+      Value<int> rowid,
+    });
+typedef $$CatalogImportUndoProductsTableUpdateCompanionBuilder =
+    CatalogImportUndoProductsCompanion Function({
+      Value<int> batchId,
+      Value<String> productId,
+      Value<bool> createdByImport,
+      Value<String?> beforeJson,
+      Value<String> afterJson,
+      Value<int> rowid,
+    });
+
+final class $$CatalogImportUndoProductsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CatalogImportUndoProductsTable,
+          CatalogImportUndoProduct
+        > {
+  $$CatalogImportUndoProductsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CatalogImportUndoBatchesTable _batchIdTable(_$AppDatabase db) =>
+      db.catalogImportUndoBatches.createAlias(
+        $_aliasNameGenerator(
+          db.catalogImportUndoProducts.batchId,
+          db.catalogImportUndoBatches.id,
+        ),
+      );
+
+  $$CatalogImportUndoBatchesTableProcessedTableManager get batchId {
+    final $_column = $_itemColumn<int>('batch_id')!;
+
+    final manager = $$CatalogImportUndoBatchesTableTableManager(
+      $_db,
+      $_db.catalogImportUndoBatches,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_batchIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CatalogImportUndoProductsTableFilterComposer
+    extends Composer<_$AppDatabase, $CatalogImportUndoProductsTable> {
+  $$CatalogImportUndoProductsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get productId => $composableBuilder(
+    column: $table.productId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get createdByImport => $composableBuilder(
+    column: $table.createdByImport,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get beforeJson => $composableBuilder(
+    column: $table.beforeJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get afterJson => $composableBuilder(
+    column: $table.afterJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CatalogImportUndoBatchesTableFilterComposer get batchId {
+    final $$CatalogImportUndoBatchesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.batchId,
+          referencedTable: $db.catalogImportUndoBatches,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CatalogImportUndoBatchesTableFilterComposer(
+                $db: $db,
+                $table: $db.catalogImportUndoBatches,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$CatalogImportUndoProductsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CatalogImportUndoProductsTable> {
+  $$CatalogImportUndoProductsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get productId => $composableBuilder(
+    column: $table.productId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get createdByImport => $composableBuilder(
+    column: $table.createdByImport,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get beforeJson => $composableBuilder(
+    column: $table.beforeJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get afterJson => $composableBuilder(
+    column: $table.afterJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CatalogImportUndoBatchesTableOrderingComposer get batchId {
+    final $$CatalogImportUndoBatchesTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.batchId,
+          referencedTable: $db.catalogImportUndoBatches,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CatalogImportUndoBatchesTableOrderingComposer(
+                $db: $db,
+                $table: $db.catalogImportUndoBatches,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$CatalogImportUndoProductsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CatalogImportUndoProductsTable> {
+  $$CatalogImportUndoProductsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get productId =>
+      $composableBuilder(column: $table.productId, builder: (column) => column);
+
+  GeneratedColumn<bool> get createdByImport => $composableBuilder(
+    column: $table.createdByImport,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get beforeJson => $composableBuilder(
+    column: $table.beforeJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get afterJson =>
+      $composableBuilder(column: $table.afterJson, builder: (column) => column);
+
+  $$CatalogImportUndoBatchesTableAnnotationComposer get batchId {
+    final $$CatalogImportUndoBatchesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.batchId,
+          referencedTable: $db.catalogImportUndoBatches,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CatalogImportUndoBatchesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.catalogImportUndoBatches,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$CatalogImportUndoProductsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CatalogImportUndoProductsTable,
+          CatalogImportUndoProduct,
+          $$CatalogImportUndoProductsTableFilterComposer,
+          $$CatalogImportUndoProductsTableOrderingComposer,
+          $$CatalogImportUndoProductsTableAnnotationComposer,
+          $$CatalogImportUndoProductsTableCreateCompanionBuilder,
+          $$CatalogImportUndoProductsTableUpdateCompanionBuilder,
+          (
+            CatalogImportUndoProduct,
+            $$CatalogImportUndoProductsTableReferences,
+          ),
+          CatalogImportUndoProduct,
+          PrefetchHooks Function({bool batchId})
+        > {
+  $$CatalogImportUndoProductsTableTableManager(
+    _$AppDatabase db,
+    $CatalogImportUndoProductsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CatalogImportUndoProductsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CatalogImportUndoProductsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CatalogImportUndoProductsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> batchId = const Value.absent(),
+                Value<String> productId = const Value.absent(),
+                Value<bool> createdByImport = const Value.absent(),
+                Value<String?> beforeJson = const Value.absent(),
+                Value<String> afterJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CatalogImportUndoProductsCompanion(
+                batchId: batchId,
+                productId: productId,
+                createdByImport: createdByImport,
+                beforeJson: beforeJson,
+                afterJson: afterJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int batchId,
+                required String productId,
+                required bool createdByImport,
+                Value<String?> beforeJson = const Value.absent(),
+                required String afterJson,
+                Value<int> rowid = const Value.absent(),
+              }) => CatalogImportUndoProductsCompanion.insert(
+                batchId: batchId,
+                productId: productId,
+                createdByImport: createdByImport,
+                beforeJson: beforeJson,
+                afterJson: afterJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CatalogImportUndoProductsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({batchId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (batchId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.batchId,
+                                referencedTable:
+                                    $$CatalogImportUndoProductsTableReferences
+                                        ._batchIdTable(db),
+                                referencedColumn:
+                                    $$CatalogImportUndoProductsTableReferences
+                                        ._batchIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CatalogImportUndoProductsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CatalogImportUndoProductsTable,
+      CatalogImportUndoProduct,
+      $$CatalogImportUndoProductsTableFilterComposer,
+      $$CatalogImportUndoProductsTableOrderingComposer,
+      $$CatalogImportUndoProductsTableAnnotationComposer,
+      $$CatalogImportUndoProductsTableCreateCompanionBuilder,
+      $$CatalogImportUndoProductsTableUpdateCompanionBuilder,
+      (CatalogImportUndoProduct, $$CatalogImportUndoProductsTableReferences),
+      CatalogImportUndoProduct,
+      PrefetchHooks Function({bool batchId})
     >;
 typedef $$ProductSellingUnitsTableCreateCompanionBuilder =
     ProductSellingUnitsCompanion Function({
@@ -6130,6 +7658,16 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$StoreProductsTableTableManager get storeProducts =>
       $$StoreProductsTableTableManager(_db, _db.storeProducts);
+  $$CatalogImportUndoBatchesTableTableManager get catalogImportUndoBatches =>
+      $$CatalogImportUndoBatchesTableTableManager(
+        _db,
+        _db.catalogImportUndoBatches,
+      );
+  $$CatalogImportUndoProductsTableTableManager get catalogImportUndoProducts =>
+      $$CatalogImportUndoProductsTableTableManager(
+        _db,
+        _db.catalogImportUndoProducts,
+      );
   $$ProductSellingUnitsTableTableManager get productSellingUnits =>
       $$ProductSellingUnitsTableTableManager(_db, _db.productSellingUnits);
   $$DraftCartItemsTableTableManager get draftCartItems =>

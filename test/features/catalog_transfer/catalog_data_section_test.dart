@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_coordinator.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
@@ -14,10 +15,14 @@ void main() {
     tester,
   ) async {
     final operations = _FakeTransferOperations();
+    final reviewOperations = _FakeReviewOperations();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           catalogTransferCoordinatorProvider.overrideWithValue(operations),
+          catalogPackReviewCoordinatorProvider.overrideWithValue(
+            reviewOperations,
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.light,
@@ -37,18 +42,25 @@ void main() {
     expect(find.textContaining('Import adds or updates'), findsOneWidget);
 
     expect(find.text('Offline catalog pack'), findsOneWidget);
-    expect(
-      find.textContaining('Existing non-zero main prices always stay'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Existing non-zero prices'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
     await tester.pumpAndSettle();
-    expect(find.text('Import offline catalog pack'), findsOneWidget);
-    expect(operations.packImportCalls, 0);
-    await tester.tap(find.text('Choose pack and import'));
+    expect(find.text('Review catalog pack'), findsOneWidget);
+    expect(find.text('New products'), findsOneWidget);
+    expect(find.text('Existing products'), findsOneWidget);
+    expect(reviewOperations.applyCalls, 0);
+    await tester.tap(
+      find.byKey(const ValueKey('catalog-review-new-select-shown')),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('catalog-review-apply')));
     await tester.pumpAndSettle();
-    expect(operations.packImportCalls, 1);
-    expect(operations.lastPackImportMode, CatalogPackImportMode.keepExisting);
+    await tester.tap(
+      find.byKey(const ValueKey('catalog-review-confirm-apply')),
+    );
+    await tester.pumpAndSettle();
+    expect(reviewOperations.applyCalls, 1);
+    expect(reviewOperations.lastSelection!.selectedProductIds, {'new-1'});
 
     await tester.ensureVisible(find.text('Restore backup'));
     await tester.tap(find.text('Restore backup'));
@@ -77,14 +89,20 @@ void main() {
     expect(operations.importCalls, 1);
   });
 
-  testWidgets('can update matching pack products while adding new ones', (
+  testWidgets('reviews matching pack products separately from new ones', (
     tester,
   ) async {
     final operations = _FakeTransferOperations();
+    final reviewOperations = _FakeReviewOperations(
+      review: _review(includeExisting: true),
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           catalogTransferCoordinatorProvider.overrideWithValue(operations),
+          catalogPackReviewCoordinatorProvider.overrideWithValue(
+            reviewOperations,
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.light,
@@ -97,18 +115,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
     await tester.pumpAndSettle();
-    expect(find.text('Keep existing (recommended)'), findsOneWidget);
-    expect(find.text('Update matching and add new'), findsOneWidget);
-
-    await tester.tap(find.text('Update matching and add new'));
-    await tester.pump();
-    await tester.tap(find.text('Choose pack and import'));
+    await tester.tap(find.text('Existing products'));
     await tester.pumpAndSettle();
-
-    expect(operations.packImportCalls, 1);
     expect(
-      operations.lastPackImportMode,
-      CatalogPackImportMode.overwriteMatching,
+      find.text('0 of 1 existing products selected. Showing 1 of 1.'),
+      findsOneWidget,
     );
   });
 
@@ -124,11 +135,15 @@ void main() {
         productCount: 2,
       ),
     );
+    final reviewOperations = _FakeReviewOperations();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           appPreferencesClockProvider.overrideWithValue(() => now),
           catalogTransferCoordinatorProvider.overrideWithValue(operations),
+          catalogPackReviewCoordinatorProvider.overrideWithValue(
+            reviewOperations,
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.light,
@@ -160,11 +175,23 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final reviewOperations = _FakeReviewOperations(
+      undoSummary: CatalogPackUndoSummary(
+        packId: 'starter',
+        revision: 1,
+        importedAt: DateTime.utc(2026, 9, 4),
+        createdCount: 2,
+        updatedCount: 1,
+      ),
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           catalogTransferCoordinatorProvider.overrideWithValue(
             _FakeTransferOperations(),
+          ),
+          catalogPackReviewCoordinatorProvider.overrideWithValue(
+            reviewOperations,
           ),
         ],
         child: MaterialApp(
@@ -181,6 +208,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     Future<void> expectScrollableDialog({
       required Finder trigger,
@@ -203,8 +231,8 @@ void main() {
     }
 
     await expectScrollableDialog(
-      trigger: find.byKey(const ValueKey('import-catalog-pack')),
-      title: 'Import offline catalog pack',
+      trigger: find.byKey(const ValueKey('undo-catalog-pack-import')),
+      title: 'Undo last catalog import?',
     );
     await expectScrollableDialog(
       trigger: find.text('Restore backup'),
@@ -273,3 +301,87 @@ final class _FakeTransferOperations implements CatalogTransferOperations {
     );
   }
 }
+
+final class _FakeReviewOperations implements CatalogPackReviewOperations {
+  _FakeReviewOperations({CatalogPackReview? review, this.undoSummary})
+    : review = review ?? _review();
+
+  final CatalogPackReview review;
+  final CatalogPackUndoSummary? undoSummary;
+  var applyCalls = 0;
+  var discardCalls = 0;
+  var undoCalls = 0;
+  CatalogPackApplySelection? lastSelection;
+
+  @override
+  Future<CatalogPackReviewChoiceResult> chooseCatalogPackForReview() async =>
+      CatalogPackReviewReady(review);
+
+  @override
+  Future<CatalogTransferResult> applyCatalogPackReview(
+    CatalogPackReview review,
+    CatalogPackApplySelection selection,
+  ) async {
+    applyCalls++;
+    lastSelection = selection;
+    return CatalogTransferSuccess(
+      action: CatalogTransferAction.catalogPackImport,
+      message: 'Imported ${selection.selectedProductIds.length} products.',
+      productCount: selection.selectedProductIds.length,
+    );
+  }
+
+  @override
+  Future<void> discardCatalogPackReview(CatalogPackReview review) async {
+    discardCalls++;
+  }
+
+  @override
+  Future<CatalogPackUndoSummary?> getLastCatalogImportUndo() async =>
+      undoSummary;
+
+  @override
+  Future<CatalogTransferResult> undoLastCatalogImport() async {
+    undoCalls++;
+    return const CatalogTransferSuccess(
+      action: CatalogTransferAction.catalogPackUndo,
+      message: 'Catalog import undone.',
+      productCount: 3,
+    );
+  }
+}
+
+CatalogPackReview _review({bool includeExisting = false}) => CatalogPackReview(
+  reviewId: 'review-1',
+  packId: 'starter',
+  revision: 1,
+  createdAt: DateTime.utc(2026, 9, 4),
+  products: [
+    CatalogPackReviewProduct(
+      targetId: 'new-1',
+      catalogProductId: 'shared-new-1',
+      incoming: _details(name: 'New Coffee'),
+      existing: null,
+      hasBundledImage: false,
+    ),
+    if (includeExisting)
+      CatalogPackReviewProduct(
+        targetId: 'existing-1',
+        catalogProductId: 'shared-existing-1',
+        incoming: _details(name: 'Updated Crackers'),
+        existing: _details(name: 'Local Crackers'),
+        hasBundledImage: false,
+      ),
+  ],
+);
+
+CatalogPackProductDetails _details({required String name}) =>
+    CatalogPackProductDetails(
+      barcode: '4800000000000',
+      name: name,
+      brand: 'Brand',
+      unitLabel: 'Pack',
+      category: 'Snacks',
+      priceCentavos: 1000,
+      hasImage: false,
+    );

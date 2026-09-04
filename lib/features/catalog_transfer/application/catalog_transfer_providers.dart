@@ -29,6 +29,7 @@ final catalogBackupServiceProvider = Provider<CatalogBackupService>((ref) {
       ref.invalidate(appPreferencesProvider);
       ref.invalidate(customCatalogCategoriesProvider);
       ref.invalidate(onboardingControllerProvider);
+      ref.invalidate(catalogPackUndoSummaryProvider);
     },
   );
 });
@@ -56,3 +57,17 @@ final catalogTransferCoordinatorProvider = Provider<CatalogTransferOperations>(
     fileGateway: ref.watch(catalogFileGatewayProvider),
   ),
 );
+
+final catalogPackReviewCoordinatorProvider =
+    Provider<CatalogPackReviewOperations>(
+      (ref) => CatalogPackReviewCoordinator(
+        packService: ref.watch(catalogPackServiceProvider),
+        fileGateway: ref.watch(catalogFileGatewayProvider),
+      ),
+    );
+
+final catalogPackUndoSummaryProvider = FutureProvider((ref) {
+  return ref
+      .watch(catalogPackReviewCoordinatorProvider)
+      .getLastCatalogImportUndo();
+});

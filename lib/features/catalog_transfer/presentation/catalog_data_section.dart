@@ -3,11 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_coordinator.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
+import 'package:raze_store/features/catalog_transfer/presentation/catalog_pack_review_screen.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 
-enum _TransferAction { catalogPack, backup, restore, exportCsv, importCsv }
+enum _TransferAction {
+  catalogPack,
+  catalogPackUndo,
+  backup,
+  restore,
+  exportCsv,
+  importCsv,
+}
 
 final class CatalogDataSection extends ConsumerStatefulWidget {
   const CatalogDataSection({super.key});
@@ -24,6 +33,7 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final undoSummary = ref.watch(catalogPackUndoSummaryProvider);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -82,7 +92,7 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Import a .razepack file to add ready-made Filipino products and bundled images. Choose whether matching catalog details stay or update. Existing non-zero main prices always stay; a pack suggestion can fill a ₱0 price. Your photos, sub-unit prices, receipt settings, and cart are preserved.',
+              'Open a .razepack, review New and Existing products separately, then check only the products and details you trust. Nothing is added while you review. Existing non-zero prices, your photos, sub-unit prices, receipt settings, and sales are protected.',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
@@ -104,9 +114,45 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
               ),
               label: Text(
                 _busyAction == _TransferAction.catalogPack
-                    ? 'Importing…'
-                    : 'Import catalog pack',
+                    ? 'Checking pack…'
+                    : 'Choose and review catalog pack',
               ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            undoSummary.when(
+              loading: () => const SizedBox(
+                height: 38,
+                child: Center(child: LinearProgressIndicator()),
+              ),
+              error: (error, stackTrace) => Text(
+                'Undo status could not be checked.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.error),
+              ),
+              data: (undo) {
+                if (undo == null) {
+                  return Text(
+                    'No reviewed catalog import is available to undo.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  );
+                }
+                return OutlinedButton.icon(
+                  key: const ValueKey('undo-catalog-pack-import'),
+                  onPressed: _busy ? null : () => _confirmUndo(undo),
+                  icon: _actionIcon(
+                    _TransferAction.catalogPackUndo,
+                    Icons.undo_rounded,
+                  ),
+                  label: Text(
+                    _busyAction == _TransferAction.catalogPackUndo
+                        ? 'Restoring…'
+                        : 'Undo last import (${undo.changedProductCount})',
+                  ),
+                );
+              },
             ),
             const SizedBox(height: AppSpacing.lg),
             const Divider(),
@@ -238,75 +284,63 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
       _run(_TransferAction.exportCsv, (operations) => operations.exportCsv());
 
   Future<void> _confirmCatalogPackImport() async {
-    var selectedMode = CatalogPackImportMode.keepExisting;
-    final mode = await showDialog<CatalogPackImportMode>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          scrollable: true,
-          title: const Text('Import offline catalog pack'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Choose what happens when a pack product already exists on this phone.',
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              RadioGroup<CatalogPackImportMode>(
-                groupValue: selectedMode,
-                onChanged: (value) {
-                  if (value == null) return;
-                  setDialogState(() => selectedMode = value);
-                },
-                child: const Column(
-                  children: [
-                    RadioListTile<CatalogPackImportMode>(
-                      key: ValueKey('catalog-pack-keep-existing'),
-                      value: CatalogPackImportMode.keepExisting,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Keep existing (recommended)'),
-                      subtitle: Text(
-                        'Add new products and preserve matching details. A pack suggestion fills only a ₱0 main price.',
-                      ),
-                    ),
-                    RadioListTile<CatalogPackImportMode>(
-                      key: ValueKey('catalog-pack-overwrite-matching'),
-                      value: CatalogPackImportMode.overwriteMatching,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('Update matching and add new'),
-                      subtitle: Text(
-                        'Replace matching catalog details. Non-zero main prices, your own photo, and sub-unit prices stay.',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Products missing from the pack, store details, and the unfinished cart are always kept. Only import a .razepack from a source you trust.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, selectedMode),
-              child: const Text('Choose pack and import'),
-            ),
-          ],
+    setState(() => _busyAction = _TransferAction.catalogPack);
+    final operations = ref.read(catalogPackReviewCoordinatorProvider);
+    final choice = await operations.chooseCatalogPackForReview();
+    if (!mounted) return;
+    setState(() => _busyAction = null);
+    if (choice case CatalogPackReviewNotReady(:final result)) {
+      _showResult(result);
+      return;
+    }
+    final review = (choice as CatalogPackReviewReady).review;
+    final result = await Navigator.of(context).push<CatalogTransferResult>(
+      MaterialPageRoute(
+        builder: (context) => CatalogPackReviewScreen(
+          review: review,
+          onApply: (selection) =>
+              operations.applyCatalogPackReview(review, selection),
+          onDiscard: () => operations.discardCatalogPackReview(review),
         ),
       ),
     );
-    if (mode == null || !mounted) return;
-    await _run(
-      _TransferAction.catalogPack,
-      (operations) => operations.importCatalogPackMerging(mode: mode),
+    if (!mounted || result == null) return;
+    ref.invalidate(appStorageUsageProvider);
+    ref.invalidate(catalogPackUndoSummaryProvider);
+    _showResult(result);
+  }
+
+  Future<void> _confirmUndo(CatalogPackUndoSummary undo) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: const Text('Undo last catalog import?'),
+        content: Text(
+          'This removes ${undo.createdCount} products added by the pack and restores ${undo.updatedCount} products to their earlier catalog details. Completed sales stay unchanged. If any affected product was edited after import, undo stops without changing anything.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Undo import'),
+          ),
+        ],
+      ),
     );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busyAction = _TransferAction.catalogPackUndo);
+    final result = await ref
+        .read(catalogPackReviewCoordinatorProvider)
+        .undoLastCatalogImport();
+    if (!mounted) return;
+    ref.invalidate(appStorageUsageProvider);
+    ref.invalidate(catalogPackUndoSummaryProvider);
+    setState(() => _busyAction = null);
+    _showResult(result);
   }
 
   Future<void> _confirmRestore() async {
@@ -385,6 +419,10 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
     if (!mounted) return;
     ref.invalidate(appStorageUsageProvider);
     setState(() => _busyAction = null);
+    _showResult(result);
+  }
+
+  void _showResult(CatalogTransferResult result) {
     final isFailure = result is CatalogTransferFailure;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()

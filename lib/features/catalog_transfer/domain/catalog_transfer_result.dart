@@ -2,6 +2,7 @@ enum CatalogTransferAction {
   backupExport,
   backupRestore,
   catalogPackImport,
+  catalogPackUndo,
   csvExport,
   csvImport,
 }

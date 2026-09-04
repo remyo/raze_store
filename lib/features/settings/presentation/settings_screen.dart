@@ -215,6 +215,27 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const AppSectionHeader(
+                      title: 'Product maintenance',
+                      subtitle:
+                          'Review and remove unwanted catalog entries safely.',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Card(
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        key: const ValueKey('delete-multiple-products'),
+                        dense: true,
+                        leading: const Icon(Icons.checklist_rtl_rounded),
+                        title: const Text('Delete multiple products'),
+                        subtitle: const Text(
+                          'Search, select, and confirm several products at once',
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.push('/settings/products/delete'),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppSectionHeader(
                       title: 'Storage',
                       subtitle:
                           'See what is using space and safely clear temporary files.',

@@ -11,6 +11,7 @@ import 'package:raze_store/features/cart/data/local_cart_repository.dart';
 import 'package:raze_store/features/catalog/data/local_catalog_repository.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/settings/data/local_settings_repository.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
@@ -845,6 +846,313 @@ void main() {
       expect(result.failureCode, CatalogImportFailureCode.databaseFailure);
       final managedDirectory = await failingImages.managedDirectory();
       expect(await managedDirectory.list().isEmpty, isTrue);
+    },
+  );
+
+  test(
+    'review classifies products without changing database or images',
+    () async {
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      await catalog.createProduct(
+        ProductDraft(
+          id: 'existing-local',
+          barcode: '111',
+          name: 'Local Product',
+          priceCentavos: 500,
+        ),
+      );
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'existing-shared',
+            barcode: '111',
+            name: 'Incoming Existing',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 700,
+          ),
+          _product(
+            id: 'new-shared',
+            barcode: '222',
+            name: 'Incoming New',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 900,
+            image: 'images/new.png',
+          ),
+        ],
+        images: {'images/new.png': _pngBytes(31)},
+      );
+
+      final prepared = await service.prepareReview(pack.path);
+
+      expect(prepared.success, isTrue);
+      expect(prepared.review!.newProducts, hasLength(1));
+      expect(prepared.review!.existingProducts, hasLength(1));
+      expect(prepared.review!.newProducts.single.incoming.name, 'Incoming New');
+      expect(
+        prepared.review!.existingProducts.single.existing!.name,
+        'Local Product',
+      );
+      expect(await catalog.searchProducts(''), hasLength(1));
+      expect(
+        await (await imageStore.managedDirectory()).list().isEmpty,
+        isTrue,
+      );
+      expect(await service.getLastImportUndoSummary(), isNull);
+    },
+  );
+
+  test('review applies only selected products and selected fields', () async {
+    final ownerSource = File('${testRoot.path}/owner-review.png');
+    await ownerSource.writeAsBytes(_pngBytes(32));
+    final ownerPhoto = await imageStore.persistFile(ownerSource);
+    final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+    final existing = await catalog.createProduct(
+      ProductDraft(
+        id: 'existing-local',
+        barcode: '111',
+        name: 'Owner Name',
+        brand: 'Owner Brand',
+        category: 'Owner Category',
+        unitLabel: 'Owner Pack',
+        localImagePath: ownerPhoto,
+        priceCentavos: 500,
+        sellingUnits: [
+          SellingUnitDraft(id: 'piece', label: 'Piece', priceCentavos: 100),
+        ],
+      ),
+    );
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'existing-shared',
+          barcode: '111',
+          name: 'Troll Name',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 9999,
+          image: 'images/existing.png',
+        ),
+        _product(
+          id: 'selected-new',
+          barcode: '222',
+          name: 'Selected New',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 1200,
+        ),
+        _product(
+          id: 'unchecked-new',
+          barcode: '333',
+          name: 'Unchecked New',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 1300,
+        ),
+      ],
+      images: {'images/existing.png': _pngBytes(33)},
+    );
+    final prepared = await service.prepareReview(pack.path);
+    final review = prepared.review!;
+    final selectedNew = review.newProducts.singleWhere(
+      (item) => item.incoming.name == 'Selected New',
+    );
+    final selectedExisting = review.existingProducts.single;
+
+    final result = await service.applyReview(
+      review.reviewId,
+      CatalogPackApplySelection(
+        selectedProductIds: [selectedNew.targetId, selectedExisting.targetId],
+        fields: const {
+          CatalogPackImportField.category,
+          CatalogPackImportField.suggestedPrice,
+          CatalogPackImportField.image,
+        },
+      ),
+    );
+
+    expect(result.success, isTrue);
+    final products = await catalog.searchProducts('');
+    expect(products, hasLength(2));
+    expect(products.where((item) => item.name == 'Unchecked New'), isEmpty);
+    final updated = products.singleWhere((item) => item.id == existing.id);
+    expect(updated.name, 'Owner Name');
+    expect(updated.brand, 'Owner Brand');
+    expect(updated.unitLabel, 'Owner Pack');
+    expect(updated.category, 'Pack Category');
+    expect(updated.priceCentavos, 500);
+    expect(updated.localImagePath, ownerPhoto);
+    expect(updated.catalogImagePath, isNotNull);
+    expect(updated.sellingUnits.single.label, 'Piece');
+    final added = products.singleWhere((item) => item.name == 'Selected New');
+    expect(added.barcode, isNull);
+    expect(added.brand, isNull);
+    expect(added.unitLabel, isNull);
+    expect(added.category, 'Pack Category');
+    expect(added.priceCentavos, 1200);
+    expect(await service.getLastImportUndoSummary(), isNotNull);
+  });
+
+  test(
+    'undo removes imported new rows and exactly restores updated rows',
+    () async {
+      final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+      final existing = await catalog.createProduct(
+        ProductDraft(
+          id: 'existing-local',
+          barcode: '111',
+          name: 'Before Import',
+          category: 'Before Category',
+          priceCentavos: 0,
+        ),
+      );
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'existing-shared',
+            barcode: '111',
+            name: 'After Import',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 750,
+          ),
+          _product(
+            id: 'new-shared',
+            barcode: '222',
+            name: 'Added By Import',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 900,
+            image: 'images/new-undo.png',
+          ),
+        ],
+        images: {'images/new-undo.png': _pngBytes(34)},
+      );
+      final review = (await service.prepareReview(pack.path)).review!;
+      final applied = await service.applyReview(
+        review.reviewId,
+        CatalogPackApplySelection(
+          selectedProductIds: review.products.map((item) => item.targetId),
+        ),
+      );
+      expect(applied.success, isTrue);
+      expect(await catalog.searchProducts(''), hasLength(2));
+
+      final undone = await service.undoLastImport();
+
+      expect(undone.success, isTrue, reason: undone.message);
+      final products = await catalog.searchProducts('');
+      expect(products, hasLength(1));
+      final restored = products.single;
+      expect(restored.id, existing.id);
+      expect(restored.name, 'Before Import');
+      expect(restored.category, 'Before Category');
+      expect(restored.priceCentavos, 0);
+      expect(restored.metadata.source, isNull);
+      expect(await service.getLastImportUndoSummary(), isNull);
+    },
+  );
+
+  test('undo refuses to overwrite a product edited after import', () async {
+    final catalog = LocalCatalogRepository(database, imageStore: imageStore);
+    await catalog.createProduct(
+      ProductDraft(
+        id: 'existing-local',
+        barcode: '111',
+        name: 'Before Import',
+        priceCentavos: 500,
+      ),
+    );
+    final pack = await _writePack(
+      testRoot,
+      number: packNumber++,
+      products: [
+        _product(
+          id: 'existing-shared',
+          barcode: '111',
+          name: 'After Import',
+          updatedAt: DateTime.utc(2026),
+          priceCentavos: 900,
+        ),
+      ],
+    );
+    final review = (await service.prepareReview(pack.path)).review!;
+    expect(
+      (await service.applyReview(
+        review.reviewId,
+        CatalogPackApplySelection(
+          selectedProductIds: [review.products.single.targetId],
+        ),
+      )).success,
+      isTrue,
+    );
+    final imported = (await catalog.searchProducts('')).single;
+    await catalog.updateProduct(
+      imported.id,
+      ProductDraft(
+        barcode: imported.barcode,
+        source: imported.metadata.source,
+        sourceProductId: imported.metadata.sourceProductId,
+        sourceUpdatedAt: imported.sourceUpdatedAt,
+        name: 'Owner Edit After Import',
+        brand: imported.brand,
+        category: imported.category,
+        unitLabel: imported.unitLabel,
+        remoteImageUrl: imported.remoteImageUrl,
+        localImagePath: imported.localImagePath,
+        catalogImagePath: imported.catalogImagePath,
+        priceCentavos: imported.priceCentavos,
+      ),
+    );
+
+    final undo = await service.undoLastImport();
+
+    expect(undo.success, isFalse);
+    expect(undo.failureCode, CatalogImportFailureCode.validationFailed);
+    expect(
+      (await catalog.searchProducts('')).single.name,
+      'Owner Edit After Import',
+    );
+    expect(await service.getLastImportUndoSummary(), isNotNull);
+  });
+
+  test(
+    'an empty selection changes nothing and discarding expires review',
+    () async {
+      final pack = await _writePack(
+        testRoot,
+        number: packNumber++,
+        products: [
+          _product(
+            id: 'new-shared',
+            barcode: '111',
+            name: 'New Product',
+            updatedAt: DateTime.utc(2026),
+            priceCentavos: 100,
+          ),
+        ],
+      );
+      final review = (await service.prepareReview(pack.path)).review!;
+
+      final empty = await service.applyReview(
+        review.reviewId,
+        CatalogPackApplySelection(selectedProductIds: const []),
+      );
+      expect(empty.success, isFalse);
+      expect(
+        await LocalCatalogRepository(database).searchProducts(''),
+        isEmpty,
+      );
+
+      await service.discardReview(review.reviewId);
+      final expired = await service.applyReview(
+        review.reviewId,
+        CatalogPackApplySelection(
+          selectedProductIds: [review.products.single.targetId],
+        ),
+      );
+      expect(expired.success, isFalse);
+      expect(expired.message, contains('expired'));
     },
   );
 }

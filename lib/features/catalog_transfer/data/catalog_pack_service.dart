@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:raze_store/core/barcode/barcode.dart';
 import 'package:raze_store/core/database/app_database.dart' as database;
 import 'package:raze_store/core/storage/local_product_image_store.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:uuid/uuid.dart';
 
@@ -47,6 +48,27 @@ final class CatalogImportResult {
   final int createdCount;
   final int updatedCount;
   final int imageCount;
+  final CatalogImportFailureCode? failureCode;
+  final Object? cause;
+}
+
+final class CatalogPackReviewPreparationResult {
+  const CatalogPackReviewPreparationResult.success(this.review)
+    : success = true,
+      message = 'Catalog pack is ready to review.',
+      failureCode = null,
+      cause = null;
+
+  const CatalogPackReviewPreparationResult.failure({
+    required this.message,
+    required this.failureCode,
+    this.cause,
+  }) : success = false,
+       review = null;
+
+  final bool success;
+  final CatalogPackReview? review;
+  final String message;
   final CatalogImportFailureCode? failureCode;
   final Object? cause;
 }
@@ -103,6 +125,356 @@ final class CatalogPackService {
   final Uuid _uuid;
   final DateTime Function() _now;
   bool _operationRunning = false;
+  _CatalogPackReviewSession? _activeReview;
+
+  /// Fully validates and stages a pack without changing durable app data.
+  /// Only one review is retained at a time; starting another safely discards
+  /// the previous temporary session.
+  Future<CatalogPackReviewPreparationResult> prepareReview(
+    String sourcePath,
+  ) async {
+    if (_operationRunning) {
+      return const CatalogPackReviewPreparationResult.failure(
+        message: 'Another catalog file operation is already running.',
+        failureCode: CatalogImportFailureCode.unavailable,
+      );
+    }
+    _operationRunning = true;
+    Directory? staging;
+    try {
+      await _discardActiveReview();
+      final archiveFile = await _checkedArchiveFile(sourcePath);
+      await _preflightZipArchive(archiveFile);
+      staging = await _temporaryDirectoryFactory('raze_store_pack_');
+      final validated = await _validateAndStageArchive(
+        archiveFile: archiveFile,
+        staging: staging,
+      );
+      final plan = await _buildMergePlan(
+        validated.data,
+        staging,
+        CatalogPackImportMode.overwriteMatching,
+      );
+      final reviewId = _uuid.v4();
+      final review = CatalogPackReview(
+        reviewId: reviewId,
+        packId: validated.manifest.packId,
+        revision: validated.manifest.revision,
+        createdAt: validated.manifest.createdAt,
+        products: List.unmodifiable([
+          for (final item in plan.items)
+            CatalogPackReviewProduct(
+              targetId: item.targetId,
+              catalogProductId: item.product.catalogProductId,
+              incoming: _reviewDetailsFromPack(item.product),
+              existing: item.existing == null
+                  ? null
+                  : _reviewDetailsFromRow(item.existing!),
+              hasBundledImage: item.product.image != null,
+            ),
+        ]),
+      );
+      _activeReview = _CatalogPackReviewSession(
+        review: review,
+        staging: staging,
+        validated: validated,
+        plan: plan,
+      );
+      staging = null;
+      return CatalogPackReviewPreparationResult.success(review);
+    } on _CatalogPackException catch (error) {
+      return CatalogPackReviewPreparationResult.failure(
+        message: '${error.message} No existing products were changed.',
+        failureCode: error.code,
+        cause: error.cause,
+      );
+    } on FileSystemException catch (error) {
+      return CatalogPackReviewPreparationResult.failure(
+        message:
+            'The selected catalog pack could not be read. No existing products were changed.',
+        failureCode: CatalogImportFailureCode.ioFailure,
+        cause: error,
+      );
+    } catch (error) {
+      return CatalogPackReviewPreparationResult.failure(
+        message:
+            'The catalog pack could not be prepared. No existing products were changed.',
+        failureCode: CatalogImportFailureCode.databaseFailure,
+        cause: error,
+      );
+    } finally {
+      _operationRunning = false;
+      await _deleteDirectoryQuietly(staging);
+    }
+  }
+
+  /// Applies only the owner-selected rows and fields from an active review.
+  Future<CatalogImportResult> applyReview(
+    String reviewId,
+    CatalogPackApplySelection selection,
+  ) async {
+    if (_operationRunning) {
+      return const CatalogImportResult(
+        success: false,
+        message: 'Another catalog file operation is already running.',
+        failureCode: CatalogImportFailureCode.unavailable,
+      );
+    }
+    final session = _activeReview;
+    if (session == null || session.review.reviewId != reviewId) {
+      return const CatalogImportResult(
+        success: false,
+        message: 'This catalog review has expired. Choose the pack again.',
+        failureCode: CatalogImportFailureCode.unavailable,
+      );
+    }
+    if (selection.selectedProductIds.isEmpty) {
+      return const CatalogImportResult(
+        success: false,
+        message: 'Select at least one product to import.',
+        failureCode: CatalogImportFailureCode.validationFailed,
+      );
+    }
+    final knownIds = session.plan.items.map((item) => item.targetId).toSet();
+    if (!knownIds.containsAll(selection.selectedProductIds)) {
+      return const CatalogImportResult(
+        success: false,
+        message: 'The catalog selection contains an unknown product.',
+        failureCode: CatalogImportFailureCode.validationFailed,
+      );
+    }
+
+    _operationRunning = true;
+    final installedImages = <String, String>{};
+    var databaseCommitted = false;
+    try {
+      final selectedItems = session.plan.items
+          .where((item) => selection.includes(item.targetId))
+          .toList(growable: false);
+      if (selection.imports(CatalogPackImportField.image)) {
+        for (final item in selectedItems) {
+          final portableImage = item.product.image;
+          if (portableImage == null) continue;
+          final savedPath = await _imageStore.persistFile(
+            _safeStageFile(session.staging, portableImage),
+          );
+          installedImages[item.targetId] = savedPath;
+        }
+      }
+
+      final summary = await _applyReviewedMerge(
+        session,
+        selection,
+        installedImages,
+      );
+      databaseCommitted = true;
+      await _cleanupExpiredUndoImages(summary.expiredUndoImagePaths);
+      try {
+        await _onImportCompleted?.call();
+      } catch (_) {
+        // The atomic catalog transaction is already committed.
+      }
+      final changedCount = summary.createdCount + summary.updatedCount;
+      return CatalogImportResult(
+        success: true,
+        message: changedCount == 0
+            ? 'The selected products were already up to date. Nothing changed.'
+            : 'Imported ${summary.createdCount} new products and updated ${summary.updatedCount} existing products. You can undo this import from Settings.',
+        productCount: selectedItems.length,
+        createdCount: summary.createdCount,
+        updatedCount: summary.updatedCount,
+        imageCount: installedImages.length,
+      );
+    } on _CatalogPackException catch (error) {
+      return CatalogImportResult(
+        success: false,
+        message: '${error.message} No existing products were changed.',
+        failureCode: error.code,
+        cause: error.cause,
+      );
+    } on FileSystemException catch (error) {
+      return CatalogImportResult(
+        success: false,
+        message:
+            'The selected catalog pack could not be read. No existing products were changed.',
+        failureCode: CatalogImportFailureCode.ioFailure,
+        cause: error,
+      );
+    } catch (error) {
+      return CatalogImportResult(
+        success: false,
+        message:
+            'The selected products could not be imported. No existing products were changed.',
+        failureCode: CatalogImportFailureCode.databaseFailure,
+        cause: error,
+      );
+    } finally {
+      if (!databaseCommitted) {
+        for (final path in installedImages.values) {
+          try {
+            await _imageStore.deleteIfManaged(path);
+          } catch (_) {
+            // Best-effort cleanup of files copied before the DB transaction.
+          }
+        }
+      }
+      _operationRunning = false;
+      await _discardActiveReview(expectedReviewId: reviewId);
+    }
+  }
+
+  Future<void> discardReview(String reviewId) async {
+    // Applying owns the staged files until its finally block runs. The review
+    // screen disables Back while applying, and this guard also protects direct
+    // callers from deleting files mid-copy.
+    if (_operationRunning) return;
+    await _discardActiveReview(expectedReviewId: reviewId);
+  }
+
+  Future<CatalogPackUndoSummary?> getLastImportUndoSummary() async {
+    final batch = await (_database.select(
+      _database.catalogImportUndoBatches,
+    )..where((table) => table.id.equals(1))).getSingleOrNull();
+    if (batch == null) return null;
+    return CatalogPackUndoSummary(
+      packId: batch.packId,
+      revision: batch.revision,
+      importedAt: batch.importedAt,
+      createdCount: batch.createdCount,
+      updatedCount: batch.updatedCount,
+    );
+  }
+
+  /// Restores the catalog rows captured immediately before the last reviewed
+  /// pack import. It refuses to overwrite products edited since that import.
+  Future<CatalogImportResult> undoLastImport() async {
+    if (_operationRunning) {
+      return const CatalogImportResult(
+        success: false,
+        message: 'Another catalog file operation is already running.',
+        failureCode: CatalogImportFailureCode.unavailable,
+      );
+    }
+    _operationRunning = true;
+    final imagesToClean = <String>{};
+    var committed = false;
+    var restoredCount = 0;
+    var removedCount = 0;
+    try {
+      await _database.transaction(() async {
+        final batch = await (_database.select(
+          _database.catalogImportUndoBatches,
+        )..where((table) => table.id.equals(1))).getSingleOrNull();
+        if (batch == null) {
+          throw const _CatalogPackException(
+            CatalogImportFailureCode.sourceMissing,
+            'There is no catalog import available to undo.',
+          );
+        }
+        final entries = await (_database.select(
+          _database.catalogImportUndoProducts,
+        )..where((table) => table.batchId.equals(1))).get();
+        final ids = entries.map((entry) => entry.productId).toList();
+        final currentRows = ids.isEmpty
+            ? const <database.StoreProduct>[]
+            : await (_database.select(
+                _database.storeProducts,
+              )..where((table) => table.id.isIn(ids))).get();
+        final currentById = {for (final row in currentRows) row.id: row};
+
+        for (final entry in entries) {
+          final current = currentById[entry.productId];
+          if (current == null ||
+              !_snapshotsEqual(
+                _ProductSnapshot.fromRow(current),
+                _ProductSnapshot.fromJsonString(entry.afterJson),
+              )) {
+            throw const _CatalogPackException(
+              CatalogImportFailureCode.validationFailed,
+              'A product changed after the import, so undo was stopped to protect your newer edits.',
+            );
+          }
+          if (entry.createdByImport) {
+            final units = await (_database.select(
+              _database.productSellingUnits,
+            )..where((table) => table.productId.equals(entry.productId))).get();
+            if (units.isNotEmpty) {
+              throw const _CatalogPackException(
+                CatalogImportFailureCode.validationFailed,
+                'A product gained a selling unit after import, so undo was stopped to protect your newer edits.',
+              );
+            }
+          }
+        }
+
+        for (final entry in entries) {
+          final after = _ProductSnapshot.fromJsonString(entry.afterJson);
+          final afterImage = _usablePath(after.catalogImagePath);
+          if (afterImage != null) imagesToClean.add(afterImage);
+          if (entry.createdByImport) {
+            await (_database.delete(
+              _database.draftCartItems,
+            )..where((table) => table.productId.equals(entry.productId))).go();
+            await (_database.delete(
+              _database.storeProducts,
+            )..where((table) => table.id.equals(entry.productId))).go();
+            removedCount++;
+          } else {
+            final beforeJson = entry.beforeJson;
+            if (beforeJson == null) {
+              throw const _CatalogPackException(
+                CatalogImportFailureCode.validationFailed,
+                'The saved undo data is incomplete.',
+              );
+            }
+            final before = _ProductSnapshot.fromJsonString(beforeJson);
+            await (_database.update(_database.storeProducts)
+                  ..where((table) => table.id.equals(entry.productId)))
+                .write(before.toCompanion());
+            restoredCount++;
+          }
+        }
+        await (_database.delete(
+          _database.catalogImportUndoBatches,
+        )..where((table) => table.id.equals(1))).go();
+      });
+      committed = true;
+      for (final path in imagesToClean) {
+        await _deleteImageIfUnreferenced(path);
+      }
+      try {
+        await _onImportCompleted?.call();
+      } catch (_) {
+        // Undo is already committed.
+      }
+      return CatalogImportResult(
+        success: true,
+        message:
+            'Catalog import undone: removed $removedCount added products and restored $restoredCount existing products.',
+        productCount: removedCount + restoredCount,
+        createdCount: removedCount,
+        updatedCount: restoredCount,
+      );
+    } on _CatalogPackException catch (error) {
+      return CatalogImportResult(
+        success: false,
+        message: error.message,
+        failureCode: error.code,
+        cause: error.cause,
+      );
+    } catch (error) {
+      return CatalogImportResult(
+        success: false,
+        message: committed
+            ? 'The catalog was restored, but some old image files could not be cleaned up.'
+            : 'The catalog import could not be undone. No products were changed.',
+        failureCode: CatalogImportFailureCode.databaseFailure,
+        cause: error,
+      );
+    } finally {
+      _operationRunning = false;
+    }
+  }
 
   Future<CatalogImportResult> importMerging(
     String sourcePath, {
@@ -937,7 +1309,7 @@ final class CatalogPackService {
     var createdCount = 0;
     var updatedCount = 0;
     final supersededImages = <String>{};
-    final now = _now().toUtc();
+    final now = _databaseDate(_now());
     await _database.transaction(() async {
       final currentProducts = await _database
           .select(_database.storeProducts)
@@ -1095,15 +1467,326 @@ final class CatalogPackService {
     );
   }
 
+  Future<_ReviewedMergeSummary> _applyReviewedMerge(
+    _CatalogPackReviewSession session,
+    CatalogPackApplySelection selection,
+    Map<String, String> installedImages,
+  ) async {
+    var createdCount = 0;
+    var updatedCount = 0;
+    final expiredUndoImagePaths = <String>{};
+    final now = _databaseDate(_now());
+
+    await _database.transaction(() async {
+      final currentProducts = await _database
+          .select(_database.storeProducts)
+          .get();
+      final currentById = {for (final row in currentProducts) row.id: row};
+      final currentByBarcode = {
+        for (final row in currentProducts)
+          if (row.barcode != null) row.barcode!: row,
+      };
+      final currentBySource = {
+        for (final row in currentProducts)
+          if (row.source != null && row.sourceProductId != null)
+            (row.source!, row.sourceProductId!): row,
+      };
+      final undoEntries = <database.CatalogImportUndoProductsCompanion>[];
+
+      for (final item in session.plan.items) {
+        if (!selection.includes(item.targetId)) continue;
+        final product = item.product;
+        final sourceMatch =
+            currentBySource[(product.source, product.sourceProductId)];
+        final barcodeMatch = product.barcode == null
+            ? null
+            : currentByBarcode[product.barcode];
+        if (sourceMatch != null &&
+            barcodeMatch != null &&
+            sourceMatch.id != barcodeMatch.id) {
+          throw const _CatalogPackException(
+            CatalogImportFailureCode.validationFailed,
+            'The local catalog changed during review. Choose the pack again.',
+          );
+        }
+
+        final installedImage = installedImages[item.targetId];
+        if (item.existing == null) {
+          if (currentById.containsKey(item.targetId) ||
+              sourceMatch != null ||
+              (selection.imports(CatalogPackImportField.barcode) &&
+                  barcodeMatch != null)) {
+            throw const _CatalogPackException(
+              CatalogImportFailureCode.validationFailed,
+              'The local catalog changed during review. Choose the pack again.',
+            );
+          }
+          final after = _ProductSnapshot(
+            id: item.targetId,
+            barcode: selection.imports(CatalogPackImportField.barcode)
+                ? product.barcode
+                : null,
+            source: product.source,
+            sourceProductId: product.sourceProductId,
+            name: product.name,
+            brand: selection.imports(CatalogPackImportField.brand)
+                ? product.brand
+                : null,
+            unitLabel: selection.imports(CatalogPackImportField.unitLabel)
+                ? product.unitLabel
+                : null,
+            category: selection.imports(CatalogPackImportField.category)
+                ? product.category
+                : null,
+            remoteImageUrl: selection.imports(CatalogPackImportField.image)
+                ? product.remoteImageUrl
+                : null,
+            catalogImagePath: selection.imports(CatalogPackImportField.image)
+                ? installedImage
+                : null,
+            sourceUpdatedAt: _databaseDate(product.updatedAt),
+            localImagePath: null,
+            priceCentavos:
+                selection.imports(CatalogPackImportField.suggestedPrice)
+                ? product.suggestedPriceCentavos ?? 0
+                : 0,
+            createdAt: now,
+            updatedAt: now,
+          );
+          await _database
+              .into(_database.storeProducts)
+              .insert(after.toInsertCompanion());
+          undoEntries.add(
+            database.CatalogImportUndoProductsCompanion.insert(
+              batchId: 1,
+              productId: item.targetId,
+              createdByImport: true,
+              beforeJson: const Value(null),
+              afterJson: after.toJsonString(),
+            ),
+          );
+          createdCount++;
+          continue;
+        }
+
+        final current = currentById[item.targetId];
+        final resolvedMatch = sourceMatch ?? barcodeMatch;
+        if (current == null ||
+            resolvedMatch?.id != item.targetId ||
+            (barcodeMatch != null && barcodeMatch.id != item.targetId) ||
+            !_snapshotsEqual(
+              _ProductSnapshot.fromRow(current),
+              _ProductSnapshot.fromRow(item.existing!),
+            )) {
+          throw const _CatalogPackException(
+            CatalogImportFailureCode.validationFailed,
+            'A product changed while this pack was being reviewed. No products were imported; choose the pack again.',
+          );
+        }
+
+        final before = _ProductSnapshot.fromRow(current);
+        final proposed = before.copyWith(
+          barcode: selection.imports(CatalogPackImportField.barcode)
+              ? _NullableValue(product.barcode)
+              : null,
+          source: _NullableValue(product.source),
+          sourceProductId: _NullableValue(product.sourceProductId),
+          name: selection.imports(CatalogPackImportField.name)
+              ? product.name
+              : null,
+          brand: selection.imports(CatalogPackImportField.brand)
+              ? _NullableValue(product.brand)
+              : null,
+          unitLabel: selection.imports(CatalogPackImportField.unitLabel)
+              ? _NullableValue(product.unitLabel)
+              : null,
+          category: selection.imports(CatalogPackImportField.category)
+              ? _NullableValue(product.category)
+              : null,
+          remoteImageUrl: selection.imports(CatalogPackImportField.image)
+              ? _NullableValue(product.remoteImageUrl)
+              : null,
+          catalogImagePath:
+              selection.imports(CatalogPackImportField.image) &&
+                  installedImage != null
+              ? _NullableValue(installedImage)
+              : null,
+          sourceUpdatedAt: _NullableValue(
+            _databaseDate(
+              _latestDate(before.sourceUpdatedAt, product.updatedAt),
+            ),
+          ),
+          priceCentavos:
+              selection.imports(CatalogPackImportField.suggestedPrice) &&
+                  before.priceCentavos == 0 &&
+                  product.suggestedPriceCentavos != null
+              ? product.suggestedPriceCentavos
+              : null,
+        );
+        if (_snapshotsEqual(before, proposed)) continue;
+        final after = proposed.copyWith(updatedAt: now);
+        await (_database.update(_database.storeProducts)
+              ..where((table) => table.id.equals(item.targetId)))
+            .write(after.toCompanion());
+        undoEntries.add(
+          database.CatalogImportUndoProductsCompanion.insert(
+            batchId: 1,
+            productId: item.targetId,
+            createdByImport: false,
+            beforeJson: Value(before.toJsonString()),
+            afterJson: after.toJsonString(),
+          ),
+        );
+        updatedCount++;
+      }
+
+      // Do not replace a useful older undo checkpoint when the selected rows
+      // happened to be identical to the local catalog.
+      if (undoEntries.isEmpty) return;
+
+      final previousEntries = await (_database.select(
+        _database.catalogImportUndoProducts,
+      )..where((table) => table.batchId.equals(1))).get();
+      for (final entry in previousEntries) {
+        final beforeJson = entry.beforeJson;
+        if (beforeJson == null) continue;
+        final oldBefore = _ProductSnapshot.fromJsonString(beforeJson);
+        final path = _usablePath(oldBefore.catalogImagePath);
+        if (path != null) expiredUndoImagePaths.add(path);
+      }
+      await (_database.delete(
+        _database.catalogImportUndoBatches,
+      )..where((table) => table.id.equals(1))).go();
+      await _database
+          .into(_database.catalogImportUndoBatches)
+          .insert(
+            database.CatalogImportUndoBatchesCompanion.insert(
+              id: const Value(1),
+              packId: session.validated.manifest.packId,
+              revision: session.validated.manifest.revision,
+              importedAt: now,
+              createdCount: createdCount,
+              updatedCount: updatedCount,
+            ),
+          );
+      await _database.batch((batch) {
+        batch.insertAll(_database.catalogImportUndoProducts, undoEntries);
+      });
+    });
+
+    return _ReviewedMergeSummary(
+      createdCount: createdCount,
+      updatedCount: updatedCount,
+      expiredUndoImagePaths: expiredUndoImagePaths,
+    );
+  }
+
+  Future<File> _checkedArchiveFile(String sourcePath) async {
+    if (p.extension(sourcePath).toLowerCase() != '.$packExtension') {
+      throw const _CatalogPackException(
+        CatalogImportFailureCode.invalidFile,
+        'Choose a file ending in .razepack.',
+      );
+    }
+    final file = File(sourcePath);
+    if (!await file.exists()) {
+      throw const _CatalogPackException(
+        CatalogImportFailureCode.sourceMissing,
+        'The selected catalog pack is no longer available.',
+      );
+    }
+    if (await file.length() > _maximumArchiveBytes) {
+      throw const _CatalogPackException(
+        CatalogImportFailureCode.archiveTooLarge,
+        'This catalog pack is too large to import safely.',
+      );
+    }
+    return file;
+  }
+
+  static CatalogPackProductDetails _reviewDetailsFromPack(
+    _CatalogPackProduct product,
+  ) => CatalogPackProductDetails(
+    barcode: product.barcode,
+    name: product.name,
+    brand: product.brand,
+    unitLabel: product.unitLabel,
+    category: product.category,
+    priceCentavos: product.suggestedPriceCentavos ?? 0,
+    hasImage: product.image != null || product.remoteImageUrl != null,
+  );
+
+  static CatalogPackProductDetails _reviewDetailsFromRow(
+    database.StoreProduct product,
+  ) => CatalogPackProductDetails(
+    barcode: product.barcode,
+    name: product.name,
+    brand: product.brand,
+    unitLabel: product.unitLabel,
+    category: product.category,
+    priceCentavos: product.priceCentavos,
+    hasImage:
+        _usablePath(product.localImagePath) != null ||
+        _usablePath(product.catalogImagePath) != null ||
+        _usablePath(product.remoteImageUrl) != null,
+  );
+
+  Future<void> _discardActiveReview({String? expectedReviewId}) async {
+    final active = _activeReview;
+    if (active == null ||
+        (expectedReviewId != null &&
+            active.review.reviewId != expectedReviewId)) {
+      return;
+    }
+    _activeReview = null;
+    await _deleteDirectoryQuietly(active.staging);
+  }
+
+  Future<void> _cleanupExpiredUndoImages(Iterable<String> paths) async {
+    for (final path in paths) {
+      try {
+        await _deleteImageIfUnreferenced(path);
+      } catch (_) {
+        // Orphaned managed media is safer than failing a committed import.
+      }
+    }
+  }
+
   Future<void> _deleteCatalogImageIfUnreferenced(String path) async {
-    final rows =
+    await _deleteImageIfUnreferenced(path);
+  }
+
+  Future<void> _deleteImageIfUnreferenced(String path) async {
+    final products =
         await (_database.select(_database.storeProducts)..where(
               (table) =>
                   table.catalogImagePath.equals(path) |
                   table.localImagePath.equals(path),
             ))
             .get();
-    if (rows.isNotEmpty) return;
+    if (products.isNotEmpty) return;
+    final cartRows = await (_database.select(
+      _database.draftCartItems,
+    )..where((table) => table.imagePathSnapshot.equals(path))).get();
+    if (cartRows.isNotEmpty) return;
+    final saleRows = await (_database.select(
+      _database.saleLines,
+    )..where((table) => table.imagePathSnapshot.equals(path))).get();
+    if (saleRows.isNotEmpty) return;
+    final undoRows = await _database
+        .select(_database.catalogImportUndoProducts)
+        .get();
+    for (final entry in undoRows) {
+      final snapshots = [entry.beforeJson, entry.afterJson];
+      for (final encoded in snapshots) {
+        if (encoded == null) continue;
+        final snapshot = _ProductSnapshot.fromJsonString(encoded);
+        if (snapshot.localImagePath == path ||
+            snapshot.catalogImagePath == path) {
+          return;
+        }
+      }
+    }
     try {
       await _imageStore.deleteIfManaged(path);
     } catch (_) {
@@ -1173,6 +1856,15 @@ final class CatalogPackService {
     if (existing == null || incoming.isAfter(existing)) return incoming;
     return existing;
   }
+
+  /// Drift's default SQLite DateTime mapping stores whole Unix seconds.
+  /// Normalize expected undo snapshots before insertion so a fresh DB read is
+  /// byte-for-byte comparable without producing false "owner edited" alarms.
+  static DateTime _databaseDate(DateTime value) =>
+      DateTime.fromMillisecondsSinceEpoch(
+        (value.toUtc().millisecondsSinceEpoch ~/ 1000) * 1000,
+        isUtc: true,
+      );
 
   static Future<Directory> _createTemporaryDirectory(String prefix) =>
       Directory.systemTemp.createTemp(prefix);
@@ -1444,6 +2136,269 @@ final class _MergeSummary {
   final int createdCount;
   final int updatedCount;
   final Set<String> supersededCatalogImages;
+}
+
+final class _ReviewedMergeSummary {
+  const _ReviewedMergeSummary({
+    required this.createdCount,
+    required this.updatedCount,
+    required this.expiredUndoImagePaths,
+  });
+
+  final int createdCount;
+  final int updatedCount;
+  final Set<String> expiredUndoImagePaths;
+}
+
+final class _CatalogPackReviewSession {
+  const _CatalogPackReviewSession({
+    required this.review,
+    required this.staging,
+    required this.validated,
+    required this.plan,
+  });
+
+  final CatalogPackReview review;
+  final Directory staging;
+  final _ValidatedCatalogPack validated;
+  final _MergePlan plan;
+}
+
+/// Strict, version-independent representation of the StoreProducts columns
+/// touched by catalog imports. The JSON is private app state, never accepted
+/// from a shared pack.
+final class _ProductSnapshot {
+  const _ProductSnapshot({
+    required this.id,
+    required this.barcode,
+    required this.source,
+    required this.sourceProductId,
+    required this.name,
+    required this.brand,
+    required this.unitLabel,
+    required this.category,
+    required this.remoteImageUrl,
+    required this.catalogImagePath,
+    required this.sourceUpdatedAt,
+    required this.localImagePath,
+    required this.priceCentavos,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory _ProductSnapshot.fromRow(database.StoreProduct row) =>
+      _ProductSnapshot(
+        id: row.id,
+        barcode: row.barcode,
+        source: row.source,
+        sourceProductId: row.sourceProductId,
+        name: row.name,
+        brand: row.brand,
+        unitLabel: row.unitLabel,
+        category: row.category,
+        remoteImageUrl: row.remoteImageUrl,
+        catalogImagePath: row.catalogImagePath,
+        sourceUpdatedAt: row.sourceUpdatedAt?.toUtc(),
+        localImagePath: row.localImagePath,
+        priceCentavos: row.priceCentavos,
+        createdAt: row.createdAt.toUtc(),
+        updatedAt: row.updatedAt.toUtc(),
+      );
+
+  factory _ProductSnapshot.fromJsonString(String encoded) {
+    final decoded = jsonDecode(encoded);
+    if (decoded is! Map) {
+      throw const FormatException('Invalid catalog undo snapshot.');
+    }
+    final json = decoded.cast<String, Object?>();
+    String requiredString(String key) {
+      final value = json[key];
+      if (value is! String || value.isEmpty) {
+        throw const FormatException('Invalid catalog undo snapshot.');
+      }
+      return value;
+    }
+
+    String? optionalString(String key) {
+      final value = json[key];
+      if (value == null) return null;
+      if (value is! String) {
+        throw const FormatException('Invalid catalog undo snapshot.');
+      }
+      return value;
+    }
+
+    DateTime requiredDate(String key) {
+      final parsed = DateTime.tryParse(requiredString(key));
+      if (parsed == null) {
+        throw const FormatException('Invalid catalog undo snapshot.');
+      }
+      return parsed.toUtc();
+    }
+
+    DateTime? optionalDate(String key) {
+      final value = optionalString(key);
+      if (value == null) return null;
+      final parsed = DateTime.tryParse(value);
+      if (parsed == null) {
+        throw const FormatException('Invalid catalog undo snapshot.');
+      }
+      return parsed.toUtc();
+    }
+
+    final price = json['priceCentavos'];
+    if (json['version'] != 1 || price is! int || price < 0) {
+      throw const FormatException('Invalid catalog undo snapshot.');
+    }
+    return _ProductSnapshot(
+      id: requiredString('id'),
+      barcode: optionalString('barcode'),
+      source: optionalString('source'),
+      sourceProductId: optionalString('sourceProductId'),
+      name: requiredString('name'),
+      brand: optionalString('brand'),
+      unitLabel: optionalString('unitLabel'),
+      category: optionalString('category'),
+      remoteImageUrl: optionalString('remoteImageUrl'),
+      catalogImagePath: optionalString('catalogImagePath'),
+      sourceUpdatedAt: optionalDate('sourceUpdatedAt'),
+      localImagePath: optionalString('localImagePath'),
+      priceCentavos: price,
+      createdAt: requiredDate('createdAt'),
+      updatedAt: requiredDate('updatedAt'),
+    );
+  }
+
+  final String id;
+  final String? barcode;
+  final String? source;
+  final String? sourceProductId;
+  final String name;
+  final String? brand;
+  final String? unitLabel;
+  final String? category;
+  final String? remoteImageUrl;
+  final String? catalogImagePath;
+  final DateTime? sourceUpdatedAt;
+  final String? localImagePath;
+  final int priceCentavos;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  _ProductSnapshot copyWith({
+    _NullableValue<String>? barcode,
+    _NullableValue<String>? source,
+    _NullableValue<String>? sourceProductId,
+    String? name,
+    _NullableValue<String>? brand,
+    _NullableValue<String>? unitLabel,
+    _NullableValue<String>? category,
+    _NullableValue<String>? remoteImageUrl,
+    _NullableValue<String>? catalogImagePath,
+    _NullableValue<DateTime>? sourceUpdatedAt,
+    _NullableValue<String>? localImagePath,
+    int? priceCentavos,
+    DateTime? updatedAt,
+  }) => _ProductSnapshot(
+    id: id,
+    barcode: barcode == null ? this.barcode : barcode.value,
+    source: source == null ? this.source : source.value,
+    sourceProductId: sourceProductId == null
+        ? this.sourceProductId
+        : sourceProductId.value,
+    name: name ?? this.name,
+    brand: brand == null ? this.brand : brand.value,
+    unitLabel: unitLabel == null ? this.unitLabel : unitLabel.value,
+    category: category == null ? this.category : category.value,
+    remoteImageUrl: remoteImageUrl == null
+        ? this.remoteImageUrl
+        : remoteImageUrl.value,
+    catalogImagePath: catalogImagePath == null
+        ? this.catalogImagePath
+        : catalogImagePath.value,
+    sourceUpdatedAt: sourceUpdatedAt == null
+        ? this.sourceUpdatedAt
+        : sourceUpdatedAt.value,
+    localImagePath: localImagePath == null
+        ? this.localImagePath
+        : localImagePath.value,
+    priceCentavos: priceCentavos ?? this.priceCentavos,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+
+  Map<String, Object?> toJson() => {
+    'version': 1,
+    'id': id,
+    'barcode': barcode,
+    'source': source,
+    'sourceProductId': sourceProductId,
+    'name': name,
+    'brand': brand,
+    'unitLabel': unitLabel,
+    'category': category,
+    'remoteImageUrl': remoteImageUrl,
+    'catalogImagePath': catalogImagePath,
+    'sourceUpdatedAt': sourceUpdatedAt?.toUtc().toIso8601String(),
+    'localImagePath': localImagePath,
+    'priceCentavos': priceCentavos,
+    'createdAt': createdAt.toUtc().toIso8601String(),
+    'updatedAt': updatedAt.toUtc().toIso8601String(),
+  };
+
+  String toJsonString() => jsonEncode(toJson());
+
+  database.StoreProductsCompanion toInsertCompanion() =>
+      database.StoreProductsCompanion.insert(
+        id: id,
+        barcode: Value(barcode),
+        source: Value(source),
+        sourceProductId: Value(sourceProductId),
+        name: name,
+        brand: Value(brand),
+        unitLabel: Value(unitLabel),
+        category: Value(category),
+        remoteImageUrl: Value(remoteImageUrl),
+        catalogImagePath: Value(catalogImagePath),
+        sourceUpdatedAt: Value(sourceUpdatedAt),
+        localImagePath: Value(localImagePath),
+        priceCentavos: priceCentavos,
+        createdAt: Value(createdAt),
+        updatedAt: Value(updatedAt),
+      );
+
+  database.StoreProductsCompanion toCompanion() =>
+      database.StoreProductsCompanion(
+        id: Value(id),
+        barcode: Value(barcode),
+        source: Value(source),
+        sourceProductId: Value(sourceProductId),
+        name: Value(name),
+        brand: Value(brand),
+        unitLabel: Value(unitLabel),
+        category: Value(category),
+        remoteImageUrl: Value(remoteImageUrl),
+        catalogImagePath: Value(catalogImagePath),
+        sourceUpdatedAt: Value(sourceUpdatedAt),
+        localImagePath: Value(localImagePath),
+        priceCentavos: Value(priceCentavos),
+        createdAt: Value(createdAt),
+        updatedAt: Value(updatedAt),
+      );
+}
+
+final class _NullableValue<T> {
+  const _NullableValue(this.value);
+
+  final T? value;
+}
+
+bool _snapshotsEqual(_ProductSnapshot first, _ProductSnapshot second) =>
+    first.toJsonString() == second.toJsonString();
+
+String? _usablePath(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
 final class _ImageDimensions {

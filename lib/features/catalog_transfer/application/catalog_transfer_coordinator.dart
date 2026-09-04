@@ -6,6 +6,7 @@ import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service
 import 'package:raze_store/features/catalog_transfer/data/catalog_csv_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_file_gateway.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
+import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 
 abstract interface class CatalogTransferOperations {
@@ -20,6 +21,142 @@ abstract interface class CatalogTransferOperations {
   Future<CatalogTransferResult> exportCsv();
 
   Future<CatalogTransferResult> importCsvMerging();
+}
+
+sealed class CatalogPackReviewChoiceResult {
+  const CatalogPackReviewChoiceResult();
+}
+
+final class CatalogPackReviewReady extends CatalogPackReviewChoiceResult {
+  const CatalogPackReviewReady(this.review);
+
+  final CatalogPackReview review;
+}
+
+final class CatalogPackReviewNotReady extends CatalogPackReviewChoiceResult {
+  const CatalogPackReviewNotReady(this.result);
+
+  final CatalogTransferResult result;
+}
+
+abstract interface class CatalogPackReviewOperations {
+  Future<CatalogPackReviewChoiceResult> chooseCatalogPackForReview();
+
+  Future<CatalogTransferResult> applyCatalogPackReview(
+    CatalogPackReview review,
+    CatalogPackApplySelection selection,
+  );
+
+  Future<void> discardCatalogPackReview(CatalogPackReview review);
+
+  Future<CatalogPackUndoSummary?> getLastCatalogImportUndo();
+
+  Future<CatalogTransferResult> undoLastCatalogImport();
+}
+
+final class CatalogPackReviewCoordinator
+    implements CatalogPackReviewOperations {
+  CatalogPackReviewCoordinator({
+    required CatalogPackService packService,
+    required CatalogFileGateway fileGateway,
+  }) : _packService = packService,
+       _fileGateway = fileGateway;
+
+  final CatalogPackService _packService;
+  final CatalogFileGateway _fileGateway;
+
+  @override
+  Future<CatalogPackReviewChoiceResult> chooseCatalogPackForReview() async {
+    try {
+      final path = await _fileGateway.pickCatalogPack();
+      if (path == null) {
+        return const CatalogPackReviewNotReady(
+          CatalogTransferCancelled(
+            message: 'Catalog pack import was cancelled.',
+          ),
+        );
+      }
+      if (p.extension(path).toLowerCase() !=
+          '.${CatalogPackService.packExtension}') {
+        return const CatalogPackReviewNotReady(
+          CatalogTransferFailure(
+            code: CatalogTransferFailureCode.invalidFile,
+            message: 'Choose a file ending in .razepack.',
+          ),
+        );
+      }
+      final prepared = await _packService.prepareReview(path);
+      final review = prepared.review;
+      if (prepared.success && review != null) {
+        return CatalogPackReviewReady(review);
+      }
+      return CatalogPackReviewNotReady(
+        CatalogTransferFailure(
+          code: _catalogPackFailureCode(prepared.failureCode),
+          message: prepared.message,
+          cause: prepared.cause,
+        ),
+      );
+    } catch (error) {
+      return CatalogPackReviewNotReady(
+        CatalogTransferFailure(
+          code: error is UnimplementedError
+              ? CatalogTransferFailureCode.unavailable
+              : CatalogTransferFailureCode.ioFailure,
+          message: error is UnimplementedError
+              ? 'File import is not available on this device.'
+              : 'The catalog pack could not be opened.',
+          cause: error,
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<CatalogTransferResult> applyCatalogPackReview(
+    CatalogPackReview review,
+    CatalogPackApplySelection selection,
+  ) async {
+    final result = await _packService.applyReview(review.reviewId, selection);
+    if (!result.success) {
+      return CatalogTransferFailure(
+        code: _catalogPackFailureCode(result.failureCode),
+        message: result.message,
+        cause: result.cause,
+      );
+    }
+    return CatalogTransferSuccess(
+      action: CatalogTransferAction.catalogPackImport,
+      message: result.message,
+      productCount: result.productCount,
+      photoCount: result.imageCount,
+    );
+  }
+
+  @override
+  Future<void> discardCatalogPackReview(CatalogPackReview review) =>
+      _packService.discardReview(review.reviewId);
+
+  @override
+  Future<CatalogPackUndoSummary?> getLastCatalogImportUndo() =>
+      _packService.getLastImportUndoSummary();
+
+  @override
+  Future<CatalogTransferResult> undoLastCatalogImport() async {
+    final result = await _packService.undoLastImport();
+    if (!result.success) {
+      return CatalogTransferFailure(
+        code: _catalogPackFailureCode(result.failureCode),
+        message: result.message,
+        cause: result.cause,
+      );
+    }
+    return CatalogTransferSuccess(
+      action: CatalogTransferAction.catalogPackUndo,
+      message: result.message,
+      productCount: result.productCount,
+    );
+  }
 }
 
 final class CatalogTransferCoordinator implements CatalogTransferOperations {
@@ -220,29 +357,7 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
   }
 
   CatalogTransferFailureCode _packFailureCode(CatalogImportFailureCode? code) =>
-      switch (code) {
-        CatalogImportFailureCode.sourceMissing =>
-          CatalogTransferFailureCode.sourceMissing,
-        CatalogImportFailureCode.invalidFile =>
-          CatalogTransferFailureCode.invalidFile,
-        CatalogImportFailureCode.unsupportedVersion =>
-          CatalogTransferFailureCode.unsupportedVersion,
-        CatalogImportFailureCode.unsafeArchive =>
-          CatalogTransferFailureCode.unsafeArchive,
-        CatalogImportFailureCode.archiveTooLarge =>
-          CatalogTransferFailureCode.archiveTooLarge,
-        CatalogImportFailureCode.integrityMismatch =>
-          CatalogTransferFailureCode.integrityMismatch,
-        CatalogImportFailureCode.validationFailed =>
-          CatalogTransferFailureCode.validationFailed,
-        CatalogImportFailureCode.ioFailure =>
-          CatalogTransferFailureCode.ioFailure,
-        CatalogImportFailureCode.databaseFailure =>
-          CatalogTransferFailureCode.databaseFailure,
-        CatalogImportFailureCode.unavailable =>
-          CatalogTransferFailureCode.unavailable,
-        null => CatalogTransferFailureCode.invalidFile,
-      };
+      _catalogPackFailureCode(code);
 
   static Future<Directory> _createTemporaryDirectory() =>
       Directory.systemTemp.createTemp('raze_store_transfer_');
@@ -256,3 +371,28 @@ final class CatalogTransferCoordinator implements CatalogTransferOperations {
     }
   }
 }
+
+CatalogTransferFailureCode _catalogPackFailureCode(
+  CatalogImportFailureCode? code,
+) => switch (code) {
+  CatalogImportFailureCode.sourceMissing =>
+    CatalogTransferFailureCode.sourceMissing,
+  CatalogImportFailureCode.invalidFile =>
+    CatalogTransferFailureCode.invalidFile,
+  CatalogImportFailureCode.unsupportedVersion =>
+    CatalogTransferFailureCode.unsupportedVersion,
+  CatalogImportFailureCode.unsafeArchive =>
+    CatalogTransferFailureCode.unsafeArchive,
+  CatalogImportFailureCode.archiveTooLarge =>
+    CatalogTransferFailureCode.archiveTooLarge,
+  CatalogImportFailureCode.integrityMismatch =>
+    CatalogTransferFailureCode.integrityMismatch,
+  CatalogImportFailureCode.validationFailed =>
+    CatalogTransferFailureCode.validationFailed,
+  CatalogImportFailureCode.ioFailure => CatalogTransferFailureCode.ioFailure,
+  CatalogImportFailureCode.databaseFailure =>
+    CatalogTransferFailureCode.databaseFailure,
+  CatalogImportFailureCode.unavailable =>
+    CatalogTransferFailureCode.unavailable,
+  null => CatalogTransferFailureCode.invalidFile,
+};
