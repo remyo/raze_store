@@ -49,6 +49,97 @@ void main() {
     );
   });
 
+  testWidgets('aligns the visible product-name and reader controls at 390px', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(390, 844);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final readerRow = tester.widget<Row>(
+      find.byKey(const ValueKey('product-name-reader-row')),
+    );
+    final flexes = readerRow.children
+        .whereType<Expanded>()
+        .map((child) => child.flex)
+        .toList(growable: false);
+    expect(flexes, hasLength(2));
+    expect(flexes.first / (flexes.first + flexes.last), closeTo(0.7, 0.001));
+    final nameField = find.byKey(const ValueKey('product-name-field'));
+    final readLabel = find.byKey(const ValueKey('read-product-label'));
+    expect(readLabel, findsOneWidget);
+    expect(find.text('Read label'), findsOneWidget);
+    await tester.ensureVisible(nameField);
+    await tester.pumpAndSettle();
+
+    final inputDecorator = find.descendant(
+      of: nameField,
+      matching: find.byType(InputDecorator),
+    );
+    expect(inputDecorator, findsOneWidget);
+    final editableText = find.descendant(
+      of: nameField,
+      matching: find.byType(EditableText),
+    );
+    expect(editableText, findsOneWidget);
+    final nameContainer = InputDecorator.containerOf(
+      tester.element(editableText),
+    );
+    expect(nameContainer, isNotNull);
+    final nameBounds =
+        nameContainer!.localToGlobal(Offset.zero) & nameContainer.size;
+
+    final readerMaterial = find.descendant(
+      of: readLabel,
+      matching: find.byType(Material),
+    );
+    expect(readerMaterial, findsOneWidget);
+    final readerBounds = tester.getRect(readerMaterial);
+
+    expect(nameBounds.height, AppSize.field);
+    expect(readerBounds.height, AppSize.field);
+    expect(readerBounds.top, closeTo(nameBounds.top, 0.5));
+    expect(readerBounds.bottom, closeTo(nameBounds.bottom, 0.5));
+
+    tester.state<FormState>(find.byType(Form)).validate();
+    await tester.pump();
+    await tester.ensureVisible(nameField);
+    await tester.pumpAndSettle();
+    final errorNameContainer = InputDecorator.containerOf(
+      tester.element(editableText),
+    );
+    expect(errorNameContainer, isNotNull);
+    final errorNameBounds =
+        errorNameContainer!.localToGlobal(Offset.zero) &
+        errorNameContainer.size;
+    final errorReaderBounds = tester.getRect(readerMaterial);
+    expect(errorNameBounds.height, AppSize.field);
+    expect(errorReaderBounds.height, AppSize.field);
+    expect(errorReaderBounds.top, closeTo(errorNameBounds.top, 0.5));
+    expect(errorReaderBounds.bottom, closeTo(errorNameBounds.bottom, 0.5));
+
+    final readerButton = tester.widget<OutlinedButton>(readLabel);
+    expect(
+      readerButton.style?.side?.resolve(const <WidgetState>{})?.width,
+      greaterThan(1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('offers offline background removal for a chosen photo', (
     tester,
   ) async {
@@ -211,11 +302,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Take a photo'), findsOneWidget);
-    expect(find.text('Read product label'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('scan-product-label-action')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('read-product-photo-text')), findsNothing);
+    expect(find.byKey(const ValueKey('read-product-label')), findsOneWidget);
   });
 
-  testWidgets('reads a captured label and fills selected product details', (
+  testWidgets('shows a captured label below the name until it is confirmed', (
     tester,
   ) async {
     final directory = (await tester.runAsync(
@@ -253,25 +349,87 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.light,
-          home: const ProductFormScreen(),
+          home: ProductFormScreen(
+            initialPrice: '8.75',
+            initialMetadata: CatalogMetadata(
+              name: 'Original product',
+              brand: 'Original brand',
+              unitLabel: 'Original unit',
+            ),
+          ),
         ),
       ),
     );
 
-    await tester.tap(find.text('Add photo'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Read product label'));
+    await tester.tap(find.byKey(const ValueKey('read-product-label')));
     await tester.pumpAndSettle();
 
     expect(captureLauncher.purposes, [ProductCapturePurpose.productLabel]);
     expect(recognizer.paths, [source.path]);
-    expect(find.text('Review label details'), findsOneWidget);
-    expect(find.text('Brown Coffee'), findsOneWidget);
-    expect(find.text('KOPIKO'), findsOneWidget);
+    expect(find.text('Review label details'), findsNothing);
 
-    final apply = find.byKey(const ValueKey('apply-detected-product-details'));
-    await tester.ensureVisible(apply);
-    await tester.tap(apply);
+    // OCR must never overwrite an existing product name without an explicit
+    // confirmation from the user.
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-name-field')),
+          )
+          .controller
+          ?.text,
+      'Original product',
+    );
+    final recognizedLabel = find.byKey(
+      const ValueKey('recognized-product-label'),
+    );
+    final useRecognizedLabel = find.byKey(
+      const ValueKey('use-recognized-product-label'),
+    );
+    expect(recognizedLabel, findsOneWidget);
+    expect(useRecognizedLabel, findsOneWidget);
+    expect(find.text('Brown Coffee'), findsOneWidget);
+    expect(find.text('OK, use this text'), findsOneWidget);
+    expect(
+      tester.getTopLeft(recognizedLabel).dy,
+      greaterThan(
+        tester
+            .getBottomLeft(
+              find.byKey(const ValueKey('product-name-reader-row')),
+            )
+            .dy,
+      ),
+    );
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Brand'))
+          .controller
+          ?.text,
+      'Original brand',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-main-unit-field')),
+          )
+          .controller
+          ?.text,
+      'Original unit',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-main-price-field')),
+          )
+          .controller
+          ?.text,
+      '8.75',
+    );
+    expect(find.text('Add photo'), findsOneWidget);
+    expect(find.text('Change photo'), findsNothing);
+
+    await tester.ensureVisible(useRecognizedLabel);
+    await tester.pumpAndSettle();
+    await tester.tap(useRecognizedLabel);
     await tester.pumpAndSettle();
 
     expect(
@@ -283,31 +441,16 @@ void main() {
           ?.text,
       'Brown Coffee',
     );
-    expect(
-      tester
-          .widget<TextFormField>(
-            find.byKey(const ValueKey('product-main-unit-field')),
-          )
-          .controller
-          ?.text,
-      '30 g',
-    );
-    expect(
-      tester
-          .widget<TextFormField>(
-            find.byKey(const ValueKey('product-main-price-field')),
-          )
-          .controller
-          ?.text,
-      '12.50',
-    );
-    expect(
-      find.text('Details filled from the photo. Please review before saving.'),
-      findsOneWidget,
-    );
+    expect(recognizedLabel, findsNothing);
+    expect(useRecognizedLabel, findsNothing);
+    expect(find.text('OK, use this text'), findsNothing);
+    // Capturing a close-up label is OCR-only and must not silently install it
+    // as the product photo.
+    expect(find.text('Add photo'), findsOneWidget);
+    expect(find.text('Change photo'), findsNothing);
   });
 
-  testWidgets('detected label does not replace existing values by default', (
+  testWidgets('confirmed label replaces the name but leaves the price intact', (
     tester,
   ) async {
     final captureLauncher = _FakeProductCaptureLauncher(
@@ -340,15 +483,10 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Add photo'));
+    await tester.tap(find.byKey(const ValueKey('read-product-label')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Read product label'));
-    await tester.pumpAndSettle();
-    final apply = find.byKey(const ValueKey('apply-detected-product-details'));
-    await tester.ensureVisible(apply);
-    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
+
+    expect(find.text('Review label details'), findsNothing);
 
     expect(
       tester
@@ -359,6 +497,30 @@ void main() {
           ?.text,
       'Existing name',
     );
+    expect(find.text('Different product'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('recognized-product-label')),
+      findsOneWidget,
+    );
+    expect(find.text('OK, use this text'), findsOneWidget);
+
+    final useRecognizedLabel = find.byKey(
+      const ValueKey('use-recognized-product-label'),
+    );
+    await tester.ensureVisible(useRecognizedLabel);
+    await tester.pumpAndSettle();
+    await tester.tap(useRecognizedLabel);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-name-field')),
+          )
+          .controller
+          ?.text,
+      'Different product',
+    );
     expect(
       tester
           .widget<TextFormField>(
@@ -368,6 +530,207 @@ void main() {
           ?.text,
       '15.00',
     );
+  });
+
+  testWidgets('keeps a detected label after a canceled or failed rescan', (
+    tester,
+  ) async {
+    final captureLauncher = _ScriptedProductCaptureLauncher([
+      XFile('/tmp/raze-store-first-label.png'),
+      null,
+      XFile('/tmp/raze-store-failed-label.png'),
+    ]);
+    final recognizer = _ScriptedProductTextRecognizer([
+      _recognizedName('First suggestion'),
+      StateError('recognition failed'),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(captureLauncher),
+          productTextRecognizerProvider.overrideWithValue(recognizer),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+
+    final readLabel = find.byKey(const ValueKey('read-product-label'));
+    await tester.tap(readLabel);
+    await tester.pumpAndSettle();
+    expect(find.text('First suggestion'), findsOneWidget);
+
+    await tester.tap(readLabel);
+    await tester.pumpAndSettle();
+    expect(find.text('First suggestion'), findsOneWidget);
+
+    await tester.tap(readLabel);
+    await tester.pumpAndSettle();
+    expect(find.text('First suggestion'), findsOneWidget);
+    expect(
+      find.text(
+        'Could not read the product label. Check camera access and try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(recognizer.paths, [
+      '/tmp/raze-store-first-label.png',
+      '/tmp/raze-store-failed-label.png',
+    ]);
+  });
+
+  testWidgets('a successful rescan replaces the pending label', (tester) async {
+    final captureLauncher = _ScriptedProductCaptureLauncher([
+      XFile('/tmp/raze-store-first-label.png'),
+      XFile('/tmp/raze-store-second-label.png'),
+    ]);
+    final recognizer = _ScriptedProductTextRecognizer([
+      _recognizedName('First suggestion'),
+      _recognizedName('Better suggestion'),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(captureLauncher),
+          productTextRecognizerProvider.overrideWithValue(recognizer),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+
+    final readLabel = find.byKey(const ValueKey('read-product-label'));
+    await tester.tap(readLabel);
+    await tester.pumpAndSettle();
+    expect(find.text('First suggestion'), findsOneWidget);
+
+    await tester.tap(readLabel);
+    await tester.pumpAndSettle();
+    expect(find.text('First suggestion'), findsNothing);
+    expect(find.text('Better suggestion'), findsOneWidget);
+  });
+
+  testWidgets('manual name editing clears a stale detected label', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(
+            _FakeProductCaptureLauncher(XFile('/tmp/raze-store-label.png')),
+          ),
+          productTextRecognizerProvider.overrideWithValue(
+            _FakeProductTextRecognizer(_recognizedName('OCR suggestion')),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(initialName: 'Original name'),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('read-product-label')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('recognized-product-label')),
+      findsOneWidget,
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('product-name-field')),
+      'Name typed by owner',
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('recognized-product-label')),
+      findsNothing,
+    );
+    expect(find.text('OCR suggestion'), findsNothing);
+  });
+
+  testWidgets('announces detected label text as a live region', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(
+            _FakeProductCaptureLauncher(XFile('/tmp/raze-store-label.png')),
+          ),
+          productTextRecognizerProvider.overrideWithValue(
+            _FakeProductTextRecognizer(_recognizedName('Brown Coffee')),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('read-product-label')));
+    await tester.pumpAndSettle();
+
+    final detected = find.byKey(const ValueKey('recognized-product-label'));
+    expect(detected, findsOneWidget);
+    final semanticsData = tester.getSemantics(detected).getSemanticsData();
+    expect(
+      semanticsData.label,
+      startsWith('Detected product name: Brown Coffee'),
+    );
+    expect(semanticsData.flagsCollection.isLiveRegion, isTrue);
+    semantics.dispose();
+  });
+
+  testWidgets('deletes the OCR-only captured file after recognition', (
+    tester,
+  ) async {
+    final directory = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('raze_store_ocr_cleanup_test_'),
+    ))!;
+    addTearDown(() async {
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
+    final source = File('${directory.path}/label.png');
+    await tester.runAsync(
+      () => source.writeAsBytes(base64Decode(_onePixelPng)),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(
+            _FakeProductCaptureLauncher(XFile(source.path)),
+          ),
+          productTextRecognizerProvider.overrideWithValue(
+            _FakeProductTextRecognizer(_recognizedName('Brown Coffee')),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+
+    expect(source.existsSync(), isTrue);
+    await tester.tap(find.byKey(const ValueKey('read-product-label')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Brown Coffee'), findsOneWidget);
+    expect(source.existsSync(), isFalse);
   });
 
   testWidgets('rejects the fallback main label for a sub-unit', (tester) async {
@@ -675,6 +1038,13 @@ Future<void> _pumpForm(
   );
 }
 
+ProductTextRecognitionResult _recognizedName(String productName) {
+  return ProductTextRecognitionResult(
+    rawLines: [productName],
+    suggestions: ProductTextSuggestions(productName: productName),
+  );
+}
+
 final class _RecordingCatalogRepository implements CatalogRepository {
   _RecordingCatalogRepository({
     this.watchedProduct,
@@ -785,6 +1155,20 @@ final class _FakeProductCaptureLauncher implements ProductCaptureLauncher {
   }
 }
 
+final class _ScriptedProductCaptureLauncher implements ProductCaptureLauncher {
+  _ScriptedProductCaptureLauncher(this.results);
+
+  final List<XFile?> results;
+
+  @override
+  Future<XFile?> capture(
+    BuildContext context, {
+    ProductCapturePurpose purpose = ProductCapturePurpose.productPhoto,
+  }) async {
+    return results.removeAt(0);
+  }
+}
+
 final class _FakeProductTextRecognizer implements ProductTextRecognizer {
   _FakeProductTextRecognizer(this.result);
 
@@ -797,6 +1181,23 @@ final class _FakeProductTextRecognizer implements ProductTextRecognizer {
   ) async {
     paths.add(imagePath);
     return result;
+  }
+}
+
+final class _ScriptedProductTextRecognizer implements ProductTextRecognizer {
+  _ScriptedProductTextRecognizer(this.results);
+
+  final List<Object> results;
+  final List<String> paths = [];
+
+  @override
+  Future<ProductTextRecognitionResult> recognizeImagePath(
+    String imagePath,
+  ) async {
+    paths.add(imagePath);
+    final result = results.removeAt(0);
+    if (result is ProductTextRecognitionResult) return result;
+    throw result;
   }
 }
 

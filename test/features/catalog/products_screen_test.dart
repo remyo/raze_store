@@ -173,10 +173,12 @@ void main() {
     for (final product in products) {
       final tile = find.byKey(ValueKey('product-grid-item-${product.id}'));
       expect(tile, findsOneWidget);
-      expect(
-        find.descendant(of: tile, matching: find.byType(ProductImage)),
-        findsOneWidget,
+      final imageFinder = find.descendant(
+        of: tile,
+        matching: find.byType(ProductImage),
       );
+      expect(imageFinder, findsOneWidget);
+      expect(tester.widget<ProductImage>(imageFinder).fit, BoxFit.cover);
     }
 
     await tester.tap(find.byKey(const ValueKey('product-layout-list')));

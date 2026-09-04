@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/core/widgets/camera_scan_frame.dart';
 import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
 
 void main() {
@@ -58,9 +59,9 @@ void main() {
   );
 
   testWidgets(
-    'shows purpose guide and offers torch when sampled light is low',
+    'label reader mirrors the barcode camera card and keeps low-light help',
     (tester) async {
-      final session = _FakeProductCameraSession();
+      final session = _FakeSwitchableProductCameraSession();
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
@@ -72,15 +73,140 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Capture product label'), findsOneWidget);
+      final previewFinder = find.byKey(const ValueKey('fake-camera-preview'));
+      final cameraCardFinder = find.ancestor(
+        of: previewFinder,
+        matching: find.byType(Card),
+      );
+      expect(cameraCardFinder, findsOneWidget);
+
+      final cameraCard = tester.widget<Card>(cameraCardFinder);
+      expect(cameraCard.color, Colors.black);
+      expect(cameraCard.clipBehavior, Clip.antiAlias);
+
+      final cameraCardElement = tester.element(cameraCardFinder);
+      final widthConstraint = cameraCardElement
+          .findAncestorWidgetOfExactType<ConstrainedBox>();
+      expect(widthConstraint, isNotNull);
+      expect(widthConstraint!.constraints.maxWidth, 720);
+
+      final cameraAspectRatioFinder = find.descendant(
+        of: cameraCardFinder,
+        matching: find.byType(AspectRatio),
+      );
+      expect(cameraAspectRatioFinder, findsOneWidget);
       expect(
-        find.text('Fill the frame with the product label and keep text sharp'),
+        tester.widget<AspectRatio>(cameraAspectRatioFinder).aspectRatio,
+        4 / 3,
+      );
+      final previewCoverFinder = find.descendant(
+        of: find.byKey(const ValueKey('product-capture-preview-cover')),
+        matching: find.byType(FittedBox),
+        matchRoot: true,
+      );
+      expect(previewCoverFinder, findsOneWidget);
+      expect(tester.widget<FittedBox>(previewCoverFinder).fit, BoxFit.cover);
+
+      expect(find.text('Read label'), findsOneWidget);
+      expect(
+        find.text('Center the product name inside the frame'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('product-label-guide-frame')),
         findsOneWidget,
       );
       expect(
         find.byKey(const ValueKey('product-capture-guide-frame')),
         findsOneWidget,
       );
+      expect(find.bySemanticsLabel('Product name guide frame'), findsOneWidget);
+      final sharedScanFrame = tester.widget<CameraScanFrame>(
+        find.byType(CameraScanFrame),
+      );
+      // Keep the established barcode scanner treatment while giving longer
+      // product names a little more horizontal room.
+      expect(sharedScanFrame.widthFactor, 0.84);
+      expect(sharedScanFrame.aspectRatio, 2.25);
+      expect(sharedScanFrame.center, const Offset(0.5, 0.5));
+      expect(sharedScanFrame.overlayOpacity, 0.08);
+      final guideWindowFinder = find.byKey(
+        const ValueKey('product-label-guide-window'),
+      );
+      expect(guideWindowFinder, findsOneWidget);
+      final guideWindow = tester.widget<DecoratedBox>(guideWindowFinder);
+      final decoration = guideWindow.decoration as BoxDecoration;
+      final border = decoration.border! as Border;
+      expect(border.top.color, Colors.white);
+      expect(border.top.width, 2.5);
+      expect(border.right, border.top);
+      expect(border.bottom, border.top);
+      expect(border.left, border.top);
+      expect(decoration.borderRadius, AppRadius.card);
+      expect(decoration.boxShadow, hasLength(1));
+      final shadow = decoration.boxShadow!.single;
+      expect(shadow.color, const Color(0x73000000));
+      expect(shadow.blurRadius, 14);
+      expect(shadow.spreadRadius, 2);
+      expect(
+        find.byKey(const ValueKey('product-label-guide-caption')),
+        findsNothing,
+      );
+
+      final torchButtonFinder = find.byKey(
+        const ValueKey('product-capture-torch-button'),
+      );
+      final switchButtonFinder = find.byKey(
+        const ValueKey('product-capture-switch-camera-button'),
+      );
+      expect(torchButtonFinder, findsOneWidget);
+      expect(switchButtonFinder, findsOneWidget);
+      expect(
+        tester.widget<IconButton>(torchButtonFinder).tooltip,
+        'Turn flash on',
+      );
+      expect(
+        tester.widget<IconButton>(switchButtonFinder).tooltip,
+        'Switch camera',
+      );
+      expect(tester.widget<IconButton>(torchButtonFinder).onPressed, isNotNull);
+      expect(
+        tester.widget<IconButton>(switchButtonFinder).onPressed,
+        isNotNull,
+      );
+
+      for (final controlFinder in [torchButtonFinder, switchButtonFinder]) {
+        final controlElement = tester.element(controlFinder);
+        final material = controlElement
+            .findAncestorWidgetOfExactType<Material>();
+        expect(material, isNotNull);
+        expect(material!.shape, isA<CircleBorder>());
+      }
+
+      final controlsAlignmentFinder = find.ancestor(
+        of: torchButtonFinder,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Align && widget.alignment == Alignment.topRight,
+        ),
+      );
+      expect(controlsAlignmentFinder, findsOneWidget);
+      expect(
+        find.descendant(
+          of: controlsAlignmentFinder,
+          matching: switchButtonFinder,
+        ),
+        findsOneWidget,
+      );
+      var cameraCardRect = tester.getRect(cameraCardFinder);
+      final torchCenter = tester.getCenter(torchButtonFinder);
+      final switchCenter = tester.getCenter(switchButtonFinder);
+      expect(cameraCardRect.contains(torchCenter), isTrue);
+      expect(cameraCardRect.contains(switchCenter), isTrue);
+      expect(torchCenter.dx, greaterThan(cameraCardRect.center.dx));
+      expect(switchCenter.dx, greaterThan(torchCenter.dx));
+      expect(torchCenter.dy, lessThan(cameraCardRect.center.dy));
+      expect(switchCenter.dy, lessThan(cameraCardRect.center.dy));
+
       expect(
         find.byKey(const ValueKey('product-capture-low-light-warning')),
         findsNothing,
@@ -98,6 +224,9 @@ void main() {
         ),
         findsOneWidget,
       );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('product-capture-warning-torch-action')),
+      );
       await tester.tap(
         find.byKey(const ValueKey('product-capture-warning-torch-action')),
       );
@@ -108,8 +237,161 @@ void main() {
         find.text('Still too dark? Move somewhere brighter.'),
         findsOneWidget,
       );
+
+      final shutterFinder = find.byKey(
+        const ValueKey('product-capture-shutter-button'),
+      );
+      expect(shutterFinder, findsOneWidget);
+      expect(shutterFinder.hitTestable(), findsOneWidget);
+      expect(tester.widget<IconButton>(shutterFinder).tooltip, 'Read label');
+      cameraCardRect = tester.getRect(cameraCardFinder);
+      expect(
+        tester.getTopLeft(shutterFinder).dx,
+        greaterThan(cameraCardRect.right),
+      );
     },
   );
+
+  for (final viewport in const <Size>[
+    Size(320, 568),
+    Size(390, 844),
+    Size(844, 390),
+  ]) {
+    testWidgets(
+      'label camera and shutter fit ${viewport.width.toInt()}x${viewport.height.toInt()} without scrolling',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = viewport;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        final session = _FakeProductCameraSession();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: ProductCaptureScreen(
+              purpose: ProductCapturePurpose.productLabel,
+              sessionFactory: () async => session,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+
+        final previewFinder = find.byKey(const ValueKey('fake-camera-preview'));
+        final cameraCardFinder = find.ancestor(
+          of: previewFinder,
+          matching: find.byType(Card),
+        );
+        final shutterFinder = find.byKey(
+          const ValueKey('product-capture-shutter-button'),
+        );
+        expect(cameraCardFinder, findsOneWidget);
+        expect(shutterFinder, findsOneWidget);
+        expect(cameraCardFinder.hitTestable(), findsOneWidget);
+        expect(shutterFinder.hitTestable(), findsOneWidget);
+
+        final screenRect = Offset.zero & viewport;
+        final cameraCardRect = tester.getRect(cameraCardFinder);
+        final shutterRect = tester.getRect(shutterFinder);
+        expect(screenRect.contains(cameraCardRect.topLeft), isTrue);
+        expect(screenRect.contains(cameraCardRect.bottomRight), isTrue);
+        expect(screenRect.contains(shutterRect.topLeft), isTrue);
+        expect(screenRect.contains(shutterRect.bottomRight), isTrue);
+        expect(
+          cameraCardRect.width / cameraCardRect.height,
+          closeTo(4 / 3, 0.01),
+        );
+        if (viewport.width > viewport.height) {
+          expect(shutterRect.left, greaterThan(cameraCardRect.right));
+        } else {
+          expect(shutterRect.top, greaterThan(cameraCardRect.bottom));
+        }
+
+        final previewCoverFinder = find.descendant(
+          of: find.byKey(const ValueKey('product-capture-preview-cover')),
+          matching: find.byType(FittedBox),
+          matchRoot: true,
+        );
+        expect(previewCoverFinder, findsOneWidget);
+        expect(tester.widget<FittedBox>(previewCoverFinder).fit, BoxFit.cover);
+
+        for (final scrollable in tester.stateList<ScrollableState>(
+          find.byType(Scrollable),
+        )) {
+          expect(scrollable.position.pixels, 0);
+        }
+
+        final sharedScanFrame = tester.widget<CameraScanFrame>(
+          find.byType(CameraScanFrame),
+        );
+        expect(sharedScanFrame.widthFactor, 0.84);
+        expect(sharedScanFrame.aspectRatio, 2.25);
+        final guideRect = tester.getRect(
+          find.byKey(const ValueKey('product-label-guide-window')),
+        );
+        expect(guideRect.width / cameraCardRect.width, closeTo(0.84, 0.01));
+
+        if (viewport == const Size(320, 568)) {
+          session
+            ..emitLuminance(0.10)
+            ..emitLuminance(0.10)
+            ..emitLuminance(0.10);
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          expect(
+            find
+                .byKey(const ValueKey('product-capture-low-light-warning'))
+                .hitTestable(),
+            findsOneWidget,
+          );
+          expect(
+            find
+                .byKey(const ValueKey('product-capture-warning-torch-action'))
+                .hitTestable(),
+            findsOneWidget,
+          );
+        }
+      },
+    );
+  }
+
+  testWidgets('product photo keeps its full-screen camera treatment', (
+    tester,
+  ) async {
+    final session = _FakeProductCameraSession();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: ProductCaptureScreen(sessionFactory: () async => session),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, Colors.black);
+    expect(find.byType(Card), findsNothing);
+    expect(find.byType(CameraScanFrame), findsNothing);
+    expect(
+      find.byKey(const ValueKey('product-capture-guide-frame')),
+      findsOneWidget,
+    );
+    expect(find.byType(CustomPaint), findsWidgets);
+
+    final fullScreenStackFinder = find.ancestor(
+      of: find.byKey(const ValueKey('fake-camera-preview')),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Stack && widget.fit == StackFit.expand,
+      ),
+    );
+    expect(fullScreenStackFinder, findsOneWidget);
+    expect(
+      tester.getSize(fullScreenStackFinder).width,
+      tester.view.physicalSize.width / tester.view.devicePixelRatio,
+    );
+  });
 
   testWidgets('stops light sampling, captures, and returns the XFile', (
     tester,
@@ -269,6 +551,17 @@ class _FakeProductCameraSession implements ProductCameraSession {
   }
 
   void emitLuminance(double value) => _onLuminance?.call(value);
+}
+
+class _FakeSwitchableProductCameraSession extends _FakeProductCameraSession
+    implements ProductCameraSwitchingSession {
+  @override
+  bool get canSwitchCamera => true;
+
+  @override
+  Future<void> switchCamera() async {
+    events.add('switchCamera');
+  }
 }
 
 class _FakeProductCaptureLauncher implements ProductCaptureLauncher {

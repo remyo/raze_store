@@ -415,7 +415,6 @@ class _SaleLineImage extends StatelessWidget {
               height: AppSize.thumbnail,
               fit: BoxFit.cover,
               cacheWidth: 168,
-              cacheHeight: 168,
               semanticLabel: line.nameSnapshot,
             )
           : Image.file(
@@ -424,7 +423,6 @@ class _SaleLineImage extends StatelessWidget {
               height: AppSize.thumbnail,
               fit: BoxFit.cover,
               cacheWidth: 168,
-              cacheHeight: 168,
               semanticLabel: line.nameSnapshot,
               errorBuilder: (_, _, _) => fallback,
             ),

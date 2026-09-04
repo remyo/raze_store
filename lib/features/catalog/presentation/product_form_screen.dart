@@ -102,6 +102,7 @@ class _ProductEditor extends ConsumerStatefulWidget {
 
 class _ProductEditorState extends ConsumerState<_ProductEditor> {
   final _formKey = GlobalKey<FormState>();
+  final _nameValidationKey = GlobalKey<FormFieldState<String>>();
   late final TextEditingController _nameController;
   late final TextEditingController _brandController;
   late final TextEditingController _unitController;
@@ -118,6 +119,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   bool _removingBackground = false;
   bool _readingText = false;
   bool _backgroundRemoved = false;
+  String? _recognizedProductName;
 
   bool get _editing => widget.product != null;
   bool get _blocked => _busy || _removingBackground || _readingText;
@@ -182,6 +184,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final scheme = Theme.of(context).colorScheme;
     final categorySuggestions = ref.watch(catalogCategorySuggestionsProvider);
     return PopScope(
       canPop: !_blocked && !widget.goToProductsAfterSave,
@@ -271,11 +274,9 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                     removeExisting: _removeExistingPhoto,
                     busy: _blocked,
                     removingBackground: _removingBackground,
-                    readingText: _readingText,
                     backgroundRemoved: _backgroundRemoved,
                     onChoose: _choosePhotoSource,
                     onRemoveBackground: _removePhotoBackground,
-                    onReadText: _readCurrentPhotoText,
                     onRemove: _removePhoto,
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -284,19 +285,189 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                     subtitle: 'Only the name and selling price are required.',
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  TextFormField(
-                    key: const ValueKey('product-name-field'),
-                    controller: _nameController,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Product name',
-                      hintText: 'e.g. Instant noodles',
-                      prefixIcon: Icon(Icons.inventory_2_outlined),
-                    ),
-                    validator: (value) => value == null || value.trim().isEmpty
+                  FormField<String>(
+                    key: _nameValidationKey,
+                    initialValue: _nameController.text,
+                    validator: (_) => _nameController.text.trim().isEmpty
                         ? 'Enter the product name.'
                         : null,
+                    builder: (nameField) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        IntrinsicHeight(
+                          child: Row(
+                            key: const ValueKey('product-name-reader-row'),
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 70,
+                                child: TextFormField(
+                                  key: const ValueKey('product-name-field'),
+                                  controller: _nameController,
+                                  textCapitalization: TextCapitalization.words,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: (value) {
+                                    nameField.didChange(value);
+                                    if (nameField.hasError) {
+                                      nameField.validate();
+                                    }
+                                    if (_recognizedProductName != null) {
+                                      setState(
+                                        () => _recognizedProductName = null,
+                                      );
+                                    }
+                                  },
+                                  decoration: const InputDecoration(
+                                    labelText: 'Product name',
+                                    hintText: 'e.g. Instant noodles',
+                                    prefixIcon: Icon(
+                                      Icons.inventory_2_outlined,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Expanded(
+                                flex: 30,
+                                child: Semantics(
+                                  button: true,
+                                  enabled: !_blocked,
+                                  label: 'Read label',
+                                  onTap: _blocked ? null : _readProductLabel,
+                                  child: ExcludeSemantics(
+                                    child: Tooltip(
+                                      message: 'Read label',
+                                      child: SizedBox(
+                                        height: AppSize.field,
+                                        width: double.infinity,
+                                        child: OutlinedButton(
+                                          key: const ValueKey(
+                                            'read-product-label',
+                                          ),
+                                          onPressed: _blocked
+                                              ? null
+                                              : _readProductLabel,
+                                          style:
+                                              AppButtonStyles.compactOutlined(
+                                                context,
+                                              ).copyWith(
+                                                minimumSize:
+                                                    const WidgetStatePropertyAll(
+                                                      Size(
+                                                        double.infinity,
+                                                        AppSize.field,
+                                                      ),
+                                                    ),
+                                                padding:
+                                                    const WidgetStatePropertyAll(
+                                                      EdgeInsets.symmetric(
+                                                        horizontal:
+                                                            AppSpacing.xxs,
+                                                      ),
+                                                    ),
+                                                side: WidgetStatePropertyAll(
+                                                  BorderSide(
+                                                    color:
+                                                        scheme.outlineVariant,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                elevation:
+                                                    WidgetStateProperty.resolveWith(
+                                                      (states) =>
+                                                          states.contains(
+                                                                WidgetState
+                                                                    .pressed,
+                                                              ) ||
+                                                              states.contains(
+                                                                WidgetState
+                                                                    .disabled,
+                                                              )
+                                                          ? 0
+                                                          : 1,
+                                                    ),
+                                                shadowColor:
+                                                    WidgetStatePropertyAll(
+                                                      scheme.shadow.withValues(
+                                                        alpha: 0.18,
+                                                      ),
+                                                    ),
+                                              ),
+                                          child: _readingText
+                                              ? const SizedBox.square(
+                                                  dimension: 18,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                      ),
+                                                )
+                                              : MediaQuery.textScalerOf(
+                                                      context,
+                                                    ).scale(
+                                                      AppButtonStyles
+                                                          .compactFontSize,
+                                                    ) >
+                                                    18
+                                              ? const Icon(
+                                                  Icons
+                                                      .document_scanner_outlined,
+                                                  size: AppSize.icon,
+                                                )
+                                              : const Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .document_scanner_outlined,
+                                                      size: 16,
+                                                    ),
+                                                    SizedBox(
+                                                      width: AppSpacing.xxs,
+                                                    ),
+                                                    Flexible(
+                                                      child: Text(
+                                                        'Read label',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (nameField.errorText case final error?)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              left: AppSpacing.sm,
+                              top: AppSpacing.xxs,
+                            ),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: Text(
+                                error,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: scheme.error),
+                              ),
+                            ),
+                          ),
+                        if (_recognizedProductName case final recognized?) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          _RecognizedProductLabel(
+                            text: recognized,
+                            onAccept: _acceptRecognizedProductName,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Row(
@@ -591,16 +762,6 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                   Navigator.pop(context, _ProductPhotoAction.takeProductPhoto),
             ),
             ListTile(
-              key: const ValueKey('scan-product-label-action'),
-              leading: const Icon(Icons.document_scanner_outlined),
-              title: const Text('Read product label'),
-              subtitle: const Text(
-                'Take one photo and suggest the name, brand, size, and price.',
-              ),
-              onTap: () =>
-                  Navigator.pop(context, _ProductPhotoAction.readProductLabel),
-            ),
-            ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Choose from gallery'),
               onTap: () =>
@@ -619,19 +780,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
           picked = await ref
               .read(productCaptureLauncherProvider)
               .capture(context, purpose: ProductCapturePurpose.productPhoto);
-        case _ProductPhotoAction.readProductLabel:
-          picked = await ref
-              .read(productCaptureLauncherProvider)
-              .capture(context, purpose: ProductCapturePurpose.productLabel);
         case _ProductPhotoAction.chooseFromGallery:
           picked = await ref.read(productPhotoPickerProvider).pickFromGallery();
       }
       if (!mounted || picked == null) return;
       await _setPendingPhoto(picked);
-      if (!mounted) return;
-      if (action == _ProductPhotoAction.readProductLabel) {
-        await _readPhotoText(picked);
-      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -650,88 +803,78 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
     });
   }
 
-  Future<void> _readCurrentPhotoText() async {
-    final existingPath = _removeExistingPhoto
-        ? null
-        : widget.product?.localImagePath;
-    final source =
-        _pendingPhoto ?? (existingPath == null ? null : XFile(existingPath));
-    if (source == null || _blocked) return;
-    await _readPhotoText(source);
-  }
-
-  Future<void> _readPhotoText(XFile source) async {
+  Future<void> _readProductLabel() async {
     if (_blocked) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _readingText = true);
-    late final ProductTextRecognitionResult recognition;
+    XFile? source;
     try {
-      recognition = await ref
+      source = await ref
+          .read(productCaptureLauncherProvider)
+          .capture(context, purpose: ProductCapturePurpose.productLabel);
+      if (!mounted || source == null) return;
+
+      final recognition = await ref
           .read(productTextRecognizerProvider)
           .recognizeImagePath(source.path);
+      if (!mounted) return;
+
+      final productName = recognition.suggestions.productName?.trim();
+      if (productName == null || productName.isEmpty) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No product name found. Move closer and keep only the name in the frame.',
+              ),
+            ),
+          );
+        return;
+      }
+
+      setState(() => _recognizedProductName = productName);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not read the label. Try a brighter, sharper photo.',
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not read the product label. Check camera access and try again.',
+            ),
           ),
-        ),
-      );
-      return;
+        );
     } finally {
+      if (source != null) {
+        _deleteLabelCapture(source);
+      }
       if (mounted) setState(() => _readingText = false);
     }
-    if (!mounted) return;
+  }
 
-    if (recognition.rawLines.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No text was found. Move closer and keep the label inside the frame.',
-          ),
-        ),
-      );
-      return;
+  void _deleteLabelCapture(XFile source) {
+    try {
+      final file = File(source.path);
+      if (file.existsSync()) {
+        file.deleteSync();
+      }
+    } catch (_) {
+      // Label photos are temporary OCR inputs; cleanup is best effort.
     }
+  }
 
-    final selection = await showModalBottomSheet<_RecognizedProductSelection>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) => _RecognizedProductReview(
-        recognition: recognition,
-        currentName: _nameController.text,
-        currentBrand: _brandController.text,
-        currentUnit: _unitController.text,
-        currentPrice: _priceController.text,
-      ),
-    );
-    if (selection == null || !mounted) return;
-
-    if (selection.productName != null) {
-      _replaceControllerText(_nameController, selection.productName!);
-    }
-    if (selection.brand != null) {
-      _replaceControllerText(_brandController, selection.brand!);
-    }
-    if (selection.sizeOrUnit != null) {
-      _replaceControllerText(_unitController, selection.sizeOrUnit!);
-    }
-    if (selection.priceCentavos != null) {
-      _replaceControllerText(
-        _priceController,
-        formatPesoInput(selection.priceCentavos!),
-      );
-    }
+  void _acceptRecognizedProductName() {
+    final productName = _recognizedProductName?.trim();
+    if (productName == null || productName.isEmpty || _blocked) return;
+    _replaceControllerText(_nameController, productName);
+    setState(() => _recognizedProductName = null);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         const SnackBar(
           behavior: SnackBarBehavior.floating,
-          content: Text(
-            'Details filled from the photo. Please review before saving.',
-          ),
+          content: Text('Product name updated from the label.'),
         ),
       );
   }
@@ -741,6 +884,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
       text: value,
       selection: TextSelection.collapsed(offset: value.length),
     );
+    if (identical(controller, _nameController)) {
+      final field = _nameValidationKey.currentState;
+      field?.didChange(value);
+      if (field?.hasError ?? false) field!.validate();
+    }
   }
 
   Future<void> _removePhotoBackground() async {
@@ -1018,318 +1166,73 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   }
 }
 
-enum _ProductPhotoAction {
-  takeProductPhoto,
-  readProductLabel,
-  chooseFromGallery,
-}
+enum _ProductPhotoAction { takeProductPhoto, chooseFromGallery }
 
-final class _RecognizedProductSelection {
-  const _RecognizedProductSelection({
-    this.productName,
-    this.brand,
-    this.sizeOrUnit,
-    this.priceCentavos,
-  });
+class _RecognizedProductLabel extends StatelessWidget {
+  const _RecognizedProductLabel({required this.text, required this.onAccept});
 
-  final String? productName;
-  final String? brand;
-  final String? sizeOrUnit;
-  final int? priceCentavos;
-}
-
-class _RecognizedProductReview extends StatefulWidget {
-  const _RecognizedProductReview({
-    required this.recognition,
-    required this.currentName,
-    required this.currentBrand,
-    required this.currentUnit,
-    required this.currentPrice,
-  });
-
-  final ProductTextRecognitionResult recognition;
-  final String currentName;
-  final String currentBrand;
-  final String currentUnit;
-  final String currentPrice;
-
-  @override
-  State<_RecognizedProductReview> createState() =>
-      _RecognizedProductReviewState();
-}
-
-class _RecognizedProductReviewState extends State<_RecognizedProductReview> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _brandController;
-  late final TextEditingController _unitController;
-  late final TextEditingController _priceController;
-  late bool _useName;
-  late bool _useBrand;
-  late bool _useUnit;
-  late bool _usePrice;
-  String? _priceError;
-
-  ProductTextSuggestions get _suggestions => widget.recognition.suggestions;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(
-      text: _suggestions.productName ?? '',
-    );
-    _brandController = TextEditingController(text: _suggestions.brand ?? '');
-    _unitController = TextEditingController(
-      text: _suggestions.sizeOrUnit ?? '',
-    );
-    _priceController = TextEditingController(
-      text: _suggestions.priceCentavos == null
-          ? ''
-          : formatPesoInput(_suggestions.priceCentavos!),
-    );
-    _useName = _selectedByDefault(widget.currentName, _suggestions.productName);
-    _useBrand = _selectedByDefault(widget.currentBrand, _suggestions.brand);
-    _useUnit = _selectedByDefault(widget.currentUnit, _suggestions.sizeOrUnit);
-    final currentPrice = tryParsePesoCentavos(widget.currentPrice);
-    _usePrice =
-        _suggestions.priceCentavos != null &&
-        (currentPrice == null || currentPrice == _suggestions.priceCentavos);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _brandController.dispose();
-    _unitController.dispose();
-    _priceController.dispose();
-    super.dispose();
-  }
+  final String text;
+  final VoidCallback onAccept;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final hasSuggestion =
-        _suggestions.productName != null ||
-        _suggestions.brand != null ||
-        _suggestions.sizeOrUnit != null ||
-        _suggestions.priceCentavos != null;
-    final hasSelectedSuggestion =
-        (_useName && _nameController.text.trim().isNotEmpty) ||
-        (_useBrand && _brandController.text.trim().isNotEmpty) ||
-        (_useUnit && _unitController.text.trim().isNotEmpty) ||
-        (_usePrice && _priceController.text.trim().isNotEmpty);
-    return FractionallySizedBox(
-      heightFactor: 0.9,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          0,
-          AppSpacing.md,
-          MediaQuery.viewInsetsOf(context).bottom + AppSpacing.sm,
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Detected product name: $text',
+      child: Container(
+        key: const ValueKey('recognized-product-label'),
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: AppRadius.control,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Review label details',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              hasSuggestion
-                  ? 'Select only the details you want to use. Existing values stay unchanged unless you select a replacement.'
-                  : 'Text was found, but no safe field suggestions could be made. Review the detected text below.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_suggestions.productName != null)
-                      _detectedField(
-                        checkboxKey: const ValueKey(
-                          'detected-product-name-checkbox',
-                        ),
-                        label: 'Product name',
-                        controller: _nameController,
-                        selected: _useName,
-                        currentValue: widget.currentName,
-                        onSelected: (value) => setState(() => _useName = value),
-                      ),
-                    if (_suggestions.brand != null)
-                      _detectedField(
-                        checkboxKey: const ValueKey('detected-brand-checkbox'),
-                        label: 'Brand',
-                        controller: _brandController,
-                        selected: _useBrand,
-                        currentValue: widget.currentBrand,
-                        onSelected: (value) =>
-                            setState(() => _useBrand = value),
-                      ),
-                    if (_suggestions.sizeOrUnit != null)
-                      _detectedField(
-                        checkboxKey: const ValueKey('detected-unit-checkbox'),
-                        label: 'Size / unit',
-                        controller: _unitController,
-                        selected: _useUnit,
-                        currentValue: widget.currentUnit,
-                        onSelected: (value) => setState(() => _useUnit = value),
-                      ),
-                    if (_suggestions.priceCentavos != null)
-                      _detectedField(
-                        checkboxKey: const ValueKey('detected-price-checkbox'),
-                        label: 'Printed price',
-                        controller: _priceController,
-                        selected: _usePrice,
-                        currentValue: widget.currentPrice.isEmpty
-                            ? ''
-                            : '₱${widget.currentPrice}',
-                        prefixText: '₱ ',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        errorText: _priceError,
-                        onSelected: (value) =>
-                            setState(() => _usePrice = value),
-                      ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Card(
-                      color: scheme.surfaceContainerLow,
-                      child: ExpansionTile(
-                        key: const ValueKey('recognized-label-text'),
-                        initiallyExpanded: !hasSuggestion,
-                        leading: const Icon(Icons.text_snippet_outlined),
-                        title: const Text('Detected text'),
-                        subtitle: Text(
-                          '${widget.recognition.rawLines.length} line${widget.recognition.rawLines.length == 1 ? '' : 's'} found',
-                        ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.md,
-                              0,
-                              AppSpacing.md,
-                              AppSpacing.md,
-                            ),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: SelectableText(
-                                widget.recognition.rawLines.join('\n'),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                Icon(
+                  Icons.text_snippet_outlined,
+                  size: AppSize.icon,
+                  color: scheme.primary,
                 ),
-                const Spacer(),
-                FilledButton.icon(
-                  key: const ValueKey('apply-detected-product-details'),
-                  onPressed: hasSelectedSuggestion ? _submit : null,
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Use selected'),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Detected text',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      SelectableText(
+                        text,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            FilledButton.icon(
+              key: const ValueKey('use-recognized-product-label'),
+              onPressed: onAccept,
+              icon: const Icon(Icons.check_rounded),
+              label: const Text('OK, use this text'),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _detectedField({
-    required ValueKey<String> checkboxKey,
-    required String label,
-    required TextEditingController controller,
-    required bool selected,
-    required String currentValue,
-    required ValueChanged<bool> onSelected,
-    TextInputType? keyboardType,
-    String? prefixText,
-    String? errorText,
-  }) {
-    final current = currentValue.trim();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Checkbox(
-              key: checkboxKey,
-              value: selected,
-              onChanged: (value) => onSelected(value ?? false),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: selected,
-              onChanged: (_) => setState(() => _priceError = null),
-              keyboardType: keyboardType,
-              decoration: InputDecoration(
-                labelText: label,
-                prefixText: prefixText,
-                errorText: errorText,
-                helperText: current.isEmpty
-                    ? 'New suggestion'
-                    : selected
-                    ? 'Will replace: $current'
-                    : 'Keeping: $current',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _submit() {
-    final price = _usePrice
-        ? tryParsePesoCentavos(_priceController.text)
-        : null;
-    if (_usePrice && (price == null || price <= 0)) {
-      setState(() => _priceError = 'Enter a valid price.');
-      return;
-    }
-    Navigator.of(context).pop(
-      _RecognizedProductSelection(
-        productName: _selectedText(_useName, _nameController),
-        brand: _selectedText(_useBrand, _brandController),
-        sizeOrUnit: _selectedText(_useUnit, _unitController),
-        priceCentavos: price,
-      ),
-    );
-  }
-
-  static bool _selectedByDefault(String current, String? suggestion) {
-    if (suggestion == null || suggestion.trim().isEmpty) return false;
-    final normalizedCurrent = current.trim().toLowerCase();
-    return normalizedCurrent.isEmpty ||
-        normalizedCurrent == suggestion.trim().toLowerCase();
-  }
-
-  static String? _selectedText(
-    bool selected,
-    TextEditingController controller,
-  ) {
-    final value = controller.text.trim();
-    return selected && value.isNotEmpty ? value : null;
   }
 }
 
@@ -1466,11 +1369,9 @@ class _PhotoEditor extends StatelessWidget {
     required this.removeExisting,
     required this.busy,
     required this.removingBackground,
-    required this.readingText,
     required this.backgroundRemoved,
     required this.onChoose,
     required this.onRemoveBackground,
-    required this.onReadText,
     required this.onRemove,
   });
 
@@ -1479,11 +1380,9 @@ class _PhotoEditor extends StatelessWidget {
   final bool removeExisting;
   final bool busy;
   final bool removingBackground;
-  final bool readingText;
   final bool backgroundRemoved;
   final VoidCallback onChoose;
   final VoidCallback onRemoveBackground;
-  final VoidCallback onReadText;
   final VoidCallback onRemove;
 
   @override
@@ -1509,7 +1408,6 @@ class _PhotoEditor extends StatelessWidget {
                       height: 104,
                       fit: BoxFit.cover,
                       cacheWidth: previewCacheSize,
-                      cacheHeight: previewCacheSize,
                       errorBuilder: (_, _, _) => const ProductImagePlaceholder(
                         width: 104,
                         height: 104,
@@ -1522,7 +1420,6 @@ class _PhotoEditor extends StatelessWidget {
                       height: 104,
                       fit: BoxFit.cover,
                       cacheWidth: previewCacheSize,
-                      cacheHeight: previewCacheSize,
                       errorBuilder: (_, _, _) => const ProductImagePlaceholder(
                         width: 104,
                         height: 104,
@@ -1563,20 +1460,6 @@ class _PhotoEditor extends StatelessWidget {
                             : backgroundRemoved
                             ? 'Background removed'
                             : 'Remove background',
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    OutlinedButton.icon(
-                      key: const ValueKey('read-product-photo-text'),
-                      onPressed: busy ? null : onReadText,
-                      icon: readingText
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.document_scanner_outlined),
-                      label: Text(
-                        readingText ? 'Reading label…' : 'Read label text',
                       ),
                     ),
                     TextButton.icon(

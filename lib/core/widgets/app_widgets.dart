@@ -1,6 +1,7 @@
 export 'app_search_field.dart';
 export 'app_section_header.dart';
 export 'app_state_views.dart';
+export 'camera_scan_frame.dart';
 export 'price_text.dart';
 export 'product_image_placeholder.dart';
 export 'quantity_stepper.dart';

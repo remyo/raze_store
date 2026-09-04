@@ -19,7 +19,6 @@ class BoundedNetworkImage extends StatefulWidget {
     this.height,
     this.fit = BoxFit.cover,
     this.cacheWidth,
-    this.cacheHeight,
     this.semanticLabel,
     this.timeout = const Duration(seconds: 10),
     this.maximumBytes = 5 * 1024 * 1024,
@@ -32,7 +31,6 @@ class BoundedNetworkImage extends StatefulWidget {
   final double? height;
   final BoxFit fit;
   final int? cacheWidth;
-  final int? cacheHeight;
   final String? semanticLabel;
   final Duration timeout;
   final int maximumBytes;
@@ -83,7 +81,6 @@ class _BoundedNetworkImageState extends State<BoundedNetworkImage> {
       height: widget.height,
       fit: widget.fit,
       cacheWidth: widget.cacheWidth,
-      cacheHeight: widget.cacheHeight,
       semanticLabel: widget.semanticLabel,
       gaplessPlayback: true,
       errorBuilder: (_, _, _) => widget.fallback,

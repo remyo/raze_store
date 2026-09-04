@@ -540,7 +540,6 @@ class _CartLineTile extends StatelessWidget {
                         height: 64,
                         fit: BoxFit.cover,
                         cacheWidth: 192,
-                        cacheHeight: 192,
                       )
                     : Image.file(
                         File(imagePath),
@@ -548,7 +547,6 @@ class _CartLineTile extends StatelessWidget {
                         height: 64,
                         fit: BoxFit.cover,
                         cacheWidth: 192,
-                        cacheHeight: 192,
                         errorBuilder: (_, _, _) => imageFallback,
                       ),
               ),

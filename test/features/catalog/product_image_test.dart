@@ -35,10 +35,11 @@ void main() {
     );
 
     final rendered = tester.widget<Image>(find.byType(Image));
+    expect(rendered.fit, BoxFit.cover);
     expect(rendered.image, isA<ResizeImage>());
     final resized = rendered.image as ResizeImage;
     expect(resized.width, 1024);
-    expect(resized.height, 1024);
+    expect(resized.height, isNull);
     expect(resized.imageProvider, isA<FileImage>());
     expect((resized.imageProvider as FileImage).file.path, local.path);
   });
@@ -62,10 +63,11 @@ void main() {
     );
 
     final rendered = tester.widget<Image>(find.byType(Image));
+    expect(rendered.fit, BoxFit.cover);
     expect(rendered.image, isA<ResizeImage>());
     final resized = rendered.image as ResizeImage;
     expect(resized.width, 1024);
-    expect(resized.height, 1024);
+    expect(resized.height, isNull);
     expect(resized.imageProvider, isA<FileImage>());
     expect((resized.imageProvider as FileImage).file.path, catalog.path);
   });

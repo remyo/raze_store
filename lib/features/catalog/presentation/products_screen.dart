@@ -713,7 +713,7 @@ class _ProductGridCard extends StatelessWidget {
                   product: product,
                   width: double.infinity,
                   height: imageExtent,
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
                   borderRadius: AppRadius.control,
                 ),
               ),

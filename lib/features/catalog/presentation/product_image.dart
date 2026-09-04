@@ -51,7 +51,6 @@ class ProductImage extends StatelessWidget {
         height: height,
         fit: fit,
         cacheWidth: cacheSize,
-        cacheHeight: cacheSize,
         semanticLabel: product.name,
       );
     }
@@ -66,7 +65,6 @@ class ProductImage extends StatelessWidget {
         height: height,
         fit: fit,
         cacheWidth: cacheSize,
-        cacheHeight: cacheSize,
         errorBuilder: (_, _, _) => remoteOrPlaceholder(),
         semanticLabel: product.name,
       );
@@ -81,7 +79,6 @@ class ProductImage extends StatelessWidget {
           height: height,
           fit: fit,
           cacheWidth: cacheSize,
-          cacheHeight: cacheSize,
           errorBuilder: (_, _, _) => catalogOrRemote(),
           semanticLabel: product.name,
         ),

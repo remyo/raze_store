@@ -1257,7 +1257,6 @@ final class _ReviewProductThumbnail extends StatelessWidget {
         height: size,
         fit: BoxFit.cover,
         cacheWidth: cacheSize,
-        cacheHeight: cacheSize,
         filterQuality: FilterQuality.low,
         semanticLabel: 'Product image for $productName',
         errorBuilder: (_, _, _) => fallback,

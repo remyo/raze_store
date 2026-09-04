@@ -4,8 +4,10 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/core/widgets/app_widgets.dart';
 
 /// The kind of product detail the guided camera should frame.
 enum ProductCapturePurpose { productPhoto, productLabel }
@@ -54,6 +56,22 @@ abstract interface class ProductCameraSession {
   Future<void> dispose();
 }
 
+/// Optional camera capability used by the label reader's camera switch action.
+///
+/// Keeping this separate from [ProductCameraSession] means test and alternate
+/// sessions that only support one camera do not need to implement switching.
+abstract interface class ProductCameraSwitchingSession {
+  bool get canSwitchCamera;
+
+  Future<void> switchCamera();
+}
+
+/// Optional preview geometry used to crop a camera feed like the barcode
+/// scanner without stretching it.
+abstract interface class _ProductCameraPreviewGeometry {
+  Size? get orientedPreviewSize;
+}
+
 /// Creates a session using the rear camera, falling back to the first camera.
 Future<ProductCameraSession> defaultProductCameraSessionFactory() async {
   final cameras = await availableCameras();
@@ -62,14 +80,7 @@ Future<ProductCameraSession> defaultProductCameraSessionFactory() async {
   }
 
   final selectedCamera = selectProductCamera(cameras);
-  return _PluginProductCameraSession(
-    CameraController(
-      selectedCamera,
-      ResolutionPreset.high,
-      enableAudio: false,
-      imageFormatGroup: productCameraImageFormat(defaultTargetPlatform),
-    ),
-  );
+  return _PluginProductCameraSession(cameras, cameras.indexOf(selectedCamera));
 }
 
 /// Selects a rear camera when one is available.
@@ -193,6 +204,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
   bool _starting = true;
   bool _capturing = false;
   bool _changingTorch = false;
+  bool _switchingCamera = false;
   bool _torchEnabled = false;
   bool _isLowLight = false;
   String? _errorMessage;
@@ -248,6 +260,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
       _starting = true;
       _errorMessage = null;
       _torchEnabled = false;
+      _switchingCamera = false;
       _isLowLight = false;
       _lightMonitor.reset();
     });
@@ -302,6 +315,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
         _starting = true;
         _capturing = false;
         _changingTorch = false;
+        _switchingCamera = false;
         _torchEnabled = false;
         _isLowLight = false;
       });
@@ -313,7 +327,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
 
   Future<void> _capture() async {
     final session = _session;
-    if (session == null || _capturing || _changingTorch) {
+    if (session == null || _capturing || _changingTorch || _switchingCamera) {
       return;
     }
 
@@ -354,7 +368,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
 
   Future<void> _setTorchEnabled(bool enabled) async {
     final session = _session;
-    if (session == null || _changingTorch || _capturing) {
+    if (session == null || _changingTorch || _capturing || _switchingCamera) {
       return;
     }
 
@@ -381,15 +395,73 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
     }
   }
 
+  Future<void> _switchCamera() async {
+    final session = _session;
+    if (session == null ||
+        session is! ProductCameraSwitchingSession ||
+        _switchingCamera ||
+        _changingTorch ||
+        _capturing) {
+      return;
+    }
+    final switchingSession = session as ProductCameraSwitchingSession;
+    if (!switchingSession.canSwitchCamera) {
+      return;
+    }
+
+    setState(() => _switchingCamera = true);
+    try {
+      await session.stopLuminanceSampling();
+      await switchingSession.switchCamera();
+      if (!mounted || !identical(_session, session)) {
+        return;
+      }
+
+      _lightMonitor.reset();
+      setState(() {
+        _switchingCamera = false;
+        _torchEnabled = false;
+        _isLowLight = false;
+      });
+
+      try {
+        await session.startLuminanceSampling((luminance) {
+          if (!mounted || !identical(_session, session)) {
+            return;
+          }
+          if (_lightMonitor.addSample(luminance)) {
+            setState(() => _isLowLight = _lightMonitor.isLowLight);
+          }
+        });
+      } catch (_) {
+        // Camera switching still succeeds when light sampling is unavailable.
+      }
+    } catch (_) {
+      if (!mounted || !identical(_session, session)) {
+        return;
+      }
+      setState(() => _switchingCamera = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not switch cameras. Please try again.'),
+        ),
+      );
+      await _openCamera();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final readsLabel = widget.purpose == ProductCapturePurpose.productLabel;
     return PopScope(
       canPop: !_capturing,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: readsLabel
+            ? Theme.of(context).scaffoldBackgroundColor
+            : Colors.black,
         appBar: AppBar(
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
+          backgroundColor: readsLabel ? null : Colors.black,
+          foregroundColor: readsLabel ? null : Colors.white,
           title: Text(widget.purpose.title),
           leading: IconButton(
             onPressed: _capturing ? null : () => Navigator.of(context).pop(),
@@ -403,6 +475,10 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
   }
 
   Widget _buildBody() {
+    if (widget.purpose == ProductCapturePurpose.productLabel) {
+      return _buildLabelBody();
+    }
+
     final errorMessage = _errorMessage;
     if (errorMessage != null) {
       return _CameraUnavailableView(
@@ -433,13 +509,24 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
           child: Center(child: session.buildPreview()),
         ),
         Semantics(
+          key: widget.purpose == ProductCapturePurpose.productLabel
+              ? const ValueKey('product-label-guide-frame')
+              : null,
           container: true,
           label: widget.purpose.guideSemanticsLabel,
           child: IgnorePointer(
-            child: CustomPaint(
-              key: const ValueKey('product-capture-guide-frame'),
-              painter: _ProductGuidePainter(widget.purpose),
-            ),
+            child: widget.purpose == ProductCapturePurpose.productLabel
+                ? const CameraScanFrame(
+                    key: ValueKey('product-capture-guide-frame'),
+                    frameKey: ValueKey('product-label-guide-window'),
+                    widthFactor: 0.78,
+                    maximumWidth: 530.4,
+                    aspectRatio: 2.25,
+                  )
+                : CustomPaint(
+                    key: const ValueKey('product-capture-guide-frame'),
+                    painter: _ProductGuidePainter(widget.purpose),
+                  ),
           ),
         ),
         Align(
@@ -456,13 +543,29 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
                   horizontal: AppSpacing.md,
                   vertical: AppSpacing.sm,
                 ),
-                child: Text(
-                  widget.purpose.instruction,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.purpose.instruction,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (widget.purpose.secondaryInstruction
+                        case final hint?) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        hint,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -559,22 +662,392 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
       ],
     );
   }
+
+  Widget _buildLabelBody() {
+    final session = _session;
+    final ProductCameraSwitchingSession? switchableSession =
+        session is ProductCameraSwitchingSession
+        ? session as ProductCameraSwitchingSession
+        : null;
+    return SafeArea(
+      top: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const pageInset = AppSpacing.sm;
+          const controlGap = AppSpacing.md;
+          final landscape = constraints.maxWidth > constraints.maxHeight;
+          final shutterSize = constraints.maxHeight < 360 ? 64.0 : 72.0;
+          final contentWidth = math.max(
+            1.0,
+            constraints.maxWidth - (pageInset * 2),
+          );
+          final contentHeight = math.max(
+            1.0,
+            constraints.maxHeight - (pageInset * 2),
+          );
+          final widthForCamera = landscape
+              ? contentWidth - controlGap - shutterSize
+              : contentWidth;
+          final heightForCamera = landscape
+              ? contentHeight
+              : contentHeight - controlGap - shutterSize;
+          final cameraWidth = math.max(
+            1.0,
+            math.min(
+              720.0,
+              math.min(widthForCamera, heightForCamera * (4 / 3)),
+            ),
+          );
+
+          final cameraCard = _buildLabelCameraCard(
+            session: session,
+            switchableSession: switchableSession,
+            width: cameraWidth,
+          );
+          final shutter = _buildLabelShutter(
+            session: session,
+            dimension: shutterSize,
+          );
+
+          return SingleChildScrollView(
+            key: const ValueKey('product-label-camera-scroll-view'),
+            padding: const EdgeInsets.all(pageInset),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: contentHeight),
+              child: landscape
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        cameraCard,
+                        const SizedBox(width: controlGap),
+                        shutter,
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        cameraCard,
+                        const SizedBox(height: controlGap),
+                        shutter,
+                      ],
+                    ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLabelCameraCard({
+    required ProductCameraSession? session,
+    required ProductCameraSwitchingSession? switchableSession,
+    required double width,
+  }) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 720),
+      child: SizedBox(
+        width: width,
+        child: Card(
+          margin: EdgeInsets.zero,
+          color: Colors.black,
+          clipBehavior: Clip.antiAlias,
+          child: AspectRatio(
+            aspectRatio: 4 / 3,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (_errorMessage case final message?)
+                  _CameraUnavailableView(message: message, onRetry: _openCamera)
+                else if (_starting || session == null)
+                  const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        SizedBox(height: AppSpacing.md),
+                        Text(
+                          'Starting camera…',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  ColoredBox(
+                    color: Colors.black,
+                    child: _CoverCameraPreview(
+                      key: const ValueKey('product-capture-preview-cover'),
+                      session: session,
+                    ),
+                  ),
+                  Semantics(
+                    key: const ValueKey('product-label-guide-frame'),
+                    container: true,
+                    label: 'Product name guide frame',
+                    child: const IgnorePointer(
+                      child: CameraScanFrame(
+                        key: ValueKey('product-capture-guide-frame'),
+                        frameKey: ValueKey('product-label-guide-window'),
+                        widthFactor: 0.84,
+                        aspectRatio: 2.25,
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _LabelCameraAction(
+                            buttonKey: const ValueKey(
+                              'product-capture-torch-button',
+                            ),
+                            tooltip: _torchEnabled
+                                ? 'Turn flash off'
+                                : 'Turn flash on',
+                            icon: _torchEnabled
+                                ? Icons.flash_on_rounded
+                                : Icons.flash_off_rounded,
+                            enabled:
+                                !_changingTorch &&
+                                !_switchingCamera &&
+                                !_capturing,
+                            progress: _changingTorch,
+                            onPressed: _toggleTorch,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          _LabelCameraAction(
+                            buttonKey: const ValueKey(
+                              'product-capture-switch-camera-button',
+                            ),
+                            tooltip: 'Switch camera',
+                            icon: Icons.cameraswitch_outlined,
+                            enabled:
+                                switchableSession?.canSwitchCamera == true &&
+                                !_changingTorch &&
+                                !_switchingCamera &&
+                                !_capturing,
+                            progress: _switchingCamera,
+                            onPressed: _switchCamera,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      child: _isLowLight
+                          ? _LowLightWarning(
+                              torchEnabled: _torchEnabled,
+                              changingTorch: _changingTorch,
+                              onTurnOnTorch: () => _setTorchEnabled(true),
+                            )
+                          : DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: const Color(0xCC15211F),
+                                borderRadius: AppRadius.control,
+                              ),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.sm,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                child: Text(
+                                  'Center the product name inside the frame',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  if (_capturing)
+                    const ColoredBox(
+                      color: Color(0x66000000),
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabelShutter({
+    required ProductCameraSession? session,
+    required double dimension,
+  }) {
+    if (session == null || _errorMessage != null) {
+      return const SizedBox.shrink();
+    }
+    return SizedBox.square(
+      dimension: dimension,
+      child: IconButton.filled(
+        key: const ValueKey('product-capture-shutter-button'),
+        onPressed: _capturing || _changingTorch || _switchingCamera
+            ? null
+            : _capture,
+        tooltip: 'Read label',
+        style: IconButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        ),
+        icon: _capturing
+            ? const SizedBox.square(
+                dimension: 28,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              )
+            : const Icon(Icons.camera_alt_rounded, size: 32),
+      ),
+    );
+  }
 }
 
-class _PluginProductCameraSession implements ProductCameraSession {
-  _PluginProductCameraSession(this._controller);
+class _CoverCameraPreview extends StatelessWidget {
+  const _CoverCameraPreview({super.key, required this.session});
+
+  final ProductCameraSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final targetSize = constraints.biggest;
+        final reportedSize = session is _ProductCameraPreviewGeometry
+            ? (session as _ProductCameraPreviewGeometry).orientedPreviewSize
+            : null;
+        final sourceSize =
+            reportedSize == null ||
+                !reportedSize.width.isFinite ||
+                !reportedSize.height.isFinite ||
+                reportedSize.width <= 0 ||
+                reportedSize.height <= 0
+            ? targetSize
+            : reportedSize;
+        return ClipRect(
+          child: SizedBox.fromSize(
+            size: targetSize,
+            child: FittedBox(
+              fit: BoxFit.cover,
+              child: SizedBox.fromSize(
+                size: sourceSize,
+                child: session.buildPreview(),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LabelCameraAction extends StatelessWidget {
+  const _LabelCameraAction({
+    required this.buttonKey,
+    required this.tooltip,
+    required this.icon,
+    required this.enabled,
+    required this.progress,
+    required this.onPressed,
+  });
+
+  final Key buttonKey;
+  final String tooltip;
+  final IconData icon;
+  final bool enabled;
+  final bool progress;
+  final Future<void> Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xB315211F),
+      shape: const CircleBorder(),
+      child: IconButton(
+        key: buttonKey,
+        onPressed: enabled ? () => unawaited(onPressed()) : null,
+        tooltip: tooltip,
+        color: Colors.white,
+        disabledColor: Colors.white38,
+        icon: progress
+            ? const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Icon(icon),
+      ),
+    );
+  }
+}
+
+class _PluginProductCameraSession
+    implements
+        ProductCameraSession,
+        ProductCameraSwitchingSession,
+        _ProductCameraPreviewGeometry {
+  _PluginProductCameraSession(
+    List<CameraDescription> cameras,
+    this._cameraIndex,
+  ) : _cameras = List.unmodifiable(cameras) {
+    _controller = _createController(_cameras[_cameraIndex]);
+  }
 
   static const _sampleInterval = Duration(milliseconds: 650);
 
-  final CameraController _controller;
+  final List<CameraDescription> _cameras;
+  int _cameraIndex;
+  late CameraController _controller;
   DateTime? _lastSampleAt;
   bool _disposed = false;
+
+  CameraController _createController(CameraDescription camera) {
+    return CameraController(
+      camera,
+      ResolutionPreset.high,
+      enableAudio: false,
+      imageFormatGroup: productCameraImageFormat(defaultTargetPlatform),
+    );
+  }
+
+  @override
+  bool get canSwitchCamera => !_disposed && _cameras.length > 1;
 
   @override
   Future<void> initialize() => _controller.initialize();
 
   @override
   Widget buildPreview() => CameraPreview(_controller);
+
+  @override
+  Size? get orientedPreviewSize {
+    final previewSize = _controller.value.previewSize;
+    if (previewSize == null) {
+      return null;
+    }
+    final value = _controller.value;
+    final orientation = value.isRecordingVideo
+        ? value.recordingOrientation ?? value.deviceOrientation
+        : value.previewPauseOrientation ??
+              value.lockedCaptureOrientation ??
+              value.deviceOrientation;
+    final landscape =
+        orientation == DeviceOrientation.landscapeLeft ||
+        orientation == DeviceOrientation.landscapeRight;
+    return landscape
+        ? previewSize
+        : Size(previewSize.height, previewSize.width);
+  }
 
   @override
   Future<void> startLuminanceSampling(ValueChanged<double> onSample) async {
@@ -616,6 +1089,28 @@ class _PluginProductCameraSession implements ProductCameraSession {
       return Future<void>.value();
     }
     return _controller.setFlashMode(enabled ? FlashMode.torch : FlashMode.off);
+  }
+
+  @override
+  Future<void> switchCamera() async {
+    if (!canSwitchCamera) {
+      return;
+    }
+
+    final previousController = _controller;
+    if (previousController.value.isStreamingImages) {
+      await previousController.stopImageStream();
+    }
+    if (previousController.value.isInitialized &&
+        previousController.value.flashMode == FlashMode.torch) {
+      await previousController.setFlashMode(FlashMode.off);
+    }
+    await previousController.dispose();
+
+    _cameraIndex = (_cameraIndex + 1) % _cameras.length;
+    _lastSampleAt = null;
+    _controller = _createController(_cameras[_cameraIndex]);
+    await _controller.initialize();
   }
 
   @override
@@ -818,7 +1313,7 @@ class _ProductGuidePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final guideRect = _guideRect(size, purpose.guideAspectRatio);
+    final guideRect = _productGuideRect(size, purpose.guideAspectRatio);
     final guide = RRect.fromRectAndRadius(
       guideRect,
       const Radius.circular(AppRadius.large),
@@ -890,48 +1385,54 @@ class _ProductGuidePainter extends CustomPainter {
       );
   }
 
-  Rect _guideRect(Size size, double aspectRatio) {
-    final maxWidth = math.max(0.0, size.width - (AppSpacing.xxl * 2));
-    final maxHeight = math.max(0.0, size.height * 0.56);
-    var width = math.min(maxWidth, 430.0);
-    var height = width / aspectRatio;
-    if (height > maxHeight) {
-      height = maxHeight;
-      width = height * aspectRatio;
-    }
-    return Rect.fromCenter(
-      center: Offset(size.width / 2, (size.height * 0.47)),
-      width: width,
-      height: height,
-    );
-  }
-
   @override
   bool shouldRepaint(_ProductGuidePainter oldDelegate) =>
       oldDelegate.purpose != purpose;
 }
 
+Rect _productGuideRect(Size size, double aspectRatio) {
+  final maxWidth = math.max(0.0, size.width - (AppSpacing.xxl * 2));
+  final maxHeight = math.max(0.0, size.height * 0.56);
+  var width = math.min(maxWidth, 430.0);
+  var height = width / aspectRatio;
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height * aspectRatio;
+  }
+  return Rect.fromCenter(
+    center: Offset(size.width / 2, (size.height * 0.47)),
+    width: width,
+    height: height,
+  );
+}
+
 extension on ProductCapturePurpose {
   String get title => switch (this) {
     ProductCapturePurpose.productPhoto => 'Take product photo',
-    ProductCapturePurpose.productLabel => 'Capture product label',
+    ProductCapturePurpose.productLabel => 'Read label',
   };
 
   String get instruction => switch (this) {
     ProductCapturePurpose.productPhoto =>
       'Fit the whole product inside the frame',
     ProductCapturePurpose.productLabel =>
-      'Fill the frame with the product label and keep text sharp',
+      'Center the product name inside the frame',
+  };
+
+  String? get secondaryInstruction => switch (this) {
+    ProductCapturePurpose.productPhoto => null,
+    ProductCapturePurpose.productLabel =>
+      'Keep other words outside the frame, avoid glare, and hold steady.',
   };
 
   String get guideSemanticsLabel => switch (this) {
     ProductCapturePurpose.productPhoto => 'Product photo guide frame',
-    ProductCapturePurpose.productLabel => 'Product label guide frame',
+    ProductCapturePurpose.productLabel => 'Product name guide frame',
   };
 
   double get guideAspectRatio => switch (this) {
     ProductCapturePurpose.productPhoto => 0.78,
-    ProductCapturePurpose.productLabel => 1.45,
+    ProductCapturePurpose.productLabel => 2.25,
   };
 }
 

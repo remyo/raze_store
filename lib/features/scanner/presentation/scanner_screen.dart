@@ -678,28 +678,7 @@ class _ScannerOverlay extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColoredBox(color: Colors.black.withValues(alpha: 0.08)),
-        Align(
-          child: FractionallySizedBox(
-            widthFactor: 0.78,
-            child: AspectRatio(
-              aspectRatio: 2.25,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 2.5),
-                  borderRadius: AppRadius.card,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x73000000),
-                      blurRadius: 14,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        const CameraScanFrame(widthFactor: 0.78, aspectRatio: 2.25),
         Align(
           alignment: Alignment.bottomCenter,
           child: Padding(

@@ -329,7 +329,6 @@ class _RemoteProductImage extends StatelessWidget {
                 fallback: placeholder,
                 fit: BoxFit.cover,
                 cacheWidth: 192,
-                cacheHeight: 192,
               ),
       ),
     );
