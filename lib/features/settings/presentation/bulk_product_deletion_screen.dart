@@ -10,6 +10,7 @@ import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/catalog/application/bulk_product_deletion_providers.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
+import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 
@@ -463,60 +464,90 @@ class _SelectableProductRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final details = <String>[
-      ?product.brand,
-      ?product.category,
-      ?product.barcode,
-    ].where((value) => value.trim().isNotEmpty).join(' · ');
+    final barcode = product.barcode?.trim();
 
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+      color: selected ? scheme.primaryContainer.withValues(alpha: 0.42) : null,
       child: InkWell(
         onTap: enabled ? () => onChanged(!selected) : null,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: AppSpacing.xs,
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xxs,
           ),
-          child: Row(
-            children: [
-              Checkbox(
-                key: ValueKey('bulk-product-checkbox-${product.id}'),
-                value: selected,
-                onChanged: enabled
-                    ? (value) => onChanged(value ?? false)
-                    : null,
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    if (details.isNotEmpty)
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSize.comfortableRow,
+            ),
+            child: Row(
+              children: [
+                ProductImage(
+                  key: ValueKey('bulk-product-image-${product.id}'),
+                  product: product,
+                  width: AppSize.smallThumbnail,
+                  height: AppSize.smallThumbnail,
+                  borderRadius: AppRadius.control,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        details,
+                        product.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                  ],
+                      const SizedBox(height: AppSpacing.xxs),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              barcode == null || barcode.isEmpty
+                                  ? 'No barcode'
+                                  : barcode,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          PriceText(
+                            centavos: product.priceCentavos,
+                            size: PriceTextSize.small,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              PriceText(
-                centavos: product.priceCentavos,
-                size: PriceTextSize.small,
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ],
+                const SizedBox(width: AppSpacing.xs),
+                SizedBox.square(
+                  dimension: AppSize.minimumTouchTarget,
+                  child: Tooltip(
+                    message: selected
+                        ? 'Do not delete this product'
+                        : 'Select product to delete',
+                    child: Checkbox(
+                      key: ValueKey('bulk-product-checkbox-${product.id}'),
+                      value: selected,
+                      visualDensity: VisualDensity.compact,
+                      onChanged: enabled
+                          ? (value) => onChanged(value ?? false)
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

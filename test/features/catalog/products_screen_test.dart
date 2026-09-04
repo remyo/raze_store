@@ -9,6 +9,7 @@ import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/cart/domain/cart.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
+import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
 
 void main() {
@@ -80,7 +81,7 @@ void main() {
     expect(tester.testTextInput.isVisible, isTrue);
   });
 
-  testWidgets('builds rows in pages and resets paging for query and category', (
+  testWidgets('builds product slivers in pages and resets pagination', (
     tester,
   ) async {
     final products = List.generate(
@@ -98,10 +99,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(_listItemCount(tester), 32);
+    // The sliver delegate contains the first 30 products and one lazy loader.
+    expect(_gridItemCount(tester), 31);
     final productScroll = find
         .descendant(
-          of: find.byKey(const ValueKey('products-list')),
+          of: find.byKey(const ValueKey('products-grid')),
           matching: find.byType(Scrollable),
         )
         .first;
@@ -114,27 +116,113 @@ void main() {
     await tester.drag(productScroll, const Offset(0, -10000));
     await tester.pumpAndSettle();
 
-    expect(_listItemCount(tester), greaterThan(32));
+    expect(_gridItemCount(tester), 61);
 
     scrollableState.position.jumpTo(0);
-    await tester.pump();
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(TextField));
     await tester.enterText(find.byType(TextField), 'product');
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(_listItemCount(tester), 32);
+    expect(_gridItemCount(tester), 31);
 
     await tester.drag(productScroll, const Offset(0, -10000));
     await tester.pumpAndSettle();
-    expect(_listItemCount(tester), greaterThan(32));
+    expect(_gridItemCount(tester), 61);
 
     scrollableState.position.jumpTo(0);
     await tester.pump();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Snacks'));
     await tester.pump();
 
-    // Header + the first 30 matching rows + the next-page loader.
-    expect(_listItemCount(tester), 32);
+    expect(_gridItemCount(tester), 31);
+  });
+
+  testWidgets('defaults to a two-column image grid and toggles to list', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(390, 900);
+    addTearDown(tester.view.reset);
+    final products = [
+      for (var index = 0; index < 2; index++)
+        _product(index, category: 'Coffee'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _emptyCartOverride,
+          catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const ProductsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('products-grid')), findsOneWidget);
+    final grid = tester.widget<SliverGrid>(
+      find.byKey(const ValueKey('product-results-grid')),
+    );
+    final delegate =
+        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 2);
+    expect(grid.delegate.estimatedChildCount, products.length);
+
+    for (final product in products) {
+      final tile = find.byKey(ValueKey('product-grid-item-${product.id}'));
+      expect(tile, findsOneWidget);
+      expect(
+        find.descendant(of: tile, matching: find.byType(ProductImage)),
+        findsOneWidget,
+      );
+    }
+
+    await tester.tap(find.byKey(const ValueKey('product-layout-list')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('products-list')), findsOneWidget);
+    expect(find.byKey(const ValueKey('product-results-grid')), findsNothing);
+    final list = tester.widget<SliverList>(
+      find.byKey(const ValueKey('product-results-list')),
+    );
+    expect(list.delegate.estimatedChildCount, products.length);
+  });
+
+  testWidgets('product grid does not overflow a 320 by 667 viewport', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(320, 667);
+    addTearDown(tester.view.reset);
+    final products = [
+      for (var index = 0; index < 6; index++)
+        _product(index, category: 'Coffee'),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _emptyCartOverride,
+          catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const ProductsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('products-grid')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.drag(
+      find.byKey(const ValueKey('products-grid')),
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('categories share one horizontal two-row scroll position', (
@@ -260,11 +348,11 @@ final _emptyCartOverride = cartDraftProvider.overrideWith(
   (ref) => Stream.value(CartDraft([])),
 );
 
-int? _listItemCount(WidgetTester tester) {
-  final list = tester.widget<ListView>(
-    find.byKey(const ValueKey('products-list')),
+int? _gridItemCount(WidgetTester tester) {
+  final grid = tester.widget<SliverGrid>(
+    find.byKey(const ValueKey('product-results-grid')),
   );
-  return list.childrenDelegate.estimatedChildCount;
+  return grid.delegate.estimatedChildCount;
 }
 
 StoreProduct _product(int index, {required String category}) {

@@ -13,6 +13,8 @@ import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog/presentation/product_quick_view.dart';
 
+enum _ProductBrowseLayout { grid, list }
+
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
@@ -29,6 +31,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Timer? _searchDebounce;
   String? _selectedCategory;
   int _visibleProductLimit = _pageSize;
+  _ProductBrowseLayout _layout = _ProductBrowseLayout.grid;
 
   @override
   void initState() {
@@ -74,6 +77,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     setState(() => _visibleProductLimit += _pageSize);
   }
 
+  void _changeLayout(_ProductBrowseLayout layout) {
+    if (_layout == layout) return;
+    setState(() {
+      _layout = layout;
+      _visibleProductLimit = _pageSize;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(catalogProductsProvider);
@@ -109,8 +120,10 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           searchFocusNode: _searchFocusNode,
           isSearching: products.isLoading,
           visibleProductLimit: _visibleProductLimit,
+          layout: _layout,
           onSearch: _onSearchChanged,
           onCategorySelected: _selectCategory,
+          onLayoutChanged: _changeLayout,
           onLoadMore: _showNextPage,
           onOpen: (product) async {
             final added = await showProductQuickView(context, product: product);
@@ -137,8 +150,10 @@ class _ProductsBody extends StatelessWidget {
     required this.searchFocusNode,
     required this.isSearching,
     required this.visibleProductLimit,
+    required this.layout,
     required this.onSearch,
     required this.onCategorySelected,
+    required this.onLayoutChanged,
     required this.onLoadMore,
     required this.onOpen,
     required this.onAddFirst,
@@ -152,8 +167,10 @@ class _ProductsBody extends StatelessWidget {
   final FocusNode searchFocusNode;
   final bool isSearching;
   final int visibleProductLimit;
+  final _ProductBrowseLayout layout;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onCategorySelected;
+  final ValueChanged<_ProductBrowseLayout> onLayoutChanged;
   final VoidCallback onLoadMore;
   final ValueChanged<StoreProduct> onOpen;
   final VoidCallback onAddFirst;
@@ -183,111 +200,212 @@ class _ProductsBody extends StatelessWidget {
         .take(visibleProductLimit)
         .toList(growable: false);
     final hasMore = shownProducts.length < visible.length;
-    final resultItemCount = visible.isEmpty
-        ? 1
-        : shownProducts.length + (hasMore ? 1 : 0);
 
-    return ListView.builder(
-      key: const ValueKey('products-list'),
+    return CustomScrollView(
+      key: ValueKey('products-${layout.name}'),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.xxxl + AppSpacing.xl,
-      ),
-      itemCount: 1 + resultItemCount,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _BoundedListItem(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _ScanCallout(onScan: onScan),
-                const SizedBox(height: AppSpacing.md),
-                AppSearchField(
-                  controller: searchController,
-                  focusNode: searchFocusNode,
-                  hintText: 'Search products or barcode',
-                  onChanged: onSearch,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                SizedBox(
-                  height: 2,
-                  child: isSearching
-                      ? const LinearProgressIndicator(
-                          key: ValueKey('product-search-progress'),
-                          minHeight: 2,
-                        )
-                      : null,
-                ),
-                if (categories.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _ProductCategoryBrowser(
-                    categories: categories,
-                    selectedCategory: activeCategory,
-                    onSelected: onCategorySelected,
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.lg),
-                AppSectionHeader(
-                  title: query.isEmpty ? 'Store products' : 'Search results',
-                  subtitle:
-                      '${visible.length} ${visible.length == 1 ? 'product' : 'products'}',
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
+      slivers: [
+        SliverLayoutBuilder(
+          builder: (context, constraints) => SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              _contentInset(constraints.crossAxisExtent),
+              AppSpacing.md,
+              _contentInset(constraints.crossAxisExtent),
+              AppSpacing.sm,
             ),
-          );
-        }
-
-        if (visible.isEmpty) {
-          return _BoundedListItem(
-            child: SizedBox(
-              height: 320,
-              child: AppEmptyState(
-                icon: products.isEmpty && query.isEmpty
-                    ? Icons.shelves
-                    : Icons.search_off_rounded,
-                title: products.isEmpty && query.isEmpty
-                    ? 'Your store list is empty'
-                    : 'No matching products',
-                message: products.isEmpty && query.isEmpty
-                    ? 'Add the products your family sells. They stay available even when the phone is offline.'
-                    : activeCategory != null
-                    ? 'There are no products left in this category.'
-                    : 'Try a different name, brand, barcode, or category.',
-                actionLabel: products.isEmpty && query.isEmpty
-                    ? 'Add first product'
-                    : null,
-                onAction: products.isEmpty && query.isEmpty ? onAddFirst : null,
+            sliver: SliverToBoxAdapter(
+              child: _ProductsHeader(
+                categories: categories,
+                selectedCategory: activeCategory,
+                query: query,
+                productCount: visible.length,
+                searchController: searchController,
+                searchFocusNode: searchFocusNode,
+                isSearching: isSearching,
+                layout: layout,
+                onSearch: onSearch,
+                onCategorySelected: onCategorySelected,
+                onLayoutChanged: onLayoutChanged,
+                onScan: onScan,
               ),
             ),
-          );
-        }
-
-        final productIndex = index - 1;
-        if (productIndex < shownProducts.length) {
-          final product = shownProducts[productIndex];
-          return _BoundedListItem(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _ProductCard(
-                key: ValueKey('product-list-item-${product.id}'),
-                product: product,
-                onTap: () => onOpen(product),
-              ),
-            ),
-          );
-        }
-
-        return _BoundedListItem(
-          child: _NextPageLoader(
-            key: ValueKey('product-page-${shownProducts.length}'),
-            onVisible: onLoadMore,
           ),
-        );
-      },
+        ),
+        if (visible.isEmpty)
+          SliverLayoutBuilder(
+            builder: (context, constraints) => SliverPadding(
+              padding: EdgeInsets.symmetric(
+                horizontal: _contentInset(constraints.crossAxisExtent),
+              ),
+              sliver: SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 320,
+                  child: AppEmptyState(
+                    icon: products.isEmpty && query.isEmpty
+                        ? Icons.shelves
+                        : Icons.search_off_rounded,
+                    title: products.isEmpty && query.isEmpty
+                        ? 'Your store list is empty'
+                        : 'No matching products',
+                    message: products.isEmpty && query.isEmpty
+                        ? 'Add the products your family sells. They stay available even when the phone is offline.'
+                        : activeCategory != null
+                        ? 'There are no products left in this category.'
+                        : 'Try a different name, brand, barcode, or category.',
+                    actionLabel: products.isEmpty && query.isEmpty
+                        ? 'Add first product'
+                        : null,
+                    onAction: products.isEmpty && query.isEmpty
+                        ? onAddFirst
+                        : null,
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final inset = _contentInset(constraints.crossAxisExtent);
+              final contentWidth = constraints.crossAxisExtent - (inset * 2);
+              final geometry = _productGridGeometry(context, contentWidth);
+              return SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: inset),
+                sliver: switch (layout) {
+                  _ProductBrowseLayout.grid => SliverGrid.builder(
+                    key: const ValueKey('product-results-grid'),
+                    itemCount: shownProducts.length + (hasMore ? 1 : 0),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: geometry.columnCount,
+                      mainAxisSpacing: geometry.spacing,
+                      crossAxisSpacing: geometry.spacing,
+                      mainAxisExtent: geometry.mainAxisExtent,
+                    ),
+                    itemBuilder: (context, index) {
+                      if (index == shownProducts.length) {
+                        return _NextPageLoader(
+                          key: ValueKey('product-page-${shownProducts.length}'),
+                          onVisible: onLoadMore,
+                        );
+                      }
+                      final product = shownProducts[index];
+                      return _ProductGridCard(
+                        key: ValueKey('product-grid-item-${product.id}'),
+                        product: product,
+                        imageExtent: geometry.imageExtent,
+                        onTap: () => onOpen(product),
+                      );
+                    },
+                  ),
+                  _ProductBrowseLayout.list => SliverList.builder(
+                    key: const ValueKey('product-results-list'),
+                    itemCount: shownProducts.length + (hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == shownProducts.length) {
+                        return _NextPageLoader(
+                          key: ValueKey('product-page-${shownProducts.length}'),
+                          onVisible: onLoadMore,
+                        );
+                      }
+                      final product = shownProducts[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: _ProductCard(
+                          key: ValueKey('product-list-item-${product.id}'),
+                          product: product,
+                          onTap: () => onOpen(product),
+                        ),
+                      );
+                    },
+                  ),
+                },
+              );
+            },
+          ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: AppSpacing.xxxl + AppSpacing.xl),
+        ),
+      ],
+    );
+  }
+
+  static double _contentInset(double viewportWidth) => math.max(
+    AppSpacing.md,
+    (viewportWidth - AppBreakpoints.contentMaxWidth) / 2,
+  );
+}
+
+class _ProductsHeader extends StatelessWidget {
+  const _ProductsHeader({
+    required this.categories,
+    required this.selectedCategory,
+    required this.query,
+    required this.productCount,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.isSearching,
+    required this.layout,
+    required this.onSearch,
+    required this.onCategorySelected,
+    required this.onLayoutChanged,
+    required this.onScan,
+  });
+
+  final List<String> categories;
+  final String? selectedCategory;
+  final String query;
+  final int productCount;
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final bool isSearching;
+  final _ProductBrowseLayout layout;
+  final ValueChanged<String> onSearch;
+  final ValueChanged<String?> onCategorySelected;
+  final ValueChanged<_ProductBrowseLayout> onLayoutChanged;
+  final VoidCallback onScan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ScanCallout(onScan: onScan),
+        const SizedBox(height: AppSpacing.md),
+        AppSearchField(
+          controller: searchController,
+          focusNode: searchFocusNode,
+          hintText: 'Search products or barcode',
+          onChanged: onSearch,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        SizedBox(
+          height: 2,
+          child: isSearching
+              ? const LinearProgressIndicator(
+                  key: ValueKey('product-search-progress'),
+                  minHeight: 2,
+                )
+              : null,
+        ),
+        if (categories.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _ProductCategoryBrowser(
+            categories: categories,
+            selectedCategory: selectedCategory,
+            onSelected: onCategorySelected,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        AppSectionHeader(
+          title: query.isEmpty ? 'Store products' : 'Search results',
+          subtitle:
+              '$productCount ${productCount == 1 ? 'product' : 'products'}',
+          action: _ProductLayoutToggle(
+            value: layout,
+            onChanged: onLayoutChanged,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -374,22 +492,92 @@ class _ProductCategoryBrowser extends StatelessWidget {
   }
 }
 
-class _BoundedListItem extends StatelessWidget {
-  const _BoundedListItem({required this.child});
+class _ProductLayoutToggle extends StatelessWidget {
+  const _ProductLayoutToggle({required this.value, required this.onChanged});
 
-  final Widget child;
+  final _ProductBrowseLayout value;
+  final ValueChanged<_ProductBrowseLayout> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: AppBreakpoints.contentMaxWidth,
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: 'Product layout',
+      child: SegmentedButton<_ProductBrowseLayout>(
+        showSelectedIcon: false,
+        selected: {value},
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          minimumSize: const WidgetStatePropertyAll(
+            Size.square(AppSize.compactControl),
+          ),
+          tapTargetSize: MaterialTapTargetSize.padded,
+          padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? scheme.primaryContainer
+                : scheme.surfaceContainerLow,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? scheme.onPrimaryContainer
+                : scheme.onSurfaceVariant,
+          ),
         ),
-        child: SizedBox(width: double.infinity, child: child),
+        segments: const [
+          ButtonSegment(
+            value: _ProductBrowseLayout.grid,
+            icon: SizedBox.square(
+              key: ValueKey('product-layout-grid'),
+              dimension: AppSize.compactControl,
+              child: Icon(Icons.grid_view_rounded, size: AppSize.icon),
+            ),
+            tooltip: 'Show products as a grid',
+          ),
+          ButtonSegment(
+            value: _ProductBrowseLayout.list,
+            icon: SizedBox.square(
+              key: ValueKey('product-layout-list'),
+              dimension: AppSize.compactControl,
+              child: Icon(Icons.view_list_rounded, size: AppSize.icon),
+            ),
+            tooltip: 'Show products as a list',
+          ),
+        ],
+        onSelectionChanged: (selection) {
+          if (selection.isNotEmpty) onChanged(selection.first);
+        },
       ),
     );
   }
+}
+
+({int columnCount, double spacing, double imageExtent, double mainAxisExtent})
+_productGridGeometry(BuildContext context, double width) {
+  final columnCount = switch (width) {
+    < 188 => 1,
+    < 520 => 2,
+    < 760 => 3,
+    < 1000 => 4,
+    _ => 5,
+  };
+  final spacing = width < AppBreakpoints.compact
+      ? AppSpacing.xs
+      : AppSpacing.sm;
+  final itemWidth = (width - (spacing * (columnCount - 1))) / columnCount;
+  final imageExtent = (itemWidth - (AppSpacing.xs * 2))
+      .clamp(80.0, 144.0)
+      .toDouble();
+  final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+  final compactCard = itemWidth < 150;
+  final detailsExtent = compactCard ? 116.0 : 108.0;
+  final scaledTextAllowance = (textScale - 1) * (compactCard ? 78.0 : 64.0);
+  return (
+    columnCount: columnCount,
+    spacing: spacing,
+    imageExtent: imageExtent,
+    mainAxisExtent: imageExtent + detailsExtent + scaledTextAllowance,
+  );
 }
 
 class _NextPageLoader extends StatefulWidget {
@@ -484,6 +672,89 @@ class _ScanCallout extends StatelessWidget {
               label: const Text('Scan'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductGridCard extends StatelessWidget {
+  const _ProductGridCard({
+    super.key,
+    required this.product,
+    required this.imageExtent,
+    required this.onTap,
+  });
+
+  final StoreProduct product;
+  final double imageExtent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final detail = [
+      product.brand,
+      product.unitLabel,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' · ');
+
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: ProductImage(
+                  product: product,
+                  width: double.infinity,
+                  height: imageExtent,
+                  fit: BoxFit.contain,
+                  borderRadius: AppRadius.control,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                product.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              if (detail.isNotEmpty)
+                Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              const Spacer(),
+              PriceText(
+                centavos: product.priceCentavos,
+                size: PriceTextSize.small,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              if (product.sellingUnits.isNotEmpty)
+                Text(
+                  '+${product.sellingUnits.length} other ${product.sellingUnits.length == 1 ? 'unit' : 'units'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

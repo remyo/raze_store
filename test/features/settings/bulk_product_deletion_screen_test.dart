@@ -10,6 +10,8 @@ import 'package:raze_store/core/database/app_database.dart';
 import 'package:raze_store/core/database/database_provider.dart';
 import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/core/storage/product_photo_services.dart';
+import 'package:raze_store/core/widgets/product_image_placeholder.dart';
+import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/settings/presentation/bulk_product_deletion_screen.dart';
 
 void main() {
@@ -91,6 +93,57 @@ void main() {
     expect(tester.takeException(), isNull);
     await _disposeScreen(tester);
   });
+
+  testWidgets(
+    'shows image placeholders before product details and trailing checkboxes',
+    (tester) async {
+      await _seedProducts(database, 2);
+      await _pumpScreen(tester, database: database, root: root);
+
+      final photoRow = find.byKey(
+        const ValueKey('bulk-product-row-product-000'),
+      );
+      final emptyPhotoRow = find.byKey(
+        const ValueKey('bulk-product-row-product-001'),
+      );
+      final photo = find.descendant(
+        of: photoRow,
+        matching: find.byKey(const ValueKey('bulk-product-image-product-000')),
+      );
+      final checkbox = find.descendant(
+        of: photoRow,
+        matching: find.byKey(
+          const ValueKey('bulk-product-checkbox-product-000'),
+        ),
+      );
+
+      expect(photo, findsOneWidget);
+      expect(
+        find.descendant(
+          of: photoRow,
+          matching: find.byType(ProductImagePlaceholder),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: emptyPhotoRow,
+          matching: find.byType(ProductImagePlaceholder),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getCenter(photo).dx,
+        lessThan(tester.getCenter(checkbox).dx),
+      );
+      expect(
+        find.descendant(of: photoRow, matching: find.byType(ProductImage)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await _disposeScreen(tester);
+    },
+  );
 }
 
 Future<void> _seedProducts(
