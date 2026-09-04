@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/money/money.dart';
+import 'package:raze_store/features/cart/application/cart_providers.dart';
+import 'package:raze_store/features/cart/domain/cart.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
@@ -20,6 +22,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _emptyCartOverride,
           catalogProductsProvider.overrideWith((ref) {
             final query = ref.watch(catalogSearchQueryProvider);
             observedQueries.add(query);
@@ -31,6 +34,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.byTooltip('Add product'), findsOneWidget);
+    expect(find.byKey(const ValueKey('open-cart')), findsOneWidget);
+    expect(find.byTooltip('Quick add by unit'), findsNothing);
+    expect(find.byTooltip('Store settings'), findsNothing);
 
     final searchField = find.byType(TextField);
     await tester.tap(searchField);
@@ -81,6 +90,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _emptyCartOverride,
           catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
         ],
         child: MaterialApp(theme: AppTheme.light, home: const ProductsScreen()),
@@ -141,6 +151,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _emptyCartOverride,
           catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
         ],
         child: MaterialApp(theme: AppTheme.light, home: const ProductsScreen()),
@@ -206,6 +217,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _emptyCartOverride,
           catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
         ],
         child: MaterialApp(
@@ -243,6 +255,10 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+
+final _emptyCartOverride = cartDraftProvider.overrideWith(
+  (ref) => Stream.value(CartDraft([])),
+);
 
 int? _listItemCount(WidgetTester tester) {
   final list = tester.widget<ListView>(

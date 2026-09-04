@@ -20,7 +20,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Products'), findsWidgets);
+    expect(find.text('Home'), findsOneWidget);
     expect(find.text('Your store list is empty'), findsOneWidget);
     expect(find.text('Add first product'), findsOneWidget);
   });

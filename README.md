@@ -8,10 +8,17 @@ review simple sales history without turning the app into an inventory system.
 ## MVP scope
 
 - Browse and search every product carried by the store
-- Add, edit, photograph, and delete local products
+- Navigate with three focused tabs: Home, Scan, and Profile
+- Add, edit, photograph, and delete local products with a guided camera frame
+- Warn when a product photo is too dark and offer the camera flashlight
 - Optionally remove a local product photo's background fully on-device
+- Read a photographed product label on-device and review suggested form details
 - Complete first-launch store setup and quickly add barcode, name, and price
 - Scan EAN/UPC/Code 128 barcodes on-device
+- Show an immediate confirmation when a scanned product is punched into cart
+- Configure scan sound, vibration, and a 500–2000 ms repeat-scan cooldown
+- Automatically add the main selling unit or ask which unit to sell
+- Jump directly to the badge-aware cart from Home or the barcode scanner
 - Attach sub-unit prices such as pack/stick, strip/sachet, or tray/piece to one
   main barcode
 - Choose broad built-in categories and manage reusable custom categories
@@ -24,6 +31,7 @@ review simple sales history without turning the app into an inventory system.
 - Keep the unfinished cart locally across accidental restarts
 - Review database, product-image, and temporary-file sizes in Storage Manager
 - Create/restore a complete `.razestore` backup, including sales and photos
+- Receive weekly or monthly in-app backup reminders, or turn them off
 - Import a `.razepack` by keeping matches or updating matches and adding new
   products
 - Export/import a merge-only product CSV for spreadsheet editing
@@ -48,9 +56,10 @@ Shared Philippine product data is installed from a versioned `.razepack` file.
 The pack carries barcode, name, brand, size, category, an optional reference
 price, and an optimized product image. Importing it once makes those products
 available without a server or internet connection. Scanning checks the local
-Drift database only. A single-unit product is punched into the cart immediately;
-a product with piece/pack or other sub-unit prices opens a unit and quantity
-picker first.
+Drift database only. A priced product is punched into the cart using its main
+selling unit by default. Turn off **Add main unit automatically** in **Profile →
+Settings → Barcode scanner** when the seller should choose pack, piece,
+stick, or another configured unit after each scan.
 
 Pack import is always non-deleting and offers two modes. **Keep existing** is
 the recommended default: it adds missing products without replacing matches.
@@ -66,7 +75,12 @@ future catalog-building tools, but the Flutter app does not require or contact
 it during normal use.
 
 Background removal uses a bundled ONNX model and does not upload the chosen
-photo. It requires iOS 16 or newer and increases the installed application size.
+photo. Product-label text recognition also runs on-device using the bundled
+Latin ML Kit model; detected values are suggestions and are never saved without
+review. The form does not infer a barcode from photographed digits, and it only
+suggests a price when the label explicitly contains a ₱, PHP, or standalone P
+currency marker. These
+models require iOS 16 or newer and increase the installed application size.
 
 ## Products, units, and categories
 
@@ -74,7 +88,8 @@ The barcode belongs to the main product. Its normal selling unit and price can
 be a `Pack`, `Bottle`, or any other label. Optional sub-units store separate
 local prices without requiring another barcode—for example, scanning a pack
 can offer both `Pack · ₱150.00` and `Stick · ₱8.00`. Each choice becomes its own
-cart line and receipt line.
+cart line and receipt line. If the main unit has no price but a priced sub-unit
+exists, scanning opens the unit chooser instead of adding a free cart item.
 
 One canonical barcode can belong to only one saved product. The database and
 catalog importer both enforce this rule, including equivalent UPC-A/EAN-13
@@ -89,9 +104,25 @@ The product form suggests broad sari-sari shelf categories such as **Canned
 Goods**, **Snacks**, **Biscuits**, and **Bread**, while still accepting a custom
 category. Keep the product subtype in its name instead of creating narrow
 filters such as “Tuna Can.” Imported products can introduce more category names
-without a database migration. Open **Settings → Product categories** to add or
-remove reusable custom choices. A custom category in use by a saved product
-cannot be deleted until those products are moved to another category.
+without a database migration. Open **Profile → Settings → Product
+categories** to add or remove reusable custom choices. A custom category in use
+by a saved product cannot be deleted until those products are moved to another
+category.
+
+## Scanner and backup settings
+
+Open **Profile → Settings → Barcode scanner** to control the confirmation
+sound, vibration, automatic main-unit behavior, and repeat-scan cooldown. The
+default cooldown is 500 ms. Repeated camera frames do not add duplicates: the
+same barcode must leave the frame for the selected cooldown before it can be
+punched again. A different barcode can be scanned immediately. Sound and
+vibration happen only after a camera scan is successfully written to the cart.
+
+Backup reminders are device-local and require no notification permission. They
+start weekly by default and can be changed to monthly or Off. The first reminder
+waits for a complete interval; **Later** postpones it for one day, while a
+successfully saved `.razestore` file resets the interval. A due backup is marked
+on the Profile tab and can be created directly from Profile.
 
 ## Catalog files
 
@@ -121,8 +152,8 @@ To import it on a phone:
    Android. AirDrop can also place the file on an iPhone.
 2. For a new store, enter the store details, press **Save and continue**, then
    choose **Import offline catalog pack**.
-3. For an existing store, open **Settings → Catalog files → Import catalog
-   pack**.
+3. For an existing store, open **Profile → Settings → Catalog files →
+   Import catalog pack**.
 4. Choose **Keep existing** for a safe additive import, or **Update matching
    and add new** to apply a newer catalog's details. In either mode, a pack
    suggestion fills a ₱0 price but never replaces a non-zero store price. Choose
@@ -162,6 +193,9 @@ provenance is recorded in
 A `.razestore` file is the private, lossless backup. It contains products, main
 and sub-unit prices, managed product photos, completed sales, receipt/store
 details, custom categories, and the saved theme.
+It also keeps scanner sound, vibration, cooldown, automatic-unit behavior, and
+the selected backup-reminder frequency. Reminder timing itself—the last backup,
+first-reminder anchor, and one-day snooze—stays local to each phone.
 Backups are checksummed and validated before restore; restoring replaces the
 local catalog and sales history and clears the temporary cart. Backup files are
 not encrypted and should be stored privately.
@@ -174,7 +208,7 @@ spreadsheet. Export an app-generated CSV first to get the supported columns and
 
 ## Sales and storage
 
-Use the **Sales** tab to review completed checkouts newest first. **Today** is
+Open **Profile → Sales** to review completed checkouts newest first. **Today** is
 the default; **7D**, **This month**, **3 months**, **This year**, and **Custom**
 recalculate the revenue, transaction, and item totals for the same date range.
 Open a transaction to see its saved lines and payment, recreate its receipt, or
@@ -186,7 +220,7 @@ The confirmation shows the number of selected sales and the active period before
 anything is removed. Deleting sales also removes their saved receipt lines, but
 never deletes products from the catalog.
 
-Open **Settings → Storage manager** to measure the local database, managed
+Open **Profile → Settings → Storage manager** to measure the local database, managed
 product images, temporary receipt copies, background-removal files, and other
 cache. Safe cleanup removes only rebuildable temporary files. Product data,
 sales, managed product images, gallery receipts, `.razestore` backups, and
@@ -215,5 +249,6 @@ Run on a connected Android or iOS device with:
 /Users/rem/fvm/default/bin/flutter run
 ```
 
-Camera scanning and gallery export require a physical-device smoke test even
-when the automated test suite passes.
+Barcode scanning, guided photo framing, low-light detection, the flashlight,
+label reading, and gallery export require a physical-device smoke test even when
+the automated test suite passes.

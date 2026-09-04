@@ -8,6 +8,7 @@ import 'package:raze_store/features/catalog/application/custom_catalog_categorie
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
 import 'package:raze_store/features/settings/presentation/storage_screen.dart';
 
@@ -86,6 +87,7 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
         .watch(customCatalogCategoriesProvider)
         .length;
     final storageUsage = ref.watch(appStorageUsageProvider);
+    final appPreferences = ref.watch(appPreferencesProvider);
 
     return AppPageScaffold(
       title: 'Store settings',
@@ -182,6 +184,14 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const AppSectionHeader(
+                      title: 'Barcode scanner',
+                      subtitle:
+                          'Choose how scans add products and confirm a successful add.',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildScannerSettings(appPreferences),
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppSectionHeader(
                       title: 'Product categories',
                       subtitle:
                           'Choose broad shelf groups and add your own categories.',
@@ -269,6 +279,14 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const AppSectionHeader(
+                      title: 'Backup reminders',
+                      subtitle:
+                          'Get an in-app reminder to protect products, prices, photos, and sales.',
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _buildBackupReminderSettings(appPreferences),
+                    const SizedBox(height: AppSpacing.lg),
+                    const AppSectionHeader(
                       title: 'Catalog files',
                       subtitle:
                           'Install offline products, protect local prices, or edit products in a spreadsheet.',
@@ -284,6 +302,196 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
         ],
       ),
     );
+  }
+
+  Widget _buildScannerSettings(AsyncValue<AppPreferences> preferences) {
+    return preferences.when(
+      loading: () => const _PreferenceLoadingCard(),
+      error: (error, stackTrace) => _PreferenceErrorCard(
+        onRetry: () => ref.invalidate(appPreferencesProvider),
+      ),
+      data: (preferences) => Card(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            SwitchListTile.adaptive(
+              key: const ValueKey('scanner-sound-setting'),
+              dense: true,
+              secondary: const Icon(Icons.volume_up_outlined),
+              title: const Text('Scan sound'),
+              subtitle: const Text(
+                'Play a confirmation after an item is added.',
+              ),
+              value: preferences.scannerSoundEnabled,
+              onChanged: (enabled) => _saveAppPreference(
+                () => ref
+                    .read(appPreferencesProvider.notifier)
+                    .setScannerSoundEnabled(enabled),
+              ),
+            ),
+            const Divider(height: 1),
+            SwitchListTile.adaptive(
+              key: const ValueKey('scanner-vibration-setting'),
+              dense: true,
+              secondary: const Icon(Icons.vibration_rounded),
+              title: const Text('Vibration'),
+              subtitle: const Text('Vibrate after an item is added.'),
+              value: preferences.scannerVibrationEnabled,
+              onChanged: (enabled) => _saveAppPreference(
+                () => ref
+                    .read(appPreferencesProvider.notifier)
+                    .setScannerVibrationEnabled(enabled),
+              ),
+            ),
+            const Divider(height: 1),
+            SwitchListTile.adaptive(
+              key: const ValueKey('scanner-auto-main-unit-setting'),
+              dense: true,
+              secondary: const Icon(Icons.playlist_add_check_rounded),
+              title: const Text('Add main unit automatically'),
+              subtitle: const Text(
+                'Turn off to choose pack, piece, stick, or another selling unit after scanning.',
+              ),
+              value: preferences.autoAddMainUnitOnScan,
+              onChanged: (enabled) => _saveAppPreference(
+                () => ref
+                    .read(appPreferencesProvider.notifier)
+                    .setAutoAddMainUnitOnScan(enabled),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: DropdownButtonFormField<int>(
+                key: const ValueKey('scanner-cooldown-setting'),
+                initialValue: preferences.scannerRepeatCooldownMs,
+                decoration: const InputDecoration(
+                  labelText: 'Repeat-scan cooldown',
+                  helperText:
+                      'Wait this long before the same barcode can be added again.',
+                  prefixIcon: Icon(Icons.timer_outlined),
+                ),
+                items: [
+                  for (final milliseconds
+                      in allowedScannerRepeatCooldownMilliseconds)
+                    DropdownMenuItem(
+                      value: milliseconds,
+                      child: Text(_cooldownLabel(milliseconds)),
+                    ),
+                ],
+                onChanged: (milliseconds) {
+                  if (milliseconds == null) return;
+                  _saveAppPreference(
+                    () => ref
+                        .read(appPreferencesProvider.notifier)
+                        .setScannerRepeatCooldownMs(milliseconds),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackupReminderSettings(AsyncValue<AppPreferences> preferences) {
+    return preferences.when(
+      loading: () => const _PreferenceLoadingCard(),
+      error: (error, stackTrace) => _PreferenceErrorCard(
+        onRetry: () => ref.invalidate(appPreferencesProvider),
+      ),
+      data: (preferences) {
+        final lastBackup = preferences.lastSuccessfulBackupAtUtc;
+        final lastBackupLabel = lastBackup == null
+            ? 'No successful backup has been created yet.'
+            : 'Last successful backup: ${MaterialLocalizations.of(context).formatMediumDate(lastBackup.toLocal())}';
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<BackupReminderFrequency>(
+                  key: const ValueKey('backup-reminder-frequency-setting'),
+                  initialValue: preferences.backupReminderFrequency,
+                  decoration: const InputDecoration(
+                    labelText: 'Remind me to create a backup',
+                    prefixIcon: Icon(Icons.notification_add_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: BackupReminderFrequency.off,
+                      child: Text('Off'),
+                    ),
+                    DropdownMenuItem(
+                      value: BackupReminderFrequency.weekly,
+                      child: Text('Every week'),
+                    ),
+                    DropdownMenuItem(
+                      value: BackupReminderFrequency.monthly,
+                      child: Text('Every month'),
+                    ),
+                  ],
+                  onChanged: (frequency) {
+                    if (frequency == null) return;
+                    _saveAppPreference(
+                      () => ref
+                          .read(appPreferencesProvider.notifier)
+                          .setBackupReminderFrequency(frequency),
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      preferences.isBackupReminderDue(DateTime.now())
+                          ? Icons.warning_amber_rounded
+                          : Icons.cloud_done_outlined,
+                      size: 19,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        preferences.backupReminderFrequency ==
+                                BackupReminderFrequency.off
+                            ? 'Backup reminders are turned off. $lastBackupLabel'
+                            : lastBackupLabel,
+                        key: const ValueKey('last-successful-backup-status'),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveAppPreference(Future<void> Function() save) async {
+    try {
+      await save();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Could not save this setting.')),
+        );
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -322,6 +530,46 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
   }
 }
 
+String _cooldownLabel(int milliseconds) {
+  if (milliseconds < 1000) return '$milliseconds ms';
+  final seconds = milliseconds / 1000;
+  return seconds == seconds.roundToDouble()
+      ? '${seconds.toInt()} second${seconds == 1 ? '' : 's'}'
+      : '${seconds.toStringAsFixed(1)} seconds';
+}
+
+class _PreferenceLoadingCard extends StatelessWidget {
+  const _PreferenceLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Card(
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.md),
+        child: LinearProgressIndicator(minHeight: 3),
+      ),
+    );
+  }
+}
+
+class _PreferenceErrorCard extends StatelessWidget {
+  const _PreferenceErrorCard({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        dense: true,
+        leading: const Icon(Icons.error_outline_rounded),
+        title: const Text('App preferences could not be loaded.'),
+        trailing: TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ),
+    );
+  }
+}
+
 class _SettingsBackButton extends StatelessWidget {
   const _SettingsBackButton();
 
@@ -333,7 +581,7 @@ class _SettingsBackButton extends StatelessWidget {
         if (navigator.canPop()) {
           navigator.pop();
         } else {
-          context.go('/products');
+          context.go('/profile');
         }
       },
     );

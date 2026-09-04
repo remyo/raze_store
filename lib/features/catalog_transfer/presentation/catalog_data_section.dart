@@ -5,6 +5,7 @@ import 'package:raze_store/features/catalog_transfer/application/catalog_transfe
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
 
 enum _TransferAction { catalogPack, backup, restore, exportCsv, importCsv }
 
@@ -372,6 +373,15 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
     final result = await operation(
       ref.read(catalogTransferCoordinatorProvider),
     );
+    if (result is CatalogTransferSuccess &&
+        result.action == CatalogTransferAction.backupExport) {
+      try {
+        await ref.read(appPreferencesProvider.notifier).markBackupCompleted();
+      } catch (_) {
+        // The exported file is already safe. A reminder timestamp failure
+        // should not replace the useful transfer result shown to the user.
+      }
+    }
     if (!mounted) return;
     ref.invalidate(appStorageUsageProvider);
     setState(() => _busyAction = null);

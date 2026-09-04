@@ -30,6 +30,8 @@ void main() {
     final paths = _routePaths(appRouter.configuration.routes).toList();
 
     expect(paths, isNot(contains('/catalog')));
+    expect(paths, contains('/profile'));
+    expect(paths, contains('/cart'));
     expect(paths, contains('/quick-sell'));
     expect(paths, contains('/sales'));
     expect(paths, contains(':id'));

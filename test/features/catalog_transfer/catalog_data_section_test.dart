@@ -6,6 +6,8 @@ import 'package:raze_store/features/catalog_transfer/application/catalog_transfe
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('explains safe pack merge, backup, and CSV behavior', (
@@ -110,6 +112,46 @@ void main() {
     );
   });
 
+  testWidgets('records only a successfully saved complete backup', (
+    tester,
+  ) async {
+    final now = DateTime.utc(2026, 9, 4, 9);
+    SharedPreferences.setMockInitialValues({});
+    final operations = _FakeTransferOperations(
+      backupResult: const CatalogTransferSuccess(
+        action: CatalogTransferAction.backupExport,
+        message: 'Backup saved.',
+        productCount: 2,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appPreferencesClockProvider.overrideWithValue(() => now),
+          catalogTransferCoordinatorProvider.overrideWithValue(operations),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: SingleChildScrollView(child: CatalogDataSection()),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Create backup'));
+    await tester.tap(find.text('Create backup'));
+    await tester.pumpAndSettle();
+
+    expect(operations.backupCalls, 1);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.getString(lastSuccessfulBackupPreferenceKey),
+      now.toIso8601String(),
+    );
+  });
+
   testWidgets('confirmation dialogs scroll at large text sizes', (
     tester,
   ) async {
@@ -176,14 +218,22 @@ void main() {
 }
 
 final class _FakeTransferOperations implements CatalogTransferOperations {
+  _FakeTransferOperations({
+    this.backupResult = const CatalogTransferCancelled(message: 'Cancelled.'),
+  });
+
+  final CatalogTransferResult backupResult;
   var packImportCalls = 0;
   CatalogPackImportMode? lastPackImportMode;
   var restoreCalls = 0;
   var importCalls = 0;
+  var backupCalls = 0;
 
   @override
-  Future<CatalogTransferResult> createBackup() async =>
-      const CatalogTransferCancelled(message: 'Cancelled.');
+  Future<CatalogTransferResult> createBackup() async {
+    backupCalls++;
+    return backupResult;
+  }
 
   @override
   Future<CatalogTransferResult> exportCsv() async =>

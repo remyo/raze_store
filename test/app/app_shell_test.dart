@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/app/theme/theme.dart';
-import 'package:raze_store/features/cart/application/cart_providers.dart';
-import 'package:raze_store/features/cart/domain/cart.dart';
 
 void main() {
-  testWidgets('bottom navigation opens the Sales branch', (tester) async {
+  testWidgets('bottom navigation contains Home, Scan, and Profile', (
+    tester,
+  ) async {
     tester.view
       ..devicePixelRatio = 1
       ..physicalSize = const Size(390, 844);
@@ -23,8 +23,7 @@ void main() {
           branches: [
             _branch('/products', 'Products page'),
             _branch('/scan', 'Scan page'),
-            _branch('/cart', 'Cart page'),
-            _branch('/sales', 'Sales page'),
+            _branch('/profile', 'Profile page'),
           ],
         ),
       ],
@@ -33,21 +32,22 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          cartDraftProvider.overrideWith((ref) => Stream.value(CartDraft([]))),
-        ],
         child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Products page'), findsOneWidget);
-    expect(find.text('Sales'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Scan'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Cart'), findsNothing);
+    expect(find.text('Sales'), findsNothing);
 
-    await tester.tap(find.text('Sales'));
+    await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sales page'), findsOneWidget);
+    expect(find.text('Profile page'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

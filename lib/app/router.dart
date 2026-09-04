@@ -8,6 +8,7 @@ import 'package:raze_store/features/catalog/presentation/quick_sell_screen.dart'
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/onboarding/presentation/app_startup_gate.dart';
 import 'package:raze_store/features/onboarding/presentation/first_launch_setup_screen.dart';
+import 'package:raze_store/features/profile/presentation/profile_screen.dart';
 import 'package:raze_store/features/scanner/presentation/scanner_screen.dart';
 import 'package:raze_store/features/receipt/receipt.dart';
 import 'package:raze_store/features/sales/domain/completed_sale.dart';
@@ -52,30 +53,26 @@ final appRouter = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: '/cart',
-              builder: (context, state) => const CartScreen(),
+              path: '/profile',
+              builder: (context, state) => const ProfileScreen(),
             ),
           ],
         ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/sales',
-              builder: (context, state) => const SalesScreen(),
-              routes: [
-                GoRoute(
-                  path: ':id',
-                  parentNavigatorKey: rootNavigatorKey,
-                  builder: (context, state) => SaleDetailScreen(
-                    saleId: state.pathParameters['id']!,
-                    initialSale: state.extra is CompletedSale
-                        ? state.extra! as CompletedSale
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ],
+      ],
+    ),
+    GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
+    GoRoute(
+      path: '/sales',
+      builder: (context, state) => const SalesScreen(),
+      routes: [
+        GoRoute(
+          path: ':id',
+          builder: (context, state) => SaleDetailScreen(
+            saleId: state.pathParameters['id']!,
+            initialSale: state.extra is CompletedSale
+                ? state.extra! as CompletedSale
+                : null,
+          ),
         ),
       ],
     ),

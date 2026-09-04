@@ -11,6 +11,8 @@ import 'package:raze_store/core/database/app_database.dart' as database;
 import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -53,6 +55,13 @@ final class CatalogBackupService {
   static const _photoPrefix = 'photos/';
   static const _themeModeKey = 'theme_mode';
   static const _onboardingKey = 'raze_store.onboarding.store_setup_complete';
+  static const _behaviorPreferenceKeys = <String>[
+    scannerSoundEnabledPreferenceKey,
+    scannerVibrationEnabledPreferenceKey,
+    scannerRepeatCooldownPreferenceKey,
+    autoAddMainUnitOnScanPreferenceKey,
+    backupReminderFrequencyPreferenceKey,
+  ];
   static const _maximumArchiveBytes = 512 * 1024 * 1024;
   static const _maximumExpandedBytes = 768 * 1024 * 1024;
   static const _maximumEntryBytes = 32 * 1024 * 1024;
@@ -120,6 +129,11 @@ final class CatalogBackupService {
           'themeMode': snapshot.themeMode,
           'storeSetupComplete': snapshot.storeSetupComplete,
           'customCategories': snapshot.customCategories,
+          'scannerSoundEnabled': snapshot.scannerSoundEnabled,
+          'scannerVibrationEnabled': snapshot.scannerVibrationEnabled,
+          'scannerRepeatCooldownMs': snapshot.scannerRepeatCooldownMs,
+          'autoAddMainUnitOnScan': snapshot.autoAddMainUnitOnScan,
+          'backupReminderFrequency': snapshot.backupReminderFrequency.name,
         },
       };
       final dataFile = File(p.join(staging.path, _dataPath));
@@ -403,6 +417,15 @@ final class CatalogBackupService {
       themeMode: preferences.getString(_themeModeKey),
       storeSetupComplete: preferences.getBool(_onboardingKey) ?? false,
       customCategories: customCategories,
+      scannerSoundEnabled:
+          _storedBool(preferences, scannerSoundEnabledPreferenceKey) ?? true,
+      scannerVibrationEnabled:
+          _storedBool(preferences, scannerVibrationEnabledPreferenceKey) ??
+          true,
+      scannerRepeatCooldownMs: _storedScannerCooldown(preferences),
+      autoAddMainUnitOnScan:
+          _storedBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? true,
+      backupReminderFrequency: _storedBackupReminderFrequency(preferences),
     );
   }
 
@@ -1369,6 +1392,14 @@ final class CatalogBackupService {
       final oldCustomCategories = storage.getStringList(
         customCatalogCategoriesPreferenceKey,
       );
+      final oldBehaviorPreferences = <String, Object?>{};
+      final existingBehaviorPreferenceKeys = <String>{};
+      for (final key in _behaviorPreferenceKeys) {
+        if (storage.containsKey(key)) {
+          existingBehaviorPreferenceKeys.add(key);
+          oldBehaviorPreferences[key] = storage.get(key);
+        }
+      }
       try {
         final themeMode = preferences.themeMode;
         final themeSaved = themeMode == null
@@ -1384,7 +1415,44 @@ final class CatalogBackupService {
                 customCatalogCategoriesPreferenceKey,
                 preferences.customCategories,
               );
-        if (!themeSaved || !onboardingSaved || !customCategoriesSaved) {
+        final scannerSoundSaved =
+            preferences.scannerSoundEnabled == null ||
+            await storage.setBool(
+              scannerSoundEnabledPreferenceKey,
+              preferences.scannerSoundEnabled!,
+            );
+        final scannerVibrationSaved =
+            preferences.scannerVibrationEnabled == null ||
+            await storage.setBool(
+              scannerVibrationEnabledPreferenceKey,
+              preferences.scannerVibrationEnabled!,
+            );
+        final scannerCooldownSaved =
+            preferences.scannerRepeatCooldownMs == null ||
+            await storage.setInt(
+              scannerRepeatCooldownPreferenceKey,
+              preferences.scannerRepeatCooldownMs!,
+            );
+        final autoMainUnitSaved =
+            preferences.autoAddMainUnitOnScan == null ||
+            await storage.setBool(
+              autoAddMainUnitOnScanPreferenceKey,
+              preferences.autoAddMainUnitOnScan!,
+            );
+        final backupReminderSaved =
+            preferences.backupReminderFrequency == null ||
+            await storage.setString(
+              backupReminderFrequencyPreferenceKey,
+              preferences.backupReminderFrequency!.name,
+            );
+        if (!themeSaved ||
+            !onboardingSaved ||
+            !customCategoriesSaved ||
+            !scannerSoundSaved ||
+            !scannerVibrationSaved ||
+            !scannerCooldownSaved ||
+            !autoMainUnitSaved ||
+            !backupReminderSaved) {
           throw StateError('save failed');
         }
         return true;
@@ -1407,6 +1475,14 @@ final class CatalogBackupService {
             );
           } else {
             await storage.remove(customCatalogCategoriesPreferenceKey);
+          }
+          for (final key in _behaviorPreferenceKeys) {
+            await _restoreSharedPreference(
+              storage,
+              key,
+              existed: existingBehaviorPreferenceKeys.contains(key),
+              value: oldBehaviorPreferences[key],
+            );
           }
         } catch (_) {
           // A warning is returned below even when rollback is unavailable.
@@ -1634,6 +1710,11 @@ final class _DatabaseSnapshot {
     required this.themeMode,
     required this.storeSetupComplete,
     required this.customCategories,
+    required this.scannerSoundEnabled,
+    required this.scannerVibrationEnabled,
+    required this.scannerRepeatCooldownMs,
+    required this.autoAddMainUnitOnScan,
+    required this.backupReminderFrequency,
   });
 
   final List<database.StoreProduct> products;
@@ -1644,6 +1725,11 @@ final class _DatabaseSnapshot {
   final String? themeMode;
   final bool storeSetupComplete;
   final List<String> customCategories;
+  final bool scannerSoundEnabled;
+  final bool scannerVibrationEnabled;
+  final int scannerRepeatCooldownMs;
+  final bool autoAddMainUnitOnScan;
+  final BackupReminderFrequency backupReminderFrequency;
 }
 
 enum _ProductImageSlot { local, catalog }
@@ -2117,6 +2203,11 @@ final class _BackupPreferences {
     required this.themeMode,
     required this.storeSetupComplete,
     required this.customCategories,
+    required this.scannerSoundEnabled,
+    required this.scannerVibrationEnabled,
+    required this.scannerRepeatCooldownMs,
+    required this.autoAddMainUnitOnScan,
+    required this.backupReminderFrequency,
   });
 
   factory _BackupPreferences.fromJson(Map<String, Object?> json) {
@@ -2125,6 +2216,36 @@ final class _BackupPreferences {
       throw const FormatException('The backup theme setting is invalid.');
     }
     final customCategories = _parseCustomCategories(json['customCategories']);
+    final cooldown = _optionalIntegerField(
+      json,
+      'scannerRepeatCooldownMs',
+      'scanner repeat cooldown',
+    );
+    if (cooldown != null &&
+        !allowedScannerRepeatCooldownMilliseconds.contains(cooldown)) {
+      throw const FormatException(
+        'The backup scanner cooldown setting is invalid.',
+      );
+    }
+    final rawReminderFrequency = _optionalStringField(
+      json,
+      'backupReminderFrequency',
+      'backup reminder frequency',
+    );
+    BackupReminderFrequency? reminderFrequency;
+    if (rawReminderFrequency != null) {
+      for (final frequency in BackupReminderFrequency.values) {
+        if (frequency.name == rawReminderFrequency) {
+          reminderFrequency = frequency;
+          break;
+        }
+      }
+      if (reminderFrequency == null) {
+        throw const FormatException(
+          'The backup reminder frequency setting is invalid.',
+        );
+      }
+    }
     return _BackupPreferences(
       themeMode: theme,
       storeSetupComplete: _boolean(
@@ -2132,12 +2253,34 @@ final class _BackupPreferences {
         'setup preference',
       ),
       customCategories: customCategories,
+      scannerSoundEnabled: _optionalBooleanField(
+        json,
+        'scannerSoundEnabled',
+        'scanner sound setting',
+      ),
+      scannerVibrationEnabled: _optionalBooleanField(
+        json,
+        'scannerVibrationEnabled',
+        'scanner vibration setting',
+      ),
+      scannerRepeatCooldownMs: cooldown,
+      autoAddMainUnitOnScan: _optionalBooleanField(
+        json,
+        'autoAddMainUnitOnScan',
+        'automatic main unit setting',
+      ),
+      backupReminderFrequency: reminderFrequency,
     );
   }
 
   final String? themeMode;
   final bool storeSetupComplete;
   final List<String> customCategories;
+  final bool? scannerSoundEnabled;
+  final bool? scannerVibrationEnabled;
+  final int? scannerRepeatCooldownMs;
+  final bool? autoAddMainUnitOnScan;
+  final BackupReminderFrequency? backupReminderFrequency;
 }
 
 List<String> _parseCustomCategories(Object? value) {
@@ -2303,6 +2446,76 @@ int _integer(Object? value, String label) {
 bool _boolean(Object? value, String label) {
   if (value is! bool) throw FormatException('$label must be true or false.');
   return value;
+}
+
+bool? _optionalBooleanField(
+  Map<String, Object?> json,
+  String key,
+  String label,
+) => json.containsKey(key) ? _boolean(json[key], label) : null;
+
+int? _optionalIntegerField(
+  Map<String, Object?> json,
+  String key,
+  String label,
+) => json.containsKey(key) ? _integer(json[key], label) : null;
+
+String? _optionalStringField(
+  Map<String, Object?> json,
+  String key,
+  String label,
+) {
+  if (!json.containsKey(key)) return null;
+  final value = _string(json[key], label).trim();
+  if (value.isEmpty) throw FormatException('$label must not be empty.');
+  return value;
+}
+
+bool? _storedBool(SharedPreferences preferences, String key) {
+  final value = preferences.get(key);
+  return value is bool ? value : null;
+}
+
+int _storedScannerCooldown(SharedPreferences preferences) {
+  final value = preferences.get(scannerRepeatCooldownPreferenceKey);
+  return value is int &&
+          allowedScannerRepeatCooldownMilliseconds.contains(value)
+      ? value
+      : defaultScannerRepeatCooldownMilliseconds;
+}
+
+BackupReminderFrequency _storedBackupReminderFrequency(
+  SharedPreferences preferences,
+) {
+  final value = preferences.get(backupReminderFrequencyPreferenceKey);
+  if (value is String) {
+    for (final frequency in BackupReminderFrequency.values) {
+      if (frequency.name == value) return frequency;
+    }
+  }
+  return BackupReminderFrequency.weekly;
+}
+
+Future<void> _restoreSharedPreference(
+  SharedPreferences preferences,
+  String key, {
+  required bool existed,
+  required Object? value,
+}) async {
+  if (!existed) {
+    await preferences.remove(key);
+    return;
+  }
+
+  final saved = switch (value) {
+    bool value => await preferences.setBool(key, value),
+    int value => await preferences.setInt(key, value),
+    double value => await preferences.setDouble(key, value),
+    String value => await preferences.setString(key, value),
+    List<String> value => await preferences.setStringList(key, value),
+    _ => false,
+  };
+  if (!saved) throw StateError('Could not restore an app preference.');
 }
 
 DateTime _dateTime(Object? value, String label) {

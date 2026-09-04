@@ -26,6 +26,7 @@ final catalogBackupServiceProvider = Provider<CatalogBackupService>((ref) {
       ref.invalidate(cartDraftProvider);
       ref.invalidate(storeProfileProvider);
       ref.invalidate(themeModeProvider);
+      ref.invalidate(appPreferencesProvider);
       ref.invalidate(customCatalogCategoriesProvider);
       ref.invalidate(onboardingControllerProvider);
     },

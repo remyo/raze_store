@@ -10,8 +10,10 @@ import 'package:raze_store/core/money/money.dart';
 import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/core/storage/product_photo_services.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
+import 'package:raze_store/features/catalog/application/product_text_recognizer.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
+import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -118,6 +120,7 @@ void main() {
     );
     final repository = _RecordingCatalogRepository();
     final picker = _FakePhotoPicker(XFile(source.path));
+    final captureLauncher = _FakeProductCaptureLauncher(XFile(source.path));
     final imageStore = _RecordingProductImageStore();
     final router = GoRouter(
       initialLocation: '/products/new',
@@ -141,6 +144,7 @@ void main() {
           catalogRepositoryProvider.overrideWithValue(repository),
           catalogCategorySuggestionsProvider.overrideWithValue(const []),
           productPhotoPickerProvider.overrideWithValue(picker),
+          productCaptureLauncherProvider.overrideWithValue(captureLauncher),
           localProductImageStoreProvider.overrideWithValue(imageStore),
         ],
         child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
@@ -155,7 +159,8 @@ void main() {
     await tester.tap(find.text('Take a photo'));
     await tester.pumpAndSettle();
 
-    expect(picker.cameraCalls, 1);
+    expect(captureLauncher.calls, 1);
+    expect(captureLauncher.purposes, [ProductCapturePurpose.productPhoto]);
     expect(find.text('Change photo'), findsOneWidget);
     await tester.enterText(
       find.byKey(const ValueKey('product-name-field')),
@@ -206,7 +211,163 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Take a photo'), findsOneWidget);
+    expect(find.text('Read product label'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
+  });
+
+  testWidgets('reads a captured label and fills selected product details', (
+    tester,
+  ) async {
+    final directory = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('raze_store_label_photo_test_'),
+    ))!;
+    addTearDown(() => directory.delete(recursive: true));
+    final source = File('${directory.path}/label.png');
+    await tester.runAsync(
+      () => source.writeAsBytes(base64Decode(_onePixelPng)),
+    );
+    final captureLauncher = _FakeProductCaptureLauncher(XFile(source.path));
+    final recognizer = _FakeProductTextRecognizer(
+      ProductTextRecognitionResult(
+        rawLines: const [
+          'KOPIKO',
+          'Brown Coffee',
+          'Net Wt. 30 g',
+          'SRP ₱12.50',
+        ],
+        suggestions: const ProductTextSuggestions(
+          productName: 'Brown Coffee',
+          brand: 'KOPIKO',
+          sizeOrUnit: '30 g',
+          priceCentavos: 1250,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(captureLauncher),
+          productTextRecognizerProvider.overrideWithValue(recognizer),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add photo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Read product label'));
+    await tester.pumpAndSettle();
+
+    expect(captureLauncher.purposes, [ProductCapturePurpose.productLabel]);
+    expect(recognizer.paths, [source.path]);
+    expect(find.text('Review label details'), findsOneWidget);
+    expect(find.text('Brown Coffee'), findsOneWidget);
+    expect(find.text('KOPIKO'), findsOneWidget);
+
+    final apply = find.byKey(const ValueKey('apply-detected-product-details'));
+    await tester.ensureVisible(apply);
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-name-field')),
+          )
+          .controller
+          ?.text,
+      'Brown Coffee',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-main-unit-field')),
+          )
+          .controller
+          ?.text,
+      '30 g',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-main-price-field')),
+          )
+          .controller
+          ?.text,
+      '12.50',
+    );
+    expect(
+      find.text('Details filled from the photo. Please review before saving.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('detected label does not replace existing values by default', (
+    tester,
+  ) async {
+    final captureLauncher = _FakeProductCaptureLauncher(
+      XFile('/tmp/raze-store-label.png'),
+    );
+    final recognizer = _FakeProductTextRecognizer(
+      ProductTextRecognitionResult(
+        rawLines: const ['DIFFERENT PRODUCT', '₱99.00'],
+        suggestions: const ProductTextSuggestions(
+          productName: 'Different product',
+          priceCentavos: 9900,
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productCaptureLauncherProvider.overrideWithValue(captureLauncher),
+          productTextRecognizerProvider.overrideWithValue(recognizer),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const ProductFormScreen(
+            initialName: 'Existing name',
+            initialPrice: '15.00',
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add photo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Read product label'));
+    await tester.pumpAndSettle();
+    final apply = find.byKey(const ValueKey('apply-detected-product-details'));
+    await tester.ensureVisible(apply);
+    expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-name-field')),
+          )
+          .controller
+          ?.text,
+      'Existing name',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-main-price-field')),
+          )
+          .controller
+          ?.text,
+      '15.00',
+    );
   });
 
   testWidgets('rejects the fallback main label for a sub-unit', (tester) async {
@@ -603,6 +764,39 @@ final class _FakePhotoPicker implements ProductPhotoPicker {
   Future<XFile?> takePhoto() async {
     cameraCalls++;
     return file;
+  }
+}
+
+final class _FakeProductCaptureLauncher implements ProductCaptureLauncher {
+  _FakeProductCaptureLauncher(this.file);
+
+  final XFile? file;
+  int calls = 0;
+  final List<ProductCapturePurpose> purposes = [];
+
+  @override
+  Future<XFile?> capture(
+    BuildContext context, {
+    ProductCapturePurpose purpose = ProductCapturePurpose.productPhoto,
+  }) async {
+    calls++;
+    purposes.add(purpose);
+    return file;
+  }
+}
+
+final class _FakeProductTextRecognizer implements ProductTextRecognizer {
+  _FakeProductTextRecognizer(this.result);
+
+  final ProductTextRecognitionResult result;
+  final List<String> paths = [];
+
+  @override
+  Future<ProductTextRecognitionResult> recognizeImagePath(
+    String imagePath,
+  ) async {
+    paths.add(imagePath);
+    return result;
   }
 }
 

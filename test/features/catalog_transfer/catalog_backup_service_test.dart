@@ -14,7 +14,9 @@ import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
 import 'package:raze_store/features/sales/data/local_sales_repository.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/data/local_settings_repository.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
 import 'package:raze_store/features/settings/domain/store_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -104,6 +106,26 @@ void main() {
         'Mobile Load',
         'Frozen Treats',
       ]);
+      await preferences.setBool(scannerSoundEnabledPreferenceKey, false);
+      await preferences.setBool(scannerVibrationEnabledPreferenceKey, false);
+      await preferences.setInt(scannerRepeatCooldownPreferenceKey, 1500);
+      await preferences.setBool(autoAddMainUnitOnScanPreferenceKey, false);
+      await preferences.setString(
+        backupReminderFrequencyPreferenceKey,
+        BackupReminderFrequency.monthly.name,
+      );
+      await preferences.setString(
+        backupReminderAnchorPreferenceKey,
+        DateTime.utc(2026, 8, 1).toIso8601String(),
+      );
+      await preferences.setString(
+        lastSuccessfulBackupPreferenceKey,
+        DateTime.utc(2026, 8, 20).toIso8601String(),
+      );
+      await preferences.setString(
+        backupReminderSnoozedUntilPreferenceKey,
+        DateTime.utc(2026, 9, 5).toIso8601String(),
+      );
 
       final archivePath = '${testRoot.path}/store.razestore';
       final exported = await CatalogBackupService(
@@ -114,6 +136,29 @@ void main() {
       expect(exported, isA<CatalogTransferSuccess>());
       expect((exported as CatalogTransferSuccess).photoCount, 2);
       expect(await File(archivePath).exists(), isTrue);
+      final archive = ZipDecoder().decodeBytes(
+        await File(archivePath).readAsBytes(),
+      );
+      final archiveData =
+          (jsonDecode(
+                    utf8.decode(
+                      archive.files
+                          .singleWhere((entry) => entry.name == 'data.json')
+                          .readBytes()!,
+                    ),
+                  )
+                  as Map)
+              .cast<String, Object?>();
+      final archivedPreferences = (archiveData['preferences'] as Map)
+          .cast<String, Object?>();
+      expect(archivedPreferences['scannerSoundEnabled'], isFalse);
+      expect(archivedPreferences['scannerVibrationEnabled'], isFalse);
+      expect(archivedPreferences['scannerRepeatCooldownMs'], 1500);
+      expect(archivedPreferences['autoAddMainUnitOnScan'], isFalse);
+      expect(archivedPreferences['backupReminderFrequency'], 'monthly');
+      expect(archivedPreferences, isNot(contains('reminderAnchorAtUtc')));
+      expect(archivedPreferences, isNot(contains('lastSuccessfulBackupAtUtc')));
+      expect(archivedPreferences, isNot(contains('snoozedUntilUtc')));
 
       final targetImages = LocalProductImageStore(
         root: Directory('${testRoot.path}/target'),
@@ -139,6 +184,29 @@ void main() {
       await preferences.setStringList(customCatalogCategoriesPreferenceKey, [
         'Old Category',
       ]);
+      await preferences.setBool(scannerSoundEnabledPreferenceKey, true);
+      await preferences.setBool(scannerVibrationEnabledPreferenceKey, true);
+      await preferences.setInt(scannerRepeatCooldownPreferenceKey, 500);
+      await preferences.setBool(autoAddMainUnitOnScanPreferenceKey, true);
+      await preferences.setString(
+        backupReminderFrequencyPreferenceKey,
+        BackupReminderFrequency.off.name,
+      );
+      final receivingAnchor = DateTime.utc(2026, 9, 1);
+      final receivingLastBackup = DateTime.utc(2026, 9, 2);
+      final receivingSnooze = DateTime.utc(2026, 9, 6);
+      await preferences.setString(
+        backupReminderAnchorPreferenceKey,
+        receivingAnchor.toIso8601String(),
+      );
+      await preferences.setString(
+        lastSuccessfulBackupPreferenceKey,
+        receivingLastBackup.toIso8601String(),
+      );
+      await preferences.setString(
+        backupReminderSnoozedUntilPreferenceKey,
+        receivingSnooze.toIso8601String(),
+      );
 
       final restored = await CatalogBackupService(
         database: targetDatabase,
@@ -203,6 +271,29 @@ void main() {
         'Frozen Treats',
         'Mobile Load',
       ]);
+      expect(preferences.getBool(scannerSoundEnabledPreferenceKey), isFalse);
+      expect(
+        preferences.getBool(scannerVibrationEnabledPreferenceKey),
+        isFalse,
+      );
+      expect(preferences.getInt(scannerRepeatCooldownPreferenceKey), 1500);
+      expect(preferences.getBool(autoAddMainUnitOnScanPreferenceKey), isFalse);
+      expect(
+        preferences.getString(backupReminderFrequencyPreferenceKey),
+        BackupReminderFrequency.monthly.name,
+      );
+      expect(
+        preferences.getString(backupReminderAnchorPreferenceKey),
+        receivingAnchor.toIso8601String(),
+      );
+      expect(
+        preferences.getString(lastSuccessfulBackupPreferenceKey),
+        receivingLastBackup.toIso8601String(),
+      );
+      expect(
+        preferences.getString(backupReminderSnoozedUntilPreferenceKey),
+        receivingSnooze.toIso8601String(),
+      );
     },
   );
 
@@ -241,6 +332,53 @@ void main() {
     expect(product.catalogImagePath, isNull);
     expect(product.sourceUpdatedAt, isNull);
   });
+
+  test(
+    'version 3 backups without behavior fields preserve device preferences',
+    () async {
+      await LocalCatalogRepository(sourceDatabase).createProduct(
+        ProductDraft(id: 'source-product', name: 'Source', priceCentavos: 500),
+      );
+      final archiveFile = File('${testRoot.path}/legacy-v3.razestore');
+      await CatalogBackupService(
+        database: sourceDatabase,
+        imageStore: LocalProductImageStore(
+          root: Directory('${testRoot.path}/legacy-v3-source'),
+        ),
+      ).createArchive(outputPath: archiveFile.path);
+      await _removeBehaviorPreferences(archiveFile);
+
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(scannerSoundEnabledPreferenceKey, false);
+      await preferences.setBool(scannerVibrationEnabledPreferenceKey, false);
+      await preferences.setInt(scannerRepeatCooldownPreferenceKey, 2000);
+      await preferences.setBool(autoAddMainUnitOnScanPreferenceKey, false);
+      await preferences.setString(
+        backupReminderFrequencyPreferenceKey,
+        BackupReminderFrequency.off.name,
+      );
+
+      final result = await CatalogBackupService(
+        database: targetDatabase,
+        imageStore: LocalProductImageStore(
+          root: Directory('${testRoot.path}/legacy-v3-target'),
+        ),
+      ).restoreReplacing(archivePath: archiveFile.path);
+
+      expect(result, isA<CatalogTransferSuccess>());
+      expect(preferences.getBool(scannerSoundEnabledPreferenceKey), isFalse);
+      expect(
+        preferences.getBool(scannerVibrationEnabledPreferenceKey),
+        isFalse,
+      );
+      expect(preferences.getInt(scannerRepeatCooldownPreferenceKey), 2000);
+      expect(preferences.getBool(autoAddMainUnitOnScanPreferenceKey), isFalse);
+      expect(
+        preferences.getString(backupReminderFrequencyPreferenceKey),
+        BackupReminderFrequency.off.name,
+      );
+    },
+  );
 
   test(
     'missing managed photo fails export without creating a backup',
@@ -503,7 +641,9 @@ Future<void> _rewriteAsVersion1(File file) async {
   };
   final data = (jsonDecode(utf8.decode(entries['data.json']!)) as Map)
       .cast<String, Object?>();
-  (data['preferences'] as Map).remove('customCategories');
+  final preferences = data['preferences'] as Map;
+  preferences.remove('customCategories');
+  _removeBehaviorPreferenceFields(preferences);
   for (final value in (data['products'] as List).cast<Object?>()) {
     final product = (value as Map).cast<String, Object?>();
     product.remove('catalogImage');
@@ -530,6 +670,44 @@ Future<void> _rewriteAsVersion1(File file) async {
     rewritten.add(ArchiveFile.bytes(entry.key, entry.value));
   }
   await file.writeAsBytes(ZipEncoder().encode(rewritten));
+}
+
+Future<void> _removeBehaviorPreferences(File file) async {
+  final archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+  final entries = <String, List<int>>{
+    for (final entry in archive.files) entry.name: entry.readBytes()!,
+  };
+  final data = (jsonDecode(utf8.decode(entries['data.json']!)) as Map)
+      .cast<String, Object?>();
+  _removeBehaviorPreferenceFields(data['preferences'] as Map);
+  final dataBytes = utf8.encode(jsonEncode(data));
+  entries['data.json'] = dataBytes;
+
+  final manifest = (jsonDecode(utf8.decode(entries['manifest.json']!)) as Map)
+      .cast<String, Object?>();
+  for (final value in (manifest['files'] as List).cast<Object?>()) {
+    final descriptor = (value as Map).cast<String, Object?>();
+    if (descriptor['path'] == 'data.json') {
+      descriptor['size'] = dataBytes.length;
+      descriptor['sha256'] = sha256.convert(dataBytes).toString();
+    }
+  }
+  entries['manifest.json'] = utf8.encode(jsonEncode(manifest));
+
+  final rewritten = Archive();
+  for (final entry in entries.entries) {
+    rewritten.add(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  await file.writeAsBytes(ZipEncoder().encode(rewritten));
+}
+
+void _removeBehaviorPreferenceFields(Map preferences) {
+  preferences
+    ..remove('scannerSoundEnabled')
+    ..remove('scannerVibrationEnabled')
+    ..remove('scannerRepeatCooldownMs')
+    ..remove('autoAddMainUnitOnScan')
+    ..remove('backupReminderFrequency');
 }
 
 void _writeZipUncompressedSize(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
-import 'package:raze_store/features/cart/application/cart_providers.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
@@ -11,12 +11,17 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cartQuantity = ref.watch(cartDraftProvider).value?.totalQuantity ?? 0;
+    final preferences = ref.watch(appPreferencesProvider).value;
+    final backupDue =
+        preferences?.isBackupReminderDue(
+          ref.watch(appPreferencesClockProvider)(),
+        ) ??
+        false;
     final destinations = <NavigationDestination>[
       const NavigationDestination(
         icon: Icon(Icons.storefront_outlined),
         selectedIcon: Icon(Icons.storefront_rounded),
-        label: 'Products',
+        label: 'Home',
       ),
       const NavigationDestination(
         icon: Icon(Icons.barcode_reader),
@@ -24,14 +29,9 @@ class AppShell extends ConsumerWidget {
         label: 'Scan',
       ),
       NavigationDestination(
-        icon: _CartIcon(quantity: cartQuantity),
-        selectedIcon: _CartIcon(quantity: cartQuantity, selected: true),
-        label: 'Cart',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.receipt_long_outlined),
-        selectedIcon: Icon(Icons.receipt_long_rounded),
-        label: 'Sales',
+        icon: _ProfileIcon(backupDue: backupDue),
+        selectedIcon: _ProfileIcon(backupDue: backupDue, selected: true),
+        label: 'Profile',
       ),
     ];
 
@@ -83,7 +83,7 @@ class AppShell extends ConsumerWidget {
                       const NavigationRailDestination(
                         icon: Icon(Icons.storefront_outlined),
                         selectedIcon: Icon(Icons.storefront_rounded),
-                        label: Text('Products'),
+                        label: Text('Home'),
                       ),
                       const NavigationRailDestination(
                         icon: Icon(Icons.barcode_reader),
@@ -91,17 +91,12 @@ class AppShell extends ConsumerWidget {
                         label: Text('Scan'),
                       ),
                       NavigationRailDestination(
-                        icon: _CartIcon(quantity: cartQuantity),
-                        selectedIcon: _CartIcon(
-                          quantity: cartQuantity,
+                        icon: _ProfileIcon(backupDue: backupDue),
+                        selectedIcon: _ProfileIcon(
+                          backupDue: backupDue,
                           selected: true,
                         ),
-                        label: Text('Cart'),
-                      ),
-                      const NavigationRailDestination(
-                        icon: Icon(Icons.receipt_long_outlined),
-                        selectedIcon: Icon(Icons.receipt_long_rounded),
-                        label: Text('Sales'),
+                        label: Text('Profile'),
                       ),
                     ],
                   ),
@@ -127,11 +122,28 @@ class AppShell extends ConsumerWidget {
   }
 }
 
+class _ProfileIcon extends StatelessWidget {
+  const _ProfileIcon({required this.backupDue, this.selected = false});
+
+  final bool backupDue;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Badge(
+      isLabelVisible: backupDue,
+      child: Icon(
+        selected ? Icons.person_rounded : Icons.person_outline_rounded,
+      ),
+    );
+  }
+}
+
 /// Exposes which persistent shell branch is actually visible.
 ///
 /// Route-level [TickerMode] also changes while dialogs and root routes are
 /// shown, so it cannot distinguish a deliberate scanner workflow from the
-/// user switching to Products, Cart, or Sales.
+/// user switching to Home or Profile.
 class AppShellBranchScope extends InheritedWidget {
   const AppShellBranchScope({
     super.key,
@@ -150,26 +162,6 @@ class AppShellBranchScope extends InheritedWidget {
   @override
   bool updateShouldNotify(AppShellBranchScope oldWidget) =>
       index != oldWidget.index;
-}
-
-class _CartIcon extends StatelessWidget {
-  const _CartIcon({required this.quantity, this.selected = false});
-
-  final int quantity;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Badge(
-      isLabelVisible: quantity > 0,
-      label: Text(quantity > 99 ? '99+' : '$quantity'),
-      child: Icon(
-        selected
-            ? Icons.shopping_basket_rounded
-            : Icons.shopping_basket_outlined,
-      ),
-    );
-  }
 }
 
 class _StoreMark extends StatelessWidget {

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/cart/presentation/cart_shortcut_button.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
@@ -79,23 +80,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final query = ref.watch(catalogSearchQueryProvider).trim();
 
     return AppPageScaffold(
-      title: 'Products',
+      title: 'Home',
       actions: [
-        IconButton(
-          onPressed: () => context.push('/quick-sell'),
-          tooltip: 'Quick add by unit',
-          icon: const Icon(Icons.widgets_outlined),
-        ),
         IconButton(
           onPressed: () => context.push('/products/quick-add'),
           tooltip: 'Add product',
           icon: const Icon(Icons.add_rounded),
         ),
-        IconButton(
-          onPressed: () => context.push('/settings'),
-          tooltip: 'Store settings',
-          icon: const Icon(Icons.settings_outlined),
-        ),
+        const CartShortcutButton(),
       ],
       padBody: false,
       body: products.when(

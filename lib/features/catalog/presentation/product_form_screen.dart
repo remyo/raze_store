@@ -12,10 +12,12 @@ import 'package:raze_store/core/money/money.dart';
 import 'package:raze_store/core/storage/product_photo_services.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
+import 'package:raze_store/features/catalog/application/product_text_recognizer.dart';
 import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
 import 'package:raze_store/features/catalog/presentation/duplicate_barcode_resolution.dart';
+import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
 
 class ProductFormScreen extends ConsumerWidget {
   const ProductFormScreen({
@@ -114,10 +116,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   bool _removeExistingPhoto = false;
   bool _busy = false;
   bool _removingBackground = false;
+  bool _readingText = false;
   bool _backgroundRemoved = false;
 
   bool get _editing => widget.product != null;
-  bool get _blocked => _busy || _removingBackground;
+  bool get _blocked => _busy || _removingBackground || _readingText;
 
   @override
   void initState() {
@@ -268,9 +271,11 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                     removeExisting: _removeExistingPhoto,
                     busy: _blocked,
                     removingBackground: _removingBackground,
+                    readingText: _readingText,
                     backgroundRemoved: _backgroundRemoved,
                     onChoose: _choosePhotoSource,
                     onRemoveBackground: _removePhotoBackground,
+                    onReadText: _readCurrentPhotoText,
                     onRemove: _removePhoto,
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -570,9 +575,10 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   }
 
   Future<void> _choosePhotoSource() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final action = await showModalBottomSheet<_ProductPhotoAction>(
       context: context,
       showDragHandle: true,
+      useSafeArea: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -580,38 +586,161 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Take a photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
+              subtitle: const Text('Use the product frame and lighting guide.'),
+              onTap: () =>
+                  Navigator.pop(context, _ProductPhotoAction.takeProductPhoto),
+            ),
+            ListTile(
+              key: const ValueKey('scan-product-label-action'),
+              leading: const Icon(Icons.document_scanner_outlined),
+              title: const Text('Read product label'),
+              subtitle: const Text(
+                'Take one photo and suggest the name, brand, size, and price.',
+              ),
+              onTap: () =>
+                  Navigator.pop(context, _ProductPhotoAction.readProductLabel),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
+              onTap: () =>
+                  Navigator.pop(context, _ProductPhotoAction.chooseFromGallery),
             ),
           ],
         ),
       ),
     );
-    if (source == null || !mounted) return;
+    if (action == null || !mounted) return;
 
     try {
-      final picker = ref.read(productPhotoPickerProvider);
-      final picked = source == ImageSource.camera
-          ? await picker.takePhoto()
-          : await picker.pickFromGallery();
+      final XFile? picked;
+      switch (action) {
+        case _ProductPhotoAction.takeProductPhoto:
+          picked = await ref
+              .read(productCaptureLauncherProvider)
+              .capture(context, purpose: ProductCapturePurpose.productPhoto);
+        case _ProductPhotoAction.readProductLabel:
+          picked = await ref
+              .read(productCaptureLauncherProvider)
+              .capture(context, purpose: ProductCapturePurpose.productLabel);
+        case _ProductPhotoAction.chooseFromGallery:
+          picked = await ref.read(productPhotoPickerProvider).pickFromGallery();
+      }
       if (!mounted || picked == null) return;
-      await _discardTemporaryBackgroundPhoto();
+      await _setPendingPhoto(picked);
       if (!mounted) return;
-      setState(() {
-        _pendingPhoto = picked;
-        _removeExistingPhoto = false;
-        _backgroundRemoved = false;
-      });
+      if (action == _ProductPhotoAction.readProductLabel) {
+        await _readPhotoText(picked);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open the product photo.')),
       );
     }
+  }
+
+  Future<void> _setPendingPhoto(XFile photo) async {
+    await _discardTemporaryBackgroundPhoto();
+    if (!mounted) return;
+    setState(() {
+      _pendingPhoto = photo;
+      _removeExistingPhoto = false;
+      _backgroundRemoved = false;
+    });
+  }
+
+  Future<void> _readCurrentPhotoText() async {
+    final existingPath = _removeExistingPhoto
+        ? null
+        : widget.product?.localImagePath;
+    final source =
+        _pendingPhoto ?? (existingPath == null ? null : XFile(existingPath));
+    if (source == null || _blocked) return;
+    await _readPhotoText(source);
+  }
+
+  Future<void> _readPhotoText(XFile source) async {
+    if (_blocked) return;
+    setState(() => _readingText = true);
+    late final ProductTextRecognitionResult recognition;
+    try {
+      recognition = await ref
+          .read(productTextRecognizerProvider)
+          .recognizeImagePath(source.path);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not read the label. Try a brighter, sharper photo.',
+          ),
+        ),
+      );
+      return;
+    } finally {
+      if (mounted) setState(() => _readingText = false);
+    }
+    if (!mounted) return;
+
+    if (recognition.rawLines.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No text was found. Move closer and keep the label inside the frame.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final selection = await showModalBottomSheet<_RecognizedProductSelection>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _RecognizedProductReview(
+        recognition: recognition,
+        currentName: _nameController.text,
+        currentBrand: _brandController.text,
+        currentUnit: _unitController.text,
+        currentPrice: _priceController.text,
+      ),
+    );
+    if (selection == null || !mounted) return;
+
+    if (selection.productName != null) {
+      _replaceControllerText(_nameController, selection.productName!);
+    }
+    if (selection.brand != null) {
+      _replaceControllerText(_brandController, selection.brand!);
+    }
+    if (selection.sizeOrUnit != null) {
+      _replaceControllerText(_unitController, selection.sizeOrUnit!);
+    }
+    if (selection.priceCentavos != null) {
+      _replaceControllerText(
+        _priceController,
+        formatPesoInput(selection.priceCentavos!),
+      );
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Details filled from the photo. Please review before saving.',
+          ),
+        ),
+      );
+  }
+
+  void _replaceControllerText(TextEditingController controller, String value) {
+    controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
+    );
   }
 
   Future<void> _removePhotoBackground() async {
@@ -889,6 +1018,321 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   }
 }
 
+enum _ProductPhotoAction {
+  takeProductPhoto,
+  readProductLabel,
+  chooseFromGallery,
+}
+
+final class _RecognizedProductSelection {
+  const _RecognizedProductSelection({
+    this.productName,
+    this.brand,
+    this.sizeOrUnit,
+    this.priceCentavos,
+  });
+
+  final String? productName;
+  final String? brand;
+  final String? sizeOrUnit;
+  final int? priceCentavos;
+}
+
+class _RecognizedProductReview extends StatefulWidget {
+  const _RecognizedProductReview({
+    required this.recognition,
+    required this.currentName,
+    required this.currentBrand,
+    required this.currentUnit,
+    required this.currentPrice,
+  });
+
+  final ProductTextRecognitionResult recognition;
+  final String currentName;
+  final String currentBrand;
+  final String currentUnit;
+  final String currentPrice;
+
+  @override
+  State<_RecognizedProductReview> createState() =>
+      _RecognizedProductReviewState();
+}
+
+class _RecognizedProductReviewState extends State<_RecognizedProductReview> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _brandController;
+  late final TextEditingController _unitController;
+  late final TextEditingController _priceController;
+  late bool _useName;
+  late bool _useBrand;
+  late bool _useUnit;
+  late bool _usePrice;
+  String? _priceError;
+
+  ProductTextSuggestions get _suggestions => widget.recognition.suggestions;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: _suggestions.productName ?? '',
+    );
+    _brandController = TextEditingController(text: _suggestions.brand ?? '');
+    _unitController = TextEditingController(
+      text: _suggestions.sizeOrUnit ?? '',
+    );
+    _priceController = TextEditingController(
+      text: _suggestions.priceCentavos == null
+          ? ''
+          : formatPesoInput(_suggestions.priceCentavos!),
+    );
+    _useName = _selectedByDefault(widget.currentName, _suggestions.productName);
+    _useBrand = _selectedByDefault(widget.currentBrand, _suggestions.brand);
+    _useUnit = _selectedByDefault(widget.currentUnit, _suggestions.sizeOrUnit);
+    final currentPrice = tryParsePesoCentavos(widget.currentPrice);
+    _usePrice =
+        _suggestions.priceCentavos != null &&
+        (currentPrice == null || currentPrice == _suggestions.priceCentavos);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _brandController.dispose();
+    _unitController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final hasSuggestion =
+        _suggestions.productName != null ||
+        _suggestions.brand != null ||
+        _suggestions.sizeOrUnit != null ||
+        _suggestions.priceCentavos != null;
+    final hasSelectedSuggestion =
+        (_useName && _nameController.text.trim().isNotEmpty) ||
+        (_useBrand && _brandController.text.trim().isNotEmpty) ||
+        (_useUnit && _unitController.text.trim().isNotEmpty) ||
+        (_usePrice && _priceController.text.trim().isNotEmpty);
+    return FractionallySizedBox(
+      heightFactor: 0.9,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          MediaQuery.viewInsetsOf(context).bottom + AppSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Review label details',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              hasSuggestion
+                  ? 'Select only the details you want to use. Existing values stay unchanged unless you select a replacement.'
+                  : 'Text was found, but no safe field suggestions could be made. Review the detected text below.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_suggestions.productName != null)
+                      _detectedField(
+                        checkboxKey: const ValueKey(
+                          'detected-product-name-checkbox',
+                        ),
+                        label: 'Product name',
+                        controller: _nameController,
+                        selected: _useName,
+                        currentValue: widget.currentName,
+                        onSelected: (value) => setState(() => _useName = value),
+                      ),
+                    if (_suggestions.brand != null)
+                      _detectedField(
+                        checkboxKey: const ValueKey('detected-brand-checkbox'),
+                        label: 'Brand',
+                        controller: _brandController,
+                        selected: _useBrand,
+                        currentValue: widget.currentBrand,
+                        onSelected: (value) =>
+                            setState(() => _useBrand = value),
+                      ),
+                    if (_suggestions.sizeOrUnit != null)
+                      _detectedField(
+                        checkboxKey: const ValueKey('detected-unit-checkbox'),
+                        label: 'Size / unit',
+                        controller: _unitController,
+                        selected: _useUnit,
+                        currentValue: widget.currentUnit,
+                        onSelected: (value) => setState(() => _useUnit = value),
+                      ),
+                    if (_suggestions.priceCentavos != null)
+                      _detectedField(
+                        checkboxKey: const ValueKey('detected-price-checkbox'),
+                        label: 'Printed price',
+                        controller: _priceController,
+                        selected: _usePrice,
+                        currentValue: widget.currentPrice.isEmpty
+                            ? ''
+                            : '₱${widget.currentPrice}',
+                        prefixText: '₱ ',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        errorText: _priceError,
+                        onSelected: (value) =>
+                            setState(() => _usePrice = value),
+                      ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Card(
+                      color: scheme.surfaceContainerLow,
+                      child: ExpansionTile(
+                        key: const ValueKey('recognized-label-text'),
+                        initiallyExpanded: !hasSuggestion,
+                        leading: const Icon(Icons.text_snippet_outlined),
+                        title: const Text('Detected text'),
+                        subtitle: Text(
+                          '${widget.recognition.rawLines.length} line${widget.recognition.rawLines.length == 1 ? '' : 's'} found',
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.md,
+                              0,
+                              AppSpacing.md,
+                              AppSpacing.md,
+                            ),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: SelectableText(
+                                widget.recognition.rawLines.join('\n'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  key: const ValueKey('apply-detected-product-details'),
+                  onPressed: hasSelectedSuggestion ? _submit : null,
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('Use selected'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detectedField({
+    required ValueKey<String> checkboxKey,
+    required String label,
+    required TextEditingController controller,
+    required bool selected,
+    required String currentValue,
+    required ValueChanged<bool> onSelected,
+    TextInputType? keyboardType,
+    String? prefixText,
+    String? errorText,
+  }) {
+    final current = currentValue.trim();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Checkbox(
+              key: checkboxKey,
+              value: selected,
+              onChanged: (value) => onSelected(value ?? false),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              enabled: selected,
+              onChanged: (_) => setState(() => _priceError = null),
+              keyboardType: keyboardType,
+              decoration: InputDecoration(
+                labelText: label,
+                prefixText: prefixText,
+                errorText: errorText,
+                helperText: current.isEmpty
+                    ? 'New suggestion'
+                    : selected
+                    ? 'Will replace: $current'
+                    : 'Keeping: $current',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submit() {
+    final price = _usePrice
+        ? tryParsePesoCentavos(_priceController.text)
+        : null;
+    if (_usePrice && (price == null || price <= 0)) {
+      setState(() => _priceError = 'Enter a valid price.');
+      return;
+    }
+    Navigator.of(context).pop(
+      _RecognizedProductSelection(
+        productName: _selectedText(_useName, _nameController),
+        brand: _selectedText(_useBrand, _brandController),
+        sizeOrUnit: _selectedText(_useUnit, _unitController),
+        priceCentavos: price,
+      ),
+    );
+  }
+
+  static bool _selectedByDefault(String current, String? suggestion) {
+    if (suggestion == null || suggestion.trim().isEmpty) return false;
+    final normalizedCurrent = current.trim().toLowerCase();
+    return normalizedCurrent.isEmpty ||
+        normalizedCurrent == suggestion.trim().toLowerCase();
+  }
+
+  static String? _selectedText(
+    bool selected,
+    TextEditingController controller,
+  ) {
+    final value = controller.text.trim();
+    return selected && value.isNotEmpty ? value : null;
+  }
+}
+
 class _SellingUnitFields {
   _SellingUnitFields({this.id, String label = '', String price = ''})
     : labelController = TextEditingController(text: label),
@@ -1022,9 +1466,11 @@ class _PhotoEditor extends StatelessWidget {
     required this.removeExisting,
     required this.busy,
     required this.removingBackground,
+    required this.readingText,
     required this.backgroundRemoved,
     required this.onChoose,
     required this.onRemoveBackground,
+    required this.onReadText,
     required this.onRemove,
   });
 
@@ -1033,9 +1479,11 @@ class _PhotoEditor extends StatelessWidget {
   final bool removeExisting;
   final bool busy;
   final bool removingBackground;
+  final bool readingText;
   final bool backgroundRemoved;
   final VoidCallback onChoose;
   final VoidCallback onRemoveBackground;
+  final VoidCallback onReadText;
   final VoidCallback onRemove;
 
   @override
@@ -1115,6 +1563,20 @@ class _PhotoEditor extends StatelessWidget {
                             : backgroundRemoved
                             ? 'Background removed'
                             : 'Remove background',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton.icon(
+                      key: const ValueKey('read-product-photo-text'),
+                      onPressed: busy ? null : onReadText,
+                      icon: readingText
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.document_scanner_outlined),
+                      label: Text(
+                        readingText ? 'Reading label…' : 'Read label text',
                       ),
                     ),
                     TextButton.icon(
