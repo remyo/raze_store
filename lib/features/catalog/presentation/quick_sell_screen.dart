@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/database/cart_line_id.dart';
@@ -197,21 +198,34 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
                   onChanged: (value) => setState(() => _query = value),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Tap + or − to update the cart immediately.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AppSectionHeader(
-                  title: query.isEmpty ? 'Unit products' : 'Search results',
-                  subtitle:
-                      '${visible.length} ${visible.length == 1 ? 'product' : 'products'}',
-                  action: _QuickSellLayoutToggle(
-                    value: layout,
-                    onChanged: _changeLayout,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${visible.length} ${visible.length == 1 ? 'product' : 'products'}',
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                          Text(
+                            'Tap + to add to cart',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    _QuickSellLayoutToggle(
+                      value: layout,
+                      onChanged: _changeLayout,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -252,41 +266,34 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
             ),
           )
         else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xs,
-              0,
-              AppSpacing.xs,
-              AppSpacing.xl,
-            ),
-            sliver: SliverList.separated(
-              key: const ValueKey('quick-sell-results-grid'),
-              itemCount: (visible.length + 2) ~/ 3,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.xs),
-              itemBuilder: (context, rowIndex) {
-                final firstIndex = rowIndex * 3;
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: AppBreakpoints.readingMaxWidth,
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (var column = 0; column < 3; column++) ...[
-                          if (column > 0) const SizedBox(width: AppSpacing.xxs),
-                          Expanded(
-                            child: firstIndex + column < visible.length
-                                ? buildGridCard(visible[firstIndex + column])
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+          SliverLayoutBuilder(
+            builder: (context, constraints) {
+              final horizontalPadding =
+                  ((constraints.crossAxisExtent -
+                              AppBreakpoints.readingMaxWidth) /
+                          2)
+                      .clamp(AppSpacing.xs, double.infinity)
+                      .toDouble();
+              return SliverPadding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  AppSpacing.xl,
+                ),
+                // Each product follows the shortest column, so a product
+                // with more selling units cannot leave gaps in other columns.
+                sliver: SliverMasonryGrid.count(
+                  key: const ValueKey('quick-sell-results-grid'),
+                  crossAxisCount: 3,
+                  mainAxisSpacing: AppSpacing.xs,
+                  crossAxisSpacing: AppSpacing.xs,
+                  childCount: visible.length,
+                  itemBuilder: (context, index) =>
+                      buildGridCard(visible[index]),
+                ),
+              );
+            },
           ),
       ],
     );
@@ -540,10 +547,11 @@ class _CompactUnitProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final detail = [
-      product.brand,
-      product.category,
-    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' · ');
+    final nameStyle = Theme.of(
+      context,
+    ).textTheme.labelMedium!.copyWith(fontWeight: FontWeight.w700, height: 1.3);
+    final nameHeight =
+        MediaQuery.textScalerOf(context).scale(nameStyle.fontSize!) * 2.6;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -551,60 +559,63 @@ class _CompactUnitProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.xxs),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          SizedBox(
+            height: 68,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                SizedBox(
-                  height: AppSize.minimumTouchTarget,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ProductImage(
-                        product: product,
-                        width: AppSize.iconBadge,
-                        height: AppSize.iconBadge,
-                        borderRadius: BorderRadius.circular(AppRadius.small),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          onPressed: onEdit,
-                          tooltip: 'Edit ${product.name}',
-                          constraints: const BoxConstraints.tightFor(
-                            width: AppSize.minimumTouchTarget,
-                            height: AppSize.minimumTouchTarget,
-                          ),
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.edit_outlined, size: 16),
+                LayoutBuilder(
+                  builder: (context, constraints) => ProductImage(
+                    product: product,
+                    width: constraints.maxWidth,
+                    height: 68,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    onPressed: onEdit,
+                    tooltip: 'Edit ${product.name}',
+                    constraints: const BoxConstraints.tightFor(
+                      width: AppSize.minimumTouchTarget,
+                      height: AppSize.minimumTouchTarget,
+                    ),
+                    padding: EdgeInsets.zero,
+                    icon: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerLowest.withValues(
+                          alpha: 0.94,
                         ),
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
-                ),
-                Text(
-                  product.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (detail.isNotEmpty)
-                  Text(
-                    detail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(Icons.edit_outlined, size: 14),
+                      ),
                     ),
                   ),
+                ),
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            child: SizedBox(
+              height: nameHeight,
+              child: Text(
+                product.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: nameStyle,
+              ),
+            ),
+          ),
           for (var index = 0; index < product.saleOptions.length; index++) ...[
-            const Divider(height: AppSpacing.xxs),
+            Divider(
+              height: 1,
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
             Builder(
               builder: (context) {
                 final option = product.saleOptions[index];
@@ -624,7 +635,6 @@ class _CompactUnitProductCard extends StatelessWidget {
               },
             ),
           ],
-          const SizedBox(height: AppSpacing.xxs),
         ],
       ),
     );
@@ -660,164 +670,165 @@ class _CompactUnitOption extends StatelessWidget {
         cartItem != null &&
         (displayedPrice != option.priceCentavos ||
             displayedLabel != option.label);
-    final canAdd =
-        enabled && displayedPrice > 0 && quantity < maximumCartQuantity;
-    final canRemove = enabled && quantity > 0;
-
-    Widget quantityButton({
-      required Key key,
-      required VoidCallback? onPressed,
-      required String tooltip,
-      required IconData icon,
-    }) => IconButton(
-      key: key,
-      onPressed: onPressed,
-      tooltip: tooltip,
-      constraints: const BoxConstraints.expand(),
-      padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      icon: Icon(icon, size: 18),
-    );
-
-    Widget quantityText() => FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Text(
-        '$quantity',
-        textAlign: TextAlign.center,
-        style: Theme.of(
-          context,
-        ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
-      ),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
+    return ColoredBox(
+      color: quantity > 0
+          ? scheme.primaryContainer.withValues(alpha: 0.35)
+          : scheme.surfaceContainerLowest,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xs,
+              AppSpacing.xs,
+              AppSpacing.xs,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   displayedLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              if (option.isDefault) ...[
-                const SizedBox(width: AppSpacing.xxs),
-                Tooltip(
-                  message: 'Main barcode unit',
-                  child: Icon(
-                    Icons.barcode_reader,
-                    size: 14,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: PriceText(
+                    centavos: displayedPrice,
+                    size: PriceTextSize.small,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                if (usesSavedCartPrice)
+                  Tooltip(
+                    message: 'Using the price already in cart',
+                    child: Text(
+                      'Using the price already in cart',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
               ],
-            ],
+            ),
+          ),
+          _UnitQuantityControls(
+            product: product,
+            option: option,
+            label: displayedLabel,
+            priceCentavos: displayedPrice,
+            quantity: quantity,
+            enabled: enabled,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnitQuantityControls extends StatelessWidget {
+  const _UnitQuantityControls({
+    required this.product,
+    required this.option,
+    required this.label,
+    required this.priceCentavos,
+    required this.quantity,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final StoreProduct product;
+  final ProductSaleOption option;
+  final String label;
+  final int priceCentavos;
+  final int quantity;
+  final bool enabled;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final canAdd =
+        enabled && priceCentavos > 0 && quantity < maximumCartQuantity;
+    final canRemove = enabled && quantity > 0;
+
+    Widget button({required bool add}) {
+      final active = add ? canAdd : canRemove;
+      return IconButton(
+        key: ValueKey(
+          'quick-sell-${add ? 'add' : 'remove'}-${product.id}-${option.sellingUnitId ?? 'main'}',
+        ),
+        onPressed: active ? () => onChanged(quantity + (add ? 1 : -1)) : null,
+        tooltip: add
+            ? (priceCentavos <= 0 ? 'Set a price for $label' : 'Add one $label')
+            : 'Remove one $label',
+        constraints: const BoxConstraints.expand(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+        alignment: add ? Alignment.centerRight : Alignment.centerLeft,
+        icon: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: add && active ? scheme.primary : scheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(AppRadius.small),
+          ),
+          child: Icon(
+            add ? Icons.add_rounded : Icons.remove_rounded,
+            size: 18,
+            color: add && active
+                ? scheme.onPrimary
+                : scheme.onSurfaceVariant.withValues(alpha: active ? 1 : 0.35),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: PriceText(
-                centavos: displayedPrice,
-                size: PriceTextSize.small,
+      );
+    }
+
+    return Semantics(
+      container: true,
+      label: '${product.name}, $label quantity',
+      value: '$quantity',
+      child: SizedBox(
+        height: AppSize.minimumTouchTarget,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Row(
+              children: [
+                Expanded(child: button(add: false)),
+                Expanded(child: button(add: true)),
+              ],
+            ),
+            // The count is informational; tapping it must not change the cart.
+            AbsorbPointer(
+              child: SizedBox(
+                width: 28,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '$quantity',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: quantity > 0
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
-        if (usesSavedCartPrice)
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'Using the price already in cart',
-              maxLines: 1,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-        const SizedBox(height: AppSpacing.xxs),
-        Semantics(
-          container: true,
-          label: '${product.name}, $displayedLabel quantity',
-          value: '$quantity',
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final removeButton = quantityButton(
-                key: ValueKey(
-                  'quick-sell-remove-${product.id}-${option.sellingUnitId ?? 'main'}',
-                ),
-                onPressed: canRemove ? () => onChanged(quantity - 1) : null,
-                tooltip: 'Remove one $displayedLabel',
-                icon: Icons.remove_rounded,
-              );
-              final addButton = quantityButton(
-                key: ValueKey(
-                  'quick-sell-add-${product.id}-${option.sellingUnitId ?? 'main'}',
-                ),
-                onPressed: canAdd ? () => onChanged(quantity + 1) : null,
-                tooltip: displayedPrice <= 0
-                    ? 'Set a price for $displayedLabel'
-                    : 'Add one $displayedLabel',
-                icon: Icons.add_rounded,
-              );
-              final enoughRoomForInlineControls = constraints.maxWidth >= 108;
-
-              return DecoratedBox(
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(AppRadius.small),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: enoughRoomForInlineControls
-                    ? SizedBox(
-                        height: AppSize.minimumTouchTarget,
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: AppSize.minimumTouchTarget,
-                              child: removeButton,
-                            ),
-                            Expanded(child: quantityText()),
-                            SizedBox(
-                              width: AppSize.minimumTouchTarget,
-                              child: addButton,
-                            ),
-                          ],
-                        ),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(height: 24, child: quantityText()),
-                          const Divider(height: 1),
-                          SizedBox(
-                            height: AppSize.minimumTouchTarget,
-                            child: Row(
-                              children: [
-                                Expanded(child: removeButton),
-                                const VerticalDivider(width: 1),
-                                Expanded(child: addButton),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -852,19 +863,16 @@ class _UnitProductCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.sm,
-              AppSpacing.sm,
-              AppSpacing.xs,
-              AppSpacing.xs,
-            ),
+          Container(
+            color: scheme.surfaceContainerLow.withValues(alpha: 0.5),
+            padding: const EdgeInsets.all(AppSpacing.xs),
             child: Row(
               children: [
                 ProductImage(
                   product: product,
-                  width: AppSize.smallThumbnail,
-                  height: AppSize.smallThumbnail,
+                  width: AppSize.thumbnail,
+                  height: AppSize.thumbnail,
+                  fit: BoxFit.cover,
                   borderRadius: AppRadius.control,
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -878,28 +886,32 @@ class _UnitProductCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
-                      if (detail.isNotEmpty)
+                      if (detail.isNotEmpty) ...[
+                        const SizedBox(height: 2),
                         Text(
                           detail,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall
+                          style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
+                      ],
                     ],
                   ),
                 ),
                 IconButton(
                   onPressed: onEdit,
                   tooltip: 'Edit ${product.name}',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
                 ),
               ],
             ),
           ),
           for (var index = 0; index < product.saleOptions.length; index++) ...[
-            if (index > 0) const Divider(height: 1),
+            Divider(
+              height: 1,
+              color: scheme.outlineVariant.withValues(alpha: 0.5),
+            ),
             Builder(
               builder: (context) {
                 final option = product.saleOptions[index];
@@ -954,14 +966,13 @@ class _UnitOptionRow extends StatelessWidget {
         cartItem != null &&
         (displayedPrice != option.priceCentavos ||
             displayedLabel != option.label);
-    final canAdd =
-        enabled && displayedPrice > 0 && quantity < maximumCartQuantity;
-    final canRemove = enabled && quantity > 0;
-
-    return Padding(
+    return Container(
+      color: quantity > 0
+          ? scheme.primaryContainer.withValues(alpha: 0.35)
+          : scheme.surfaceContainerLowest,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+        vertical: AppSpacing.xxs,
       ),
       child: Row(
         children: [
@@ -969,28 +980,13 @@ class _UnitOptionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        displayedLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                    ),
-                    if (option.isDefault) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      Tooltip(
-                        message: 'Main barcode unit',
-                        child: Icon(
-                          Icons.barcode_reader,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
+                Text(
+                  displayedLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 PriceText(centavos: displayedPrice, size: PriceTextSize.small),
                 if (usesSavedCartPrice)
@@ -1004,47 +1000,16 @@ class _UnitOptionRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Semantics(
-            container: true,
-            label: '${product.name}, $displayedLabel quantity',
-            value: '$quantity',
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                borderRadius: AppRadius.control,
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    key: ValueKey(
-                      'quick-sell-remove-${product.id}-${option.sellingUnitId ?? 'main'}',
-                    ),
-                    onPressed: canRemove ? () => onChanged(quantity - 1) : null,
-                    tooltip: 'Remove one $displayedLabel',
-                    icon: const Icon(Icons.remove_rounded),
-                  ),
-                  SizedBox(
-                    width: 30,
-                    child: Text(
-                      '$quantity',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                  IconButton(
-                    key: ValueKey(
-                      'quick-sell-add-${product.id}-${option.sellingUnitId ?? 'main'}',
-                    ),
-                    onPressed: canAdd ? () => onChanged(quantity + 1) : null,
-                    tooltip: displayedPrice <= 0
-                        ? 'Set a price for $displayedLabel'
-                        : 'Add one $displayedLabel',
-                    icon: const Icon(Icons.add_rounded),
-                  ),
-                ],
-              ),
+          SizedBox(
+            width: 112,
+            child: _UnitQuantityControls(
+              product: product,
+              option: option,
+              label: displayedLabel,
+              priceCentavos: displayedPrice,
+              quantity: quantity,
+              enabled: enabled,
+              onChanged: onChanged,
             ),
           ),
         ],
@@ -1066,7 +1031,7 @@ class _CartSummaryBar extends StatelessWidget {
       top: false,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: scheme.surface,
+          color: scheme.surfaceContainerLowest,
           border: Border(top: BorderSide(color: scheme.outlineVariant)),
         ),
         child: Padding(
@@ -1083,11 +1048,14 @@ class _CartSummaryBar extends StatelessWidget {
                   children: [
                     Text(
                       '${cart.totalQuantity} ${cart.totalQuantity == 1 ? 'item' : 'items'} in cart',
-                      style: Theme.of(context).textTheme.labelLarge,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                     PriceText(
                       centavos: cart.totalCentavos,
                       size: PriceTextSize.small,
+                      style: const TextStyle(fontSize: 18),
                     ),
                   ],
                 ),
@@ -1095,7 +1063,8 @@ class _CartSummaryBar extends StatelessWidget {
               FilledButton.icon(
                 key: const ValueKey('quick-sell-view-cart'),
                 onPressed: onOpenCart,
-                icon: const Icon(Icons.shopping_basket_outlined),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                iconAlignment: IconAlignment.end,
                 label: const Text('View cart'),
               ),
             ],

@@ -220,15 +220,9 @@ void main() {
         findsNothing,
       );
 
-      final results = tester.widget<SliverList>(
-        find.byKey(const ValueKey('quick-sell-results-grid')),
-      );
-      final expectedRowCount = (products.length + 2) ~/ 3;
       expect(
-        results.delegate.estimatedChildCount,
-        (expectedRowCount * 2) - 1,
-        reason:
-            'SliverList.separated includes one child per row and separator.',
+        find.byKey(const ValueKey('quick-sell-results-grid')),
+        findsOneWidget,
       );
 
       final tiles = [
@@ -350,10 +344,10 @@ void main() {
       textScaler: const TextScaler.linear(2),
     );
 
-    final results = tester.widget<SliverList>(
+    expect(
       find.byKey(const ValueKey('quick-sell-results-grid')),
+      findsOneWidget,
     );
-    expect(results.delegate.estimatedChildCount, 3);
 
     final firstProduct = products.first;
     final add = find.byKey(
@@ -388,6 +382,154 @@ void main() {
       find.byKey(ValueKey('quick-sell-grid-item-${products.last.id}')),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact grid quantity label does not change the cart', (
+    tester,
+  ) async {
+    _usePhoneView(tester, width: 320, height: 1400);
+    final repository = _RecordingCartRepository(
+      CartDraft([_stickCartItem(quantity: 3)]),
+    );
+    await _pumpScreen(
+      tester,
+      repository: repository,
+      products: [_unitProduct, _unitProductAt(0), _unitProductAt(1)],
+    );
+
+    final quantity = find.descendant(
+      of: find.byKey(const ValueKey('quick-sell-grid-item-cigarettes')),
+      matching: find.text('3'),
+    );
+    expect(quantity, findsOneWidget);
+    await tester.tapAt(tester.getCenter(quantity));
+    await tester.pumpAndSettle();
+
+    expect(repository.addCalls, 0);
+    expect(repository.updatedLineId, isNull);
+    expect(repository.updatedQuantity, isNull);
+
+    await tester.tap(
+      find.byKey(const ValueKey('quick-sell-add-cigarettes-stick')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.addCalls, 1);
+    expect(repository.addedOption?.sellingUnitId, 'stick');
+    expect(repository.addedQuantity, 1);
+
+    await tester.tap(
+      find.byKey(const ValueKey('quick-sell-remove-cigarettes-stick')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.updatedLineId, 'saved-stick-line');
+    expect(repository.updatedQuantity, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('short grid cards fill gaps and keep the correct unit controls', (
+    tester,
+  ) async {
+    _usePhoneView(tester, width: 390, height: 1400);
+    final products = [
+      _unitProductAt(0),
+      _unitProductAt(1, extraSellingUnits: 1),
+      _unitProductAt(2, extraSellingUnits: 2),
+      _unitProductAt(3),
+      _unitProductAt(4),
+    ];
+    final fourth = products[3];
+    final repository = _RecordingCartRepository(
+      CartDraft([
+        CartItem(
+          lineId: 'packed-unit-line',
+          productId: fourth.id,
+          sellingUnitId: 'piece-${fourth.id}',
+          barcode: fourth.barcode,
+          nameSnapshot: fourth.name,
+          unitLabelSnapshot: 'Piece',
+          unitPrice: const Money.fromCentavos(600),
+          quantity: 2,
+          addedAt: DateTime.utc(2026, 9, 3),
+          updatedAt: DateTime.utc(2026, 9, 3),
+        ),
+      ]),
+    );
+    await _pumpScreen(tester, repository: repository, products: products);
+
+    Finder tile(StoreProduct product) =>
+        find.byKey(ValueKey('quick-sell-grid-item-${product.id}'));
+    final firstBounds = tester.getRect(tile(products.first));
+    final thirdBounds = tester.getRect(tile(products[2]));
+    final fourthBounds = tester.getRect(tile(fourth));
+    expect(fourthBounds.left, closeTo(firstBounds.left, 0.5));
+    expect(fourthBounds.top - firstBounds.bottom, closeTo(8, 0.5));
+    expect(fourthBounds.top, lessThan(thirdBounds.bottom));
+
+    final add = find.byKey(
+      ValueKey('quick-sell-add-${fourth.id}-piece-${fourth.id}'),
+    );
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(repository.addedProduct, same(fourth));
+    expect(repository.addedOption?.sellingUnitId, 'piece-${fourth.id}');
+
+    await tester.enterText(find.byType(TextField), fourth.name);
+    await tester.pumpAndSettle();
+    expect(tile(products.first), findsNothing);
+    expect(tile(fourth), findsOneWidget);
+    expect(tester.getTopLeft(tile(fourth)).dx, closeTo(firstBounds.left, 0.5));
+
+    await tester.tap(
+      find.byKey(ValueKey('quick-sell-remove-${fourth.id}-piece-${fourth.id}')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.updatedLineId, 'packed-unit-line');
+    expect(repository.updatedQuantity, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large quick-unit catalog builds cards lazily while scrolling', (
+    tester,
+  ) async {
+    _usePhoneView(tester, width: 390, height: 844);
+    final products = [
+      for (var index = 0; index < 1000; index++)
+        _unitProductAt(index, extraSellingUnits: index % 3),
+    ];
+    final repository = _RecordingCartRepository(CartDraft(const []));
+    await _pumpScreen(tester, repository: repository, products: products);
+
+    Finder tile(StoreProduct product) =>
+        find.byKey(ValueKey('quick-sell-grid-item-${product.id}'));
+    final mountedCards = find.byWidgetPredicate((widget) {
+      final key = widget.key;
+      return key is ValueKey<String> &&
+          key.value.startsWith('quick-sell-grid-item-');
+    });
+    expect(tile(products.first), findsOneWidget);
+    expect(tile(products[60]), findsNothing);
+    expect(tile(products.last), findsNothing);
+    expect(mountedCards.evaluate().length, lessThan(30));
+
+    final scrollable = find.descendant(
+      of: find.byType(CustomScrollView),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    await tester.scrollUntilVisible(
+      tile(products[60]),
+      450,
+      scrollable: scrollable,
+      maxScrolls: 100,
+    );
+    await tester.pumpAndSettle();
+    expect(tile(products[60]), findsOneWidget);
+    expect(tile(products.first), findsNothing);
+    expect(tile(products.last), findsNothing);
+    expect(mountedCards.evaluate().length, lessThan(30));
     expect(tester.takeException(), isNull);
   });
 
@@ -514,7 +656,11 @@ void _usePhoneView(
   addTearDown(tester.view.reset);
 }
 
-StoreProduct _unitProductAt(int index, {bool useLongLabels = false}) {
+StoreProduct _unitProductAt(
+  int index, {
+  bool useLongLabels = false,
+  int extraSellingUnits = 0,
+}) {
   final id = 'quick-unit-$index';
   return StoreProduct(
     id: id,
@@ -534,6 +680,12 @@ StoreProduct _unitProductAt(int index, {bool useLongLabels = false}) {
         label: useLongLabels ? 'Individually wrapped serving' : 'Piece',
         price: const Money.fromCentavos(600),
       ),
+      for (var unit = 0; unit < extraSellingUnits; unit++)
+        SellingUnit(
+          id: 'bundle-$unit-$id',
+          label: 'Bundle ${unit + 2}',
+          price: Money.fromCentavos(1200 + unit * 600),
+        ),
     ],
     createdAt: DateTime.utc(2026, 9, 3),
     updatedAt: DateTime.utc(2026, 9, 3),

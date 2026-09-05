@@ -214,10 +214,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.saved, isEmpty);
     expect(find.text('Required'), findsNWidgets(4));
-    expect(
-      find.text('Review the highlighted receipt details before saving.'),
-      findsOneWidget,
-    );
+    expect(find.text('Enter customer name.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

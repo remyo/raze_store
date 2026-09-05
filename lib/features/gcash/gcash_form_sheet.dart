@@ -6,7 +6,7 @@ import 'gcash_record.dart';
 import 'gcash_screen.dart' show GcashFormScreen;
 
 /// Opens the transaction form with the native, scroll-aware iOS sheet motion.
-Future<void> showGcashFormSheet(
+Future<GcashRecord?> showGcashFormSheet(
   BuildContext context, {
   GcashKind kind = GcashKind.cashIn,
   GcashRecord? record,
@@ -21,10 +21,10 @@ Future<void> showGcashFormSheet(
       onBusyChanged: route.setBusy,
     ),
   );
-  return Navigator.of(context, rootNavigator: true).push<void>(route);
+  return Navigator.of(context, rootNavigator: true).push<GcashRecord>(route);
 }
 
-class _GcashFormSheetRoute extends CupertinoSheetRoute<void> {
+class _GcashFormSheetRoute extends CupertinoSheetRoute<GcashRecord> {
   _GcashFormSheetRoute({required super.scrollableBuilder});
 
   bool _busy = false;
@@ -40,7 +40,7 @@ class _GcashFormSheetRoute extends CupertinoSheetRoute<void> {
   }
 
   @override
-  bool didPop(void result) {
+  bool didPop(GcashRecord? result) {
     if (_busy) {
       // Cupertino's drag can finish after work begins, and bypasses PopScope.
       // Restore after its drag-end handler has finished setting the animation.

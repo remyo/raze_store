@@ -76,9 +76,9 @@ Future<Completer<void>> _open(
 GcashFormScreen _form(WidgetTester tester) =>
     tester.widget<GcashFormScreen>(find.byType(GcashFormScreen));
 
-CupertinoSheetRoute<void> _route(WidgetTester tester) =>
+CupertinoSheetRoute<GcashRecord> _route(WidgetTester tester) =>
     ModalRoute.of(tester.element(find.byType(GcashFormScreen)))!
-        as CupertinoSheetRoute<void>;
+        as CupertinoSheetRoute<GcashRecord>;
 
 Finder get _scrollable => find
     .descendant(

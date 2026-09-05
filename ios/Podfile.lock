@@ -2,15 +2,15 @@ PODS:
   - camera_avfoundation (0.0.1):
     - Flutter
   - Flutter (1.0.0)
-  - flutter_file_dialog (0.0.1):
+  - flutter_file_dialog (3.3.0):
     - Flutter
   - flutter_onnxruntime (0.0.1):
     - Flutter
     - onnxruntime-objc (= 1.23.0)
-  - google_mlkit_commons (0.12.0):
+  - google_mlkit_commons (0.13.0):
     - Flutter
     - MLKitVision (~> 10.0.0)
-  - google_mlkit_text_recognition (0.16.0):
+  - google_mlkit_text_recognition (0.17.1):
     - Flutter
     - google_mlkit_commons
     - GoogleMLKit/TextRecognition (~> 9.0.0)
@@ -163,10 +163,10 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   camera_avfoundation: 968a9a5323c79a99c166ad9d7866bfd2047b5a9b
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_file_dialog: ca8d7fbd1772d4f0c2777b4ab20a7787ef4e7dd8
+  flutter_file_dialog: a8b3b3d17ebb81045e4722bb127b8c2ddd27fcfe
   flutter_onnxruntime: 5c16abbb94ec57759a244095eb62cab0eaab312c
-  google_mlkit_commons: b4dfe2f6ae4cbf24010dc6640a28984d01343c86
-  google_mlkit_text_recognition: 9b164471713e3afdb4c129cabe6d1d64fef7e817
+  google_mlkit_commons: b2c0a76e7ef4ff555e70e5d71f21d66ce3d08a97
+  google_mlkit_text_recognition: 5a8cb8b73c765938fb7111de6f5f883b90f15d52
   GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
   GoogleMLKit: b1eee21a41c57704fe72483b15c85cb2c0cd7444
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8

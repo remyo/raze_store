@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:raze_store/core/widgets/app_toast.dart';
 
 import 'gcash_record.dart';
 import 'gcash_record_actions.dart';
@@ -161,6 +162,26 @@ class _GcashScreenState extends ConsumerState<GcashScreen> {
         ),
       );
 
+  Future<void> _createRecord(BuildContext context, GcashKind kind) async {
+    final saved = await showGcashFormSheet(context, kind: kind);
+    if (!mounted || !context.mounted || saved == null) return;
+    final day = DateUtils.dateOnly(saved.date);
+    // An imported receipt may be months old. Show its actual transaction day
+    // instead of silently hiding the new record behind the Today/type filter.
+    setState(() {
+      _filter = _HistoryFilter(
+        range: DateUtils.isSameDay(day, _today)
+            ? null
+            : DateTimeRange(start: day, end: day),
+      );
+      _reloadFilter();
+    });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+    final details = _openRecord(context, saved);
+    showToast(context, 'GCash record saved.', type: AppToastType.success);
+    await details;
+  }
+
   @override
   void dispose() {
     unawaited(_recordSubscription?.cancel());
@@ -250,8 +271,7 @@ class _GcashScreenState extends ConsumerState<GcashScreen> {
                       minimumSize: const Size(48, 52),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    onPressed: () =>
-                        showGcashFormSheet(context, kind: GcashKind.cashIn),
+                    onPressed: () => _createRecord(context, GcashKind.cashIn),
                     icon: const Icon(Icons.add_circle_outline_rounded),
                     label: const Text('Cash In'),
                   ),
@@ -264,8 +284,7 @@ class _GcashScreenState extends ConsumerState<GcashScreen> {
                       minimumSize: const Size(48, 52),
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    onPressed: () =>
-                        showGcashFormSheet(context, kind: GcashKind.cashOut),
+                    onPressed: () => _createRecord(context, GcashKind.cashOut),
                     icon: const Icon(Icons.payments_outlined),
                     label: const Text('Cash Out'),
                   ),

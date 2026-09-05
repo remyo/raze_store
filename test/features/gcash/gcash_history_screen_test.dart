@@ -467,68 +467,78 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('saving Cash In closes the sheet and refreshes Today history', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
-    final database = AppDatabase.forTesting(NativeDatabase.memory());
-    addTearDown(database.close);
-    final repository = GcashRepository(database);
-    await tester.runAsync(() => repository.watch().first);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [gcashRepositoryProvider.overrideWithValue(repository)],
-        child: MaterialApp(home: GcashScreen(now: () => _today)),
-      ),
-    );
-    await tester.runAsync(() => repository.watch(since: _today).first);
-    await tester.pumpAndSettle();
-    await tester.tap(_key('gcash-history-cash-in'));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'saving Cash In opens saved details and refreshes Today history',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
+      final repository = GcashRepository(database);
+      await tester.runAsync(() => repository.watch().first);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [gcashRepositoryProvider.overrideWithValue(repository)],
+          child: MaterialApp(home: GcashScreen(now: () => _today)),
+        ),
+      );
+      await tester.runAsync(() => repository.watch(since: _today).first);
+      await tester.pumpAndSettle();
+      await tester.tap(_key('gcash-history-cash-in'));
+      await tester.pumpAndSettle();
 
-    Finder field(String label) => find.byWidgetPredicate(
-      (widget) => widget is TextField && widget.decoration?.labelText == label,
-    );
-    for (final entry in [
-      (label: 'Customer name', value: 'New customer'),
-      (label: 'Mobile number (as shown on receipt)', value: '09171234567'),
-      (label: 'Amount (₱)', value: '500'),
-      (label: 'Reference / transaction number', value: '123456789'),
-    ]) {
-      await tester.ensureVisible(field(entry.label));
-      await tester.enterText(field(entry.label), entry.value);
-    }
-    await tester.ensureVisible(find.text('Choose transaction date & time'));
-    await tester.tap(find.text('Choose transaction date & time'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Switch to input'));
-    await tester.pumpAndSettle();
-    final dateField = find.descendant(
-      of: find.byType(DatePickerDialog),
-      matching: find.byType(TextField),
-    );
-    await tester.enterText(dateField, '09/05/2026');
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Save GCash record'));
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Save GCash record'));
-      return repository.watch().first;
-    });
-    await tester.pumpAndSettle();
-    final saved = await tester.runAsync(() => repository.watch().first);
-    await tester.pumpAndSettle();
+      Finder field(String label) => find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == label,
+      );
+      for (final entry in [
+        (label: 'Customer name', value: 'New customer'),
+        (label: 'Mobile number (as shown on receipt)', value: '09171234567'),
+        (label: 'Amount (₱)', value: '500'),
+        (label: 'Reference / transaction number', value: '123456789'),
+      ]) {
+        await tester.ensureVisible(field(entry.label));
+        await tester.enterText(field(entry.label), entry.value);
+      }
+      await tester.ensureVisible(find.text('Choose transaction date & time'));
+      await tester.tap(find.text('Choose transaction date & time'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Switch to input'));
+      await tester.pumpAndSettle();
+      final dateField = find.descendant(
+        of: find.byType(DatePickerDialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(dateField, '09/05/2026');
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Save GCash record'));
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Save GCash record'));
+        return repository.watch().first;
+      });
+      await tester.pumpAndSettle();
+      final saved = await tester.runAsync(() => repository.watch().first);
+      await tester.pumpAndSettle();
 
-    expect(saved!.single.name, 'New customer');
-    expect(saved.single.amount, 50000);
-    expect(saved.single.fee, 1000);
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(find.text('New customer'), findsOneWidget);
-    expect(find.text('No transactions today'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpAndSettle();
-  });
+      expect(saved!.single.name, 'New customer');
+      expect(saved.single.amount, 50000);
+      expect(saved.single.fee, 1000);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(GcashFormScreen), findsNothing);
+      expect(find.byType(GcashTransactionScreen), findsOneWidget);
+      expect(find.text('New customer'), findsOneWidget);
+      expect(find.text('GCash record saved.'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Today · All transactions'), findsOneWidget);
+      expect(find.text('New customer'), findsOneWidget);
+      expect(find.text('No transactions today'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+    },
+  );
 }

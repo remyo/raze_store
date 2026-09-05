@@ -254,7 +254,12 @@ behind it. Use the close button or swipe down to dismiss the idle form.
 Dismissal is blocked while a receipt is processing or a record is saving.
 **Save GCash record / Save changes** stays fixed at the bottom, above the
 keyboard, even with a receipt attached. The fields scroll separately; saving
-checks every required field and highlights missing details.
+checks every required field, shows a specific floating toast for missing details,
+and scrolls to the field that needs attention. If no charge tier covers the
+amount, enter a service fee manually (or `0` for no charge). A successful save
+opens the saved transaction and switches History to its transaction date, so an
+older receipt is not hidden by the Today filter. A failed save keeps the form
+and attached image available to correct or retry.
 Cash In records cash received from a customer and GCash sent to them; Cash Out
 records GCash received from a customer and cash given to them.
 
@@ -280,6 +285,8 @@ Receipt reading works best with GCash receipts. Other formats can be hard to rea
 use manual entry and check every suggested field. An unrecognized layout or failed
 reading shows a note in the form. Importing a replacement receipt clears previous
 suggestions so details from two transactions are not mixed.
+Upload and scan feedback uses an animated floating toast above the page, without
+moving the form or covering the sticky Save button.
 
 Open the gear button on a GCash page or **Settings → GCash settings** to view
 one shared **Amount range / Profit charge** table. It is read-only initially;
@@ -409,6 +416,28 @@ The project pins Flutter 3.44.7 in `.fvmrc`. For iOS, open
 `ios/Runner.xcworkspace` (not `Runner.xcodeproj`) when using Xcode. The iOS
 plugins intentionally use CocoaPods, so run `pod install` after a dependency
 change if Xcode reports missing pods.
+
+The plugin versions require Flutter 3.44+ / Dart 3.12+, which the pinned SDK
+provides. `flutter_file_dialog` 3.3.2 includes Swift Package Manager support.
+`google_mlkit_text_recognition` 0.17.1 and its `google_mlkit_commons` 0.13.0
+dependency still require CocoaPods on iOS. Flutter 3.44 can warn about these
+two plugins even with `enable-swift-package-manager: false`; this is an upstream
+migration warning and does not prevent the current CocoaPods build. Keep the
+project's CocoaPods setting until these plugins support Swift Package Manager.
+
+For this upgrade from `flutter_file_dialog` 3.0.3, clear the old generated
+headers once before refreshing packages and pods. Otherwise Xcode can report
+that `FlutterFileDialogPlugin` has different definitions in different modules.
+Future routine dependency updates only need `pub get` and `pod install`.
+
+```sh
+fvm flutter clean
+fvm flutter pub get
+cd ios
+pod install
+cd ..
+sh build.sh ios
+```
 
 Barcode scanning, guided photo framing, low-light detection, the flashlight,
 label reading, and gallery export require a physical-device smoke test even when
