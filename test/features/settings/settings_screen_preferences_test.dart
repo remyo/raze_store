@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
+import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/app_storage_usage.dart';
@@ -18,10 +19,65 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('keeps configurable setting groups closed by default', (
+    tester,
+  ) async {
+    await _pumpSettings(tester);
+
+    for (final key in <String>[
+      'settings-section-receipt',
+      'settings-section-scanner',
+      'settings-section-appearance',
+      'settings-section-backup-reminders',
+      'settings-section-catalog-files',
+    ]) {
+      expect(find.byKey(ValueKey(key)), findsOneWidget);
+    }
+
+    expect(find.text('Receipt details'), findsOneWidget);
+    expect(find.text('Barcode scanner'), findsOneWidget);
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Backup reminders'), findsOneWidget);
+    expect(find.text('Catalog files'), findsOneWidget);
+
+    expect(find.text('Store name'), findsNothing);
+    expect(find.byKey(const ValueKey('scanner-sound-setting')), findsNothing);
+    expect(find.byType(SegmentedButton<ThemeMode>), findsNothing);
+    expect(
+      find.byKey(const ValueKey('backup-reminder-frequency-setting')),
+      findsNothing,
+    );
+    expect(find.byType(CatalogDataSection), findsNothing);
+
+    await _openSettingsSection(
+      tester,
+      const ValueKey('settings-section-catalog-files'),
+    );
+
+    expect(find.byType(CatalogDataSection), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('catalog-pack-expansion')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('complete-backup-expansion')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('csv-tools-expansion')), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-catalog-pack')), findsNothing);
+  });
+
   testWidgets('shows and persists scanner behavior controls', (tester) async {
     await _pumpSettings(tester);
 
     expect(find.text('Barcode scanner'), findsOneWidget);
+    expect(find.byKey(const ValueKey('scanner-sound-setting')), findsNothing);
+
+    await _openSettingsSection(
+      tester,
+      const ValueKey('settings-section-scanner'),
+    );
+
     expect(find.text('Scan sound'), findsOneWidget);
     expect(find.text('Vibration'), findsOneWidget);
     expect(find.text('Add main unit automatically'), findsOneWidget);
@@ -73,6 +129,15 @@ void main() {
     tester,
   ) async {
     await _pumpSettings(tester);
+
+    expect(
+      find.byKey(const ValueKey('backup-reminder-frequency-setting')),
+      findsNothing,
+    );
+    await _openSettingsSection(
+      tester,
+      const ValueKey('settings-section-backup-reminders'),
+    );
 
     final frequency = find.byKey(
       const ValueKey('backup-reminder-frequency-setting'),
@@ -135,5 +200,20 @@ Future<void> _pumpSettings(WidgetTester tester) async {
       child: MaterialApp(theme: AppTheme.light, home: const SettingsScreen()),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openSettingsSection(
+  WidgetTester tester,
+  ValueKey<String> key,
+) async {
+  final section = find.byKey(key);
+  await tester.scrollUntilVisible(
+    section,
+    240,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(section);
   await tester.pumpAndSettle();
 }

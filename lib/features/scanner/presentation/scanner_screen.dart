@@ -9,7 +9,6 @@ import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/barcode/barcode.dart' as store_barcode;
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/cart/application/cart_providers.dart';
-import 'package:raze_store/features/cart/presentation/cart_shortcut_button.dart';
 import 'package:raze_store/features/catalog/application/catalog_lookup_providers.dart';
 import 'package:raze_store/features/catalog/application/catalog_lookup_service.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
@@ -133,79 +132,85 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     // Start loading scan preferences before the first camera detection. The
     // handler reads the latest value for every accepted barcode.
     ref.watch(appPreferencesProvider);
+    final screenSize = MediaQuery.sizeOf(context);
+    final cameraMaxHeight = (screenSize.height * 0.52).clamp(220.0, 510.0);
     return AppPageScaffold(
       title: 'Scan a barcode',
-      actions: const [CartShortcutButton()],
       padBody: false,
       body: ListView(
-        padding: AppSpacing.pageInsetsFor(MediaQuery.sizeOf(context).width),
+        padding: AppSpacing.pageInsetsFor(screenSize.width),
         children: [
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 680),
-              child: Card(
-                color: Colors.black,
-                clipBehavior: Clip.antiAlias,
-                child: AspectRatio(
-                  aspectRatio: 4 / 3,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      MobileScanner(
-                        controller: _scannerController,
-                        tapToFocus: true,
-                        onDetect: _onDetect,
-                        errorBuilder: (context, error) => _CameraError(
-                          onManualEntry: () => _focusManualField(context),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: cameraMaxHeight),
+                child: Card(
+                  color: Colors.black,
+                  clipBehavior: Clip.antiAlias,
+                  child: AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        MobileScanner(
+                          controller: _scannerController,
+                          tapToFocus: true,
+                          onDetect: _onDetect,
+                          errorBuilder: (context, error) => _CameraError(
+                            onManualEntry: () => _focusManualField(context),
+                          ),
+                          overlayBuilder: (_, _) =>
+                              const IgnorePointer(child: _ScannerOverlay()),
                         ),
-                        overlayBuilder: (_, _) =>
-                            const IgnorePointer(child: _ScannerOverlay()),
-                      ),
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: SafeArea(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.sm),
-                            child: ValueListenableBuilder<MobileScannerState>(
-                              valueListenable: _scannerController,
-                              builder: (context, state, _) => Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _CameraAction(
-                                    tooltip: state.torchState == TorchState.on
-                                        ? 'Turn flash off'
-                                        : 'Turn flash on',
-                                    icon: state.torchState == TorchState.on
-                                        ? Icons.flash_on_rounded
-                                        : Icons.flash_off_rounded,
-                                    enabled:
-                                        state.torchState !=
-                                        TorchState.unavailable,
-                                    onPressed: _scannerController.toggleTorch,
-                                  ),
-                                  const SizedBox(width: AppSpacing.xs),
-                                  _CameraAction(
-                                    tooltip: 'Switch camera',
-                                    icon: Icons.cameraswitch_outlined,
-                                    enabled: (state.availableCameras ?? 2) > 1,
-                                    onPressed: _scannerController.switchCamera,
-                                  ),
-                                ],
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: SafeArea(
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              child: ValueListenableBuilder<MobileScannerState>(
+                                valueListenable: _scannerController,
+                                builder: (context, state, _) => Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _CameraAction(
+                                      tooltip: state.torchState == TorchState.on
+                                          ? 'Turn flash off'
+                                          : 'Turn flash on',
+                                      icon: state.torchState == TorchState.on
+                                          ? Icons.flash_on_rounded
+                                          : Icons.flash_off_rounded,
+                                      enabled:
+                                          state.torchState !=
+                                          TorchState.unavailable,
+                                      onPressed: _scannerController.toggleTorch,
+                                    ),
+                                    const SizedBox(width: AppSpacing.xs),
+                                    _CameraAction(
+                                      tooltip: 'Switch camera',
+                                      icon: Icons.cameraswitch_outlined,
+                                      enabled:
+                                          (state.availableCameras ?? 2) > 1,
+                                      onPressed:
+                                          _scannerController.switchCamera,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      if (_handling)
-                        const ColoredBox(
-                          color: Color(0x66000000),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
+                        if (_handling)
+                          const ColoredBox(
+                            color: Color(0x66000000),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -218,6 +223,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _ScannerCartCheckoutButton(),
+                  const SizedBox(height: AppSpacing.md),
                   const AppSectionHeader(
                     title: 'Enter a barcode manually',
                     subtitle:
@@ -638,6 +645,54 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   void _focusManualField(BuildContext context) {
     _manualFocusNode.requestFocus();
+  }
+}
+
+class _ScannerCartCheckoutButton extends ConsumerWidget {
+  const _ScannerCartCheckoutButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quantity = ref.watch(cartDraftProvider).value?.totalQuantity ?? 0;
+    final quantityLabel = '$quantity ${quantity == 1 ? 'item' : 'items'}';
+
+    return Semantics(
+      button: true,
+      label: 'View cart and checkout, $quantityLabel',
+      child: FilledButton.tonal(
+        key: const ValueKey('scanner-cart-checkout'),
+        onPressed: () => context.push('/cart'),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(AppSize.regularRow),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.shopping_basket_outlined),
+            const SizedBox(width: AppSpacing.sm),
+            const Expanded(
+              child: Text(
+                'View cart & checkout',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              quantityLabel,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(width: AppSpacing.xxs),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
+      ),
+    );
   }
 }
 

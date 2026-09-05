@@ -107,14 +107,17 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const AppSectionHeader(
-                      title: 'Receipt details',
-                      subtitle:
-                          'These details appear on receipt images you save or send.',
+                      title: 'Store & selling',
+                      subtitle: 'Open only the settings you need to change.',
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Card(
+                    const SizedBox(height: AppSpacing.xs),
+                    AppExpansionCard(
+                      key: const ValueKey('settings-section-receipt'),
+                      icon: Icons.receipt_long_outlined,
+                      title: 'Receipt details',
+                      subtitle: 'Store name, contact, and receipt message',
                       child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
+                        padding: const EdgeInsets.only(top: AppSpacing.xxs),
                         child: Column(
                           children: [
                             TextFormField(
@@ -182,94 +185,51 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppSectionHeader(
+                    const SizedBox(height: AppSpacing.xs),
+                    AppExpansionCard(
+                      key: const ValueKey('settings-section-scanner'),
+                      icon: Icons.qr_code_scanner_rounded,
                       title: 'Barcode scanner',
-                      subtitle:
-                          'Choose how scans add products and confirm a successful add.',
+                      subtitle: 'Sound, vibration, selling unit, and cooldown',
+                      child: _buildScannerSettings(appPreferences),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _buildScannerSettings(appPreferences),
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppSectionHeader(
-                      title: 'Product categories',
-                      subtitle:
-                          'Choose broad shelf groups and add your own categories.',
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: ListTile(
-                        key: const ValueKey('manage-product-categories'),
-                        dense: true,
-                        leading: const Icon(Icons.category_outlined),
-                        title: const Text('Manage categories'),
-                        subtitle: Text(
-                          customCategoryCount == 0
+                    const SizedBox(height: AppSpacing.xs),
+                    _SettingsNavigationCard(
+                      children: [
+                        _SettingsNavigationRow(
+                          key: const ValueKey('manage-product-categories'),
+                          icon: Icons.category_outlined,
+                          title: 'Product categories',
+                          subtitle: customCategoryCount == 0
                               ? 'Built-in categories only'
                               : '$customCategoryCount custom ${customCategoryCount == 1 ? 'category' : 'categories'}',
+                          onTap: () => context.push('/settings/categories'),
                         ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () => context.push('/settings/categories'),
-                      ),
+                        const Divider(height: 1),
+                        _SettingsNavigationRow(
+                          key: const ValueKey('delete-multiple-products'),
+                          icon: Icons.checklist_rtl_rounded,
+                          title: 'Delete multiple products',
+                          subtitle: 'Search, select, and confirm in bulk',
+                          onTap: () =>
+                              context.push('/settings/products/delete'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.md),
                     const AppSectionHeader(
-                      title: 'Product maintenance',
+                      title: 'App & local data',
                       subtitle:
-                          'Review and remove unwanted catalog entries safely.',
+                          'Appearance, backups, files, and phone storage.',
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: ListTile(
-                        key: const ValueKey('delete-multiple-products'),
-                        dense: true,
-                        leading: const Icon(Icons.checklist_rtl_rounded),
-                        title: const Text('Delete multiple products'),
-                        subtitle: const Text(
-                          'Search, select, and confirm several products at once',
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () => context.push('/settings/products/delete'),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppSectionHeader(
-                      title: 'Storage',
-                      subtitle:
-                          'See what is using space and safely clear temporary files.',
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Card(
-                      clipBehavior: Clip.antiAlias,
-                      child: ListTile(
-                        key: const ValueKey('manage-app-storage'),
-                        dense: true,
-                        leading: const Icon(Icons.storage_rounded),
-                        title: const Text('Storage manager'),
-                        subtitle: Text(
-                          storageUsage.when(
-                            data: (usage) =>
-                                '${formatStorageBytes(usage.totalManagedBytes)} measured local data',
-                            loading: () => 'Measuring local data…',
-                            error: (error, stackTrace) =>
-                                'View storage details',
-                          ),
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: _openStorageManager,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppSectionHeader(
+                    const SizedBox(height: AppSpacing.xs),
+                    AppExpansionCard(
+                      key: const ValueKey('settings-section-appearance'),
+                      icon: Icons.palette_outlined,
                       title: 'Appearance',
-                      subtitle: 'Use the phone setting or choose a theme.',
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Card(
+                      subtitle: '${_themeModeLabel(themeMode)} theme',
                       child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.md),
+                        padding: const EdgeInsets.only(top: AppSpacing.xxs),
                         child: SegmentedButton<ThemeMode>(
                           showSelectedIcon: false,
                           segments: const [
@@ -298,22 +258,41 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppSectionHeader(
+                    const SizedBox(height: AppSpacing.xs),
+                    AppExpansionCard(
+                      key: const ValueKey('settings-section-backup-reminders'),
+                      icon: Icons.notification_add_outlined,
                       title: 'Backup reminders',
                       subtitle:
-                          'Get an in-app reminder to protect products, prices, photos, and sales.',
+                          'Choose when the app reminds you to protect data',
+                      child: _buildBackupReminderSettings(appPreferences),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _buildBackupReminderSettings(appPreferences),
-                    const SizedBox(height: AppSpacing.lg),
-                    const AppSectionHeader(
+                    const SizedBox(height: AppSpacing.xs),
+                    _SettingsNavigationCard(
+                      children: [
+                        _SettingsNavigationRow(
+                          key: const ValueKey('manage-app-storage'),
+                          icon: Icons.storage_rounded,
+                          title: 'Storage manager',
+                          subtitle: storageUsage.when(
+                            data: (usage) =>
+                                '${formatStorageBytes(usage.totalManagedBytes)} measured local data',
+                            loading: () => 'Measuring local data…',
+                            error: (error, stackTrace) =>
+                                'View storage details',
+                          ),
+                          onTap: _openStorageManager,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    const AppExpansionCard(
+                      key: ValueKey('settings-section-catalog-files'),
+                      icon: Icons.folder_copy_outlined,
                       title: 'Catalog files',
-                      subtitle:
-                          'Install offline products, protect local prices, or edit products in a spreadsheet.',
+                      subtitle: 'Catalog packs, complete backup, and CSV tools',
+                      child: CatalogDataSection(),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    const CatalogDataSection(),
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),
@@ -331,92 +310,87 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
       error: (error, stackTrace) => _PreferenceErrorCard(
         onRetry: () => ref.invalidate(appPreferencesProvider),
       ),
-      data: (preferences) => Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            SwitchListTile.adaptive(
-              key: const ValueKey('scanner-sound-setting'),
-              dense: true,
-              secondary: const Icon(Icons.volume_up_outlined),
-              title: const Text('Scan sound'),
-              subtitle: const Text(
-                'Play a confirmation after an item is added.',
-              ),
-              value: preferences.scannerSoundEnabled,
-              onChanged: (enabled) => _saveAppPreference(
-                () => ref
-                    .read(appPreferencesProvider.notifier)
-                    .setScannerSoundEnabled(enabled),
-              ),
+      data: (preferences) => Column(
+        children: [
+          SwitchListTile.adaptive(
+            key: const ValueKey('scanner-sound-setting'),
+            dense: true,
+            secondary: const Icon(Icons.volume_up_outlined),
+            title: const Text('Scan sound'),
+            subtitle: const Text('Play a confirmation after an item is added.'),
+            value: preferences.scannerSoundEnabled,
+            onChanged: (enabled) => _saveAppPreference(
+              () => ref
+                  .read(appPreferencesProvider.notifier)
+                  .setScannerSoundEnabled(enabled),
             ),
-            const Divider(height: 1),
-            SwitchListTile.adaptive(
-              key: const ValueKey('scanner-vibration-setting'),
-              dense: true,
-              secondary: const Icon(Icons.vibration_rounded),
-              title: const Text('Vibration'),
-              subtitle: const Text('Vibrate after an item is added.'),
-              value: preferences.scannerVibrationEnabled,
-              onChanged: (enabled) => _saveAppPreference(
-                () => ref
-                    .read(appPreferencesProvider.notifier)
-                    .setScannerVibrationEnabled(enabled),
-              ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile.adaptive(
+            key: const ValueKey('scanner-vibration-setting'),
+            dense: true,
+            secondary: const Icon(Icons.vibration_rounded),
+            title: const Text('Vibration'),
+            subtitle: const Text('Vibrate after an item is added.'),
+            value: preferences.scannerVibrationEnabled,
+            onChanged: (enabled) => _saveAppPreference(
+              () => ref
+                  .read(appPreferencesProvider.notifier)
+                  .setScannerVibrationEnabled(enabled),
             ),
-            const Divider(height: 1),
-            SwitchListTile.adaptive(
-              key: const ValueKey('scanner-auto-main-unit-setting'),
-              dense: true,
-              secondary: const Icon(Icons.playlist_add_check_rounded),
-              title: const Text('Add main unit automatically'),
-              subtitle: const Text(
-                'Turn off to choose pack, piece, stick, or another selling unit after scanning.',
-              ),
-              value: preferences.autoAddMainUnitOnScan,
-              onChanged: (enabled) => _saveAppPreference(
-                () => ref
-                    .read(appPreferencesProvider.notifier)
-                    .setAutoAddMainUnitOnScan(enabled),
-              ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile.adaptive(
+            key: const ValueKey('scanner-auto-main-unit-setting'),
+            dense: true,
+            secondary: const Icon(Icons.playlist_add_check_rounded),
+            title: const Text('Add main unit automatically'),
+            subtitle: const Text(
+              'Turn off to choose pack, piece, stick, or another selling unit after scanning.',
             ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              child: DropdownButtonFormField<int>(
-                key: const ValueKey('scanner-cooldown-setting'),
-                initialValue: preferences.scannerRepeatCooldownMs,
-                decoration: const InputDecoration(
-                  labelText: 'Repeat-scan cooldown',
-                  helperText:
-                      'Wait this long before the same barcode can be added again.',
-                  prefixIcon: Icon(Icons.timer_outlined),
-                ),
-                items: [
-                  for (final milliseconds
-                      in allowedScannerRepeatCooldownMilliseconds)
-                    DropdownMenuItem(
-                      value: milliseconds,
-                      child: Text(_cooldownLabel(milliseconds)),
-                    ),
-                ],
-                onChanged: (milliseconds) {
-                  if (milliseconds == null) return;
-                  _saveAppPreference(
-                    () => ref
-                        .read(appPreferencesProvider.notifier)
-                        .setScannerRepeatCooldownMs(milliseconds),
-                  );
-                },
-              ),
+            value: preferences.autoAddMainUnitOnScan,
+            onChanged: (enabled) => _saveAppPreference(
+              () => ref
+                  .read(appPreferencesProvider.notifier)
+                  .setAutoAddMainUnitOnScan(enabled),
             ),
-          ],
-        ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
+            child: DropdownButtonFormField<int>(
+              key: const ValueKey('scanner-cooldown-setting'),
+              initialValue: preferences.scannerRepeatCooldownMs,
+              decoration: const InputDecoration(
+                labelText: 'Repeat-scan cooldown',
+                helperText:
+                    'Wait this long before the same barcode can be added again.',
+                prefixIcon: Icon(Icons.timer_outlined),
+              ),
+              items: [
+                for (final milliseconds
+                    in allowedScannerRepeatCooldownMilliseconds)
+                  DropdownMenuItem(
+                    value: milliseconds,
+                    child: Text(_cooldownLabel(milliseconds)),
+                  ),
+              ],
+              onChanged: (milliseconds) {
+                if (milliseconds == null) return;
+                _saveAppPreference(
+                  () => ref
+                      .read(appPreferencesProvider.notifier)
+                      .setScannerRepeatCooldownMs(milliseconds),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -432,70 +406,68 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
         final lastBackupLabel = lastBackup == null
             ? 'No successful backup has been created yet.'
             : 'Last successful backup: ${MaterialLocalizations.of(context).formatMediumDate(lastBackup.toLocal())}';
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                DropdownButtonFormField<BackupReminderFrequency>(
-                  key: const ValueKey('backup-reminder-frequency-setting'),
-                  initialValue: preferences.backupReminderFrequency,
-                  decoration: const InputDecoration(
-                    labelText: 'Remind me to create a backup',
-                    prefixIcon: Icon(Icons.notification_add_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: BackupReminderFrequency.off,
-                      child: Text('Off'),
-                    ),
-                    DropdownMenuItem(
-                      value: BackupReminderFrequency.weekly,
-                      child: Text('Every week'),
-                    ),
-                    DropdownMenuItem(
-                      value: BackupReminderFrequency.monthly,
-                      child: Text('Every month'),
-                    ),
-                  ],
-                  onChanged: (frequency) {
-                    if (frequency == null) return;
-                    _saveAppPreference(
-                      () => ref
-                          .read(appPreferencesProvider.notifier)
-                          .setBackupReminderFrequency(frequency),
-                    );
-                  },
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.xxs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DropdownButtonFormField<BackupReminderFrequency>(
+                key: const ValueKey('backup-reminder-frequency-setting'),
+                initialValue: preferences.backupReminderFrequency,
+                decoration: const InputDecoration(
+                  labelText: 'Remind me to create a backup',
+                  prefixIcon: Icon(Icons.notification_add_outlined),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      preferences.isBackupReminderDue(DateTime.now())
-                          ? Icons.warning_amber_rounded
-                          : Icons.cloud_done_outlined,
-                      size: 19,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Text(
-                        preferences.backupReminderFrequency ==
-                                BackupReminderFrequency.off
-                            ? 'Backup reminders are turned off. $lastBackupLabel'
-                            : lastBackupLabel,
-                        key: const ValueKey('last-successful-backup-status'),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                items: const [
+                  DropdownMenuItem(
+                    value: BackupReminderFrequency.off,
+                    child: Text('Off'),
+                  ),
+                  DropdownMenuItem(
+                    value: BackupReminderFrequency.weekly,
+                    child: Text('Every week'),
+                  ),
+                  DropdownMenuItem(
+                    value: BackupReminderFrequency.monthly,
+                    child: Text('Every month'),
+                  ),
+                ],
+                onChanged: (frequency) {
+                  if (frequency == null) return;
+                  _saveAppPreference(
+                    () => ref
+                        .read(appPreferencesProvider.notifier)
+                        .setBackupReminderFrequency(frequency),
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    preferences.isBackupReminderDue(DateTime.now())
+                        ? Icons.warning_amber_rounded
+                        : Icons.cloud_done_outlined,
+                    size: 19,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      preferences.backupReminderFrequency ==
+                              BackupReminderFrequency.off
+                          ? 'Backup reminders are turned off. $lastBackupLabel'
+                          : lastBackupLabel,
+                      key: const ValueKey('last-successful-backup-status'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
@@ -557,6 +529,68 @@ String _cooldownLabel(int milliseconds) {
   return seconds == seconds.roundToDouble()
       ? '${seconds.toInt()} second${seconds == 1 ? '' : 's'}'
       : '${seconds.toStringAsFixed(1)} seconds';
+}
+
+String _themeModeLabel(ThemeMode mode) => switch (mode) {
+  ThemeMode.system => 'System',
+  ThemeMode.light => 'Light',
+  ThemeMode.dark => 'Dark',
+};
+
+class _SettingsNavigationCard extends StatelessWidget {
+  const _SettingsNavigationCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
+    );
+  }
+}
+
+class _SettingsNavigationRow extends StatelessWidget {
+  const _SettingsNavigationRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListTile(
+      minTileHeight: 58,
+      contentPadding: const EdgeInsets.only(
+        left: AppSpacing.sm,
+        right: AppSpacing.xxs,
+      ),
+      leading: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.primaryContainer.withValues(alpha: 0.58),
+          borderRadius: AppRadius.control,
+        ),
+        child: SizedBox.square(
+          dimension: AppSize.compactControl,
+          child: Icon(icon, size: 19, color: scheme.primary),
+        ),
+      ),
+      title: Text(title),
+      subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    );
+  }
 }
 
 class _PreferenceLoadingCard extends StatelessWidget {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/money/money.dart';
@@ -47,7 +48,23 @@ void main() {
 
       await _pumpScanner(tester, local: local, cart: cart, feedback: feedback);
 
-      expect(find.byKey(const ValueKey('open-cart')), findsOneWidget);
+      expect(find.byKey(const ValueKey('open-cart')), findsNothing);
+      final appBar = tester.widget<AppBar>(find.byType(AppBar));
+      expect(appBar.actions, anyOf(isNull, isEmpty));
+      expect(
+        find.byKey(const ValueKey('scanner-cart-checkout')),
+        findsOneWidget,
+      );
+      expect(find.text('View cart & checkout'), findsOneWidget);
+      expect(find.text('0 items'), findsOneWidget);
+
+      final cartButtonTop = tester.getTopLeft(
+        find.byKey(const ValueKey('scanner-cart-checkout')),
+      );
+      final manualSectionTop = tester.getTopLeft(
+        find.text('Enter a barcode manually'),
+      );
+      expect(cartButtonTop.dy, lessThan(manualSectionTop.dy));
 
       const capture = BarcodeCapture(
         barcodes: [Barcode(rawValue: '4800012345678')],
@@ -66,6 +83,7 @@ void main() {
       expect(find.byKey(const ValueKey('scan-added-feedback')), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
       expect(feedback.calls, [(sound: true, vibration: true)]);
+      expect(find.text('1 item'), findsOneWidget);
 
       // Repeated camera frames for the label that is still visible stay
       // guarded and do not start another lookup or cart mutation.
@@ -88,8 +106,34 @@ void main() {
       expect(cart.totalQuantity, 2);
       expect(cart.saleOptions, [null, null]);
       expect(feedback.calls, hasLength(2));
+      expect(find.text('2 items'), findsOneWidget);
     },
   );
+
+  testWidgets('the scanner cart button opens the checkout cart page', (
+    tester,
+  ) async {
+    final platform = _FakeMobileScannerPlatform();
+    MobileScannerPlatform.instance = platform;
+
+    await _pumpScanner(
+      tester,
+      local: _LookupCatalogRepository(_product()),
+      cart: _RecordingCartRepository(initialQuantity: 3),
+    );
+
+    expect(find.text('3 items'), findsOneWidget);
+    final cartButton = find.byKey(const ValueKey('scanner-cart-checkout'));
+    await tester.ensureVisible(cartButton);
+    await tester.tap(cartButton);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('scanner-cart-destination')),
+      findsOneWidget,
+    );
+    expect(find.text('Cart page'), findsOneWidget);
+  });
 
   testWidgets('a barcode with sub-unit prices asks which unit to add', (
     tester,
@@ -468,6 +512,23 @@ Future<void> _pumpScanner(
   ScanFeedbackService? feedback,
 }) async {
   final resolvedPreferences = preferences ?? _preferences();
+  final router = GoRouter(
+    initialLocation: '/scanner',
+    routes: [
+      GoRoute(
+        path: '/scanner',
+        builder: (context, state) => const ScannerScreen(),
+      ),
+      GoRoute(
+        path: '/cart',
+        builder: (context, state) => const Scaffold(
+          key: ValueKey('scanner-cart-destination'),
+          body: Center(child: Text('Cart page')),
+        ),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -485,7 +546,7 @@ Future<void> _pumpScanner(
           ),
         ),
       ],
-      child: MaterialApp(theme: AppTheme.light, home: const ScannerScreen()),
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
     ),
   );
   await tester.pumpAndSettle();
@@ -528,12 +589,16 @@ StoreProduct _product({
 );
 
 final class _RecordingCartRepository implements CartRepository {
-  _RecordingCartRepository({this.addError});
+  _RecordingCartRepository({this.addError, int initialQuantity = 0})
+    : totalQuantity = initialQuantity;
 
   final Object? addError;
   int addCalls = 0;
-  int totalQuantity = 0;
+  int totalQuantity;
   final List<ProductSaleOption?> saleOptions = [];
+  final StreamController<CartDraft> _drafts =
+      StreamController<CartDraft>.broadcast(sync: true);
+  StoreProduct? _latestProduct;
 
   @override
   Future<void> addProduct(
@@ -545,13 +610,15 @@ final class _RecordingCartRepository implements CartRepository {
     if (addError case final error?) throw error;
     totalQuantity += quantity;
     saleOptions.add(saleOption);
+    _latestProduct = product;
+    _drafts.add(_draft);
   }
 
   @override
   Future<void> clear() async {}
 
   @override
-  Future<CartDraft> getDraft() async => CartDraft(const []);
+  Future<CartDraft> getDraft() async => _draft;
 
   @override
   Future<void> removeProduct(String lineId) async {}
@@ -560,7 +627,29 @@ final class _RecordingCartRepository implements CartRepository {
   Future<void> updateQuantity(String lineId, int quantity) async {}
 
   @override
-  Stream<CartDraft> watchDraft() => Stream.value(CartDraft(const []));
+  Stream<CartDraft> watchDraft() async* {
+    yield _draft;
+    yield* _drafts.stream;
+  }
+
+  CartDraft get _draft {
+    if (totalQuantity == 0) return CartDraft(const []);
+    final product = _latestProduct ?? _product();
+    final saleOption = saleOptions.lastOrNull;
+    return CartDraft([
+      CartItem(
+        lineId: 'scanner-test-line',
+        productId: product.id,
+        sellingUnitId: saleOption?.sellingUnitId,
+        barcode: product.barcode,
+        nameSnapshot: product.name,
+        unitPrice: saleOption?.price ?? product.price,
+        quantity: totalQuantity,
+        addedAt: DateTime.utc(2026, 9, 4),
+        updatedAt: DateTime.utc(2026, 9, 4),
+      ),
+    ]);
+  }
 }
 
 final class _LookupCatalogRepository implements CatalogRepository {

@@ -11,6 +11,35 @@ import 'package:raze_store/features/settings/application/settings_providers.dart
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  testWidgets('keeps catalog file tools closed until the user opens them', (
+    tester,
+  ) async {
+    await _pumpCatalogDataSection(
+      tester,
+      operations: _FakeTransferOperations(),
+      reviewOperations: _FakeReviewOperations(),
+    );
+
+    expect(find.text('Offline catalog pack'), findsOneWidget);
+    expect(find.text('Complete backup'), findsOneWidget);
+    expect(find.text('CSV spreadsheet'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-catalog-pack')), findsNothing);
+    expect(find.text('Create backup'), findsNothing);
+    expect(find.text('Restore backup'), findsNothing);
+    expect(find.text('Export CSV'), findsNothing);
+    expect(find.text('Import CSV'), findsNothing);
+
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('catalog-pack-expansion'),
+      title: 'Offline catalog pack',
+    );
+
+    expect(find.byKey(const ValueKey('import-catalog-pack')), findsOneWidget);
+    expect(find.text('Create backup'), findsNothing);
+    expect(find.text('Export CSV'), findsNothing);
+  });
+
   testWidgets('explains safe pack merge, backup, and CSV behavior', (
     tester,
   ) async {
@@ -33,15 +62,13 @@ void main() {
       ),
     );
 
-    expect(
-      find.text(
-        'Backup files are not encrypted. They contain prices, completed transactions and payment amounts, store details, and copies of product photos, so keep them private.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.textContaining('Import adds or updates'), findsOneWidget);
-
     expect(find.text('Offline catalog pack'), findsOneWidget);
+    expect(find.byKey(const ValueKey('import-catalog-pack')), findsNothing);
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('catalog-pack-expansion'),
+      title: 'Offline catalog pack',
+    );
     expect(find.textContaining('Existing non-zero prices'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
     await tester.pumpAndSettle();
@@ -62,6 +89,17 @@ void main() {
     expect(reviewOperations.applyCalls, 1);
     expect(reviewOperations.lastSelection!.selectedProductIds, {'new-1'});
 
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('complete-backup-expansion'),
+      title: 'Complete backup',
+    );
+    expect(
+      find.text(
+        'Backup files are not encrypted. They contain prices, completed transactions and payment amounts, store details, and copies of product photos, so keep them private.',
+      ),
+      findsOneWidget,
+    );
     await tester.ensureVisible(find.text('Restore backup'));
     await tester.tap(find.text('Restore backup'));
     await tester.pumpAndSettle();
@@ -75,11 +113,13 @@ void main() {
       tester.element(find.byType(CatalogDataSection)),
     ).hideCurrentSnackBar();
     await tester.pumpAndSettle();
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, -400),
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('csv-tools-expansion'),
+      title: 'CSV spreadsheet',
     );
-    await tester.pumpAndSettle();
+    expect(find.textContaining('Import adds or updates'), findsOneWidget);
+    await tester.ensureVisible(find.text('Import CSV'));
     await tester.tap(find.text('Import CSV'));
     await tester.pumpAndSettle();
     expect(find.text('Import product CSV?'), findsOneWidget);
@@ -113,6 +153,11 @@ void main() {
       ),
     );
 
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('catalog-pack-expansion'),
+      title: 'Offline catalog pack',
+    );
     await tester.tap(find.byKey(const ValueKey('import-catalog-pack')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Existing products'));
@@ -155,6 +200,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('complete-backup-expansion'),
+      title: 'Complete backup',
+    );
     await tester.ensureVisible(find.text('Create backup'));
     await tester.tap(find.text('Create backup'));
     await tester.pumpAndSettle();
@@ -230,19 +280,70 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('catalog-pack-expansion'),
+      title: 'Offline catalog pack',
+    );
     await expectScrollableDialog(
       trigger: find.byKey(const ValueKey('undo-catalog-pack-import')),
       title: 'Undo last catalog import?',
     );
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('complete-backup-expansion'),
+      title: 'Complete backup',
+    );
     await expectScrollableDialog(
       trigger: find.text('Restore backup'),
       title: 'Replace local store data?',
+    );
+    await _openTransferGroup(
+      tester,
+      key: const ValueKey('csv-tools-expansion'),
+      title: 'CSV spreadsheet',
     );
     await expectScrollableDialog(
       trigger: find.text('Import CSV'),
       title: 'Import product CSV?',
     );
   });
+}
+
+Future<void> _pumpCatalogDataSection(
+  WidgetTester tester, {
+  required CatalogTransferOperations operations,
+  required CatalogPackReviewOperations reviewOperations,
+}) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        catalogTransferCoordinatorProvider.overrideWithValue(operations),
+        catalogPackReviewCoordinatorProvider.overrideWithValue(
+          reviewOperations,
+        ),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: SingleChildScrollView(child: CatalogDataSection()),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openTransferGroup(
+  WidgetTester tester, {
+  required ValueKey<String> key,
+  required String title,
+}) async {
+  final section = find.byKey(key);
+  await tester.ensureVisible(section);
+  await tester.pumpAndSettle();
+  await tester.tap(find.descendant(of: section, matching: find.text(title)));
+  await tester.pumpAndSettle();
 }
 
 final class _FakeTransferOperations implements CatalogTransferOperations {

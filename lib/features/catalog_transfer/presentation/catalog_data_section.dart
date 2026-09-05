@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_coordinator.dart';
 import 'package:raze_store/features/catalog_transfer/application/catalog_transfer_providers.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_pack_review.dart';
@@ -34,238 +35,209 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final undoSummary = ref.watch(catalogPackUndoSummaryProvider);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: AppRadius.control,
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.folder_copy_outlined,
-                    color: scheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Catalog, backup & spreadsheet tools',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xxs),
-                      Text(
-                        'Start from an offline product pack, keep a complete backup, or move prices with CSV.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (_busy) ...[
-              const SizedBox(height: AppSpacing.md),
-              Semantics(
-                liveRegion: true,
-                label: 'Catalog file operation in progress',
-                child: const LinearProgressIndicator(minHeight: 3),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Offline catalog pack',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Open a .razepack, review New and Existing products separately, then check only the products and details you trust. Nothing is added while you review. Existing non-zero prices, your photos, sub-unit prices, receipt settings, and sales are protected.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Each official starter pack includes full attribution for its DTI, Open Food Facts, and dated retailer price sources.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            FilledButton.icon(
-              key: const ValueKey('import-catalog-pack'),
-              onPressed: _busy ? null : _confirmCatalogPackImport,
-              icon: _actionIcon(
-                _TransferAction.catalogPack,
-                Icons.inventory_2_outlined,
-              ),
-              label: Text(
-                _busyAction == _TransferAction.catalogPack
-                    ? 'Checking pack…'
-                    : 'Choose and review catalog pack',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            undoSummary.when(
-              loading: () => const SizedBox(
-                height: 38,
-                child: Center(child: LinearProgressIndicator()),
-              ),
-              error: (error, stackTrace) => Text(
-                'Undo status could not be checked.',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_busy) ...[
+          Semantics(
+            liveRegion: true,
+            label: 'Catalog file operation in progress',
+            child: const LinearProgressIndicator(minHeight: 3),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
+        AppExpansionCard(
+          key: const ValueKey('catalog-pack-expansion'),
+          icon: Icons.inventory_2_outlined,
+          title: 'Offline catalog pack',
+          subtitle: 'Review trusted .razepack products before importing',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Open a .razepack, review New and Existing products separately, then check only the products and details you trust. Nothing is added while you review. Existing non-zero prices, your photos, sub-unit prices, receipt settings, and sales are protected.',
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.error),
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
-              data: (undo) {
-                if (undo == null) {
-                  return Text(
-                    'No reviewed catalog import is available to undo.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Each official starter pack includes full attribution for its DTI, Open Food Facts, and dated retailer price sources.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton.icon(
+                key: const ValueKey('import-catalog-pack'),
+                onPressed: _busy ? null : _confirmCatalogPackImport,
+                icon: _actionIcon(
+                  _TransferAction.catalogPack,
+                  Icons.inventory_2_outlined,
+                ),
+                label: Text(
+                  _busyAction == _TransferAction.catalogPack
+                      ? 'Checking pack…'
+                      : 'Choose and review catalog pack',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              undoSummary.when(
+                loading: () => const SizedBox(
+                  height: 38,
+                  child: Center(child: LinearProgressIndicator()),
+                ),
+                error: (error, stackTrace) => Text(
+                  'Undo status could not be checked.',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: scheme.error),
+                ),
+                data: (undo) {
+                  if (undo == null) {
+                    return Text(
+                      'No reviewed catalog import is available to undo.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    );
+                  }
+                  return OutlinedButton.icon(
+                    key: const ValueKey('undo-catalog-pack-import'),
+                    onPressed: _busy ? null : () => _confirmUndo(undo),
+                    icon: _actionIcon(
+                      _TransferAction.catalogPackUndo,
+                      Icons.undo_rounded,
+                    ),
+                    label: Text(
+                      _busyAction == _TransferAction.catalogPackUndo
+                          ? 'Restoring…'
+                          : 'Undo last import (${undo.changedProductCount})',
                     ),
                   );
-                }
-                return OutlinedButton.icon(
-                  key: const ValueKey('undo-catalog-pack-import'),
-                  onPressed: _busy ? null : () => _confirmUndo(undo),
-                  icon: _actionIcon(
-                    _TransferAction.catalogPackUndo,
-                    Icons.undo_rounded,
-                  ),
-                  label: Text(
-                    _busyAction == _TransferAction.catalogPackUndo
-                        ? 'Restoring…'
-                        : 'Undo last import (${undo.changedProductCount})',
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Divider(),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Complete backup',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Includes products, main and sub-unit prices, photos, completed sales history, receipt details, categories, and appearance.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: scheme.tertiaryContainer,
-                borderRadius: AppRadius.control,
+                },
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.lock_open_rounded,
-                    size: 19,
-                    color: scheme.onTertiaryContainer,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      'Backup files are not encrypted. They contain prices, completed transactions and payment amounts, store details, and copies of product photos, so keep them private.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onTertiaryContainer,
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        AppExpansionCard(
+          key: const ValueKey('complete-backup-expansion'),
+          icon: Icons.health_and_safety_outlined,
+          title: 'Complete backup',
+          subtitle: 'Save or restore products, photos, settings, and sales',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Includes products, main and sub-unit prices, photos, completed sales history, receipt details, categories, and appearance.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: scheme.tertiaryContainer,
+                  borderRadius: AppRadius.control,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.lock_open_rounded,
+                      size: 19,
+                      color: scheme.onTertiaryContainer,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        'Backup files are not encrypted. They contain prices, completed transactions and payment amounts, store details, and copies of product photos, so keep them private.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onTertiaryContainer,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ResponsiveButtons(
+                primary: FilledButton.icon(
+                  onPressed: _busy ? null : _createBackup,
+                  icon: _actionIcon(
+                    _TransferAction.backup,
+                    Icons.file_download_outlined,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _ResponsiveButtons(
-              primary: FilledButton.icon(
-                onPressed: _busy ? null : _createBackup,
-                icon: _actionIcon(
-                  _TransferAction.backup,
-                  Icons.file_download_outlined,
+                  label: Text(
+                    _busyAction == _TransferAction.backup
+                        ? 'Creating…'
+                        : 'Create backup',
+                  ),
                 ),
-                label: Text(
-                  _busyAction == _TransferAction.backup
-                      ? 'Creating…'
-                      : 'Create backup',
-                ),
-              ),
-              secondary: OutlinedButton.icon(
-                onPressed: _busy ? null : _confirmRestore,
-                icon: _actionIcon(
-                  _TransferAction.restore,
-                  Icons.restore_rounded,
-                ),
-                label: Text(
-                  _busyAction == _TransferAction.restore
-                      ? 'Restoring…'
-                      : 'Restore backup',
+                secondary: OutlinedButton.icon(
+                  onPressed: _busy ? null : _confirmRestore,
+                  icon: _actionIcon(
+                    _TransferAction.restore,
+                    Icons.restore_rounded,
+                  ),
+                  label: Text(
+                    _busyAction == _TransferAction.restore
+                        ? 'Restoring…'
+                        : 'Restore backup',
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            const Divider(),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'CSV spreadsheet',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'CSV contains catalog fields and prices, not photos or settings. Import adds or updates rows and never deletes missing products.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _ResponsiveButtons(
-              primary: OutlinedButton.icon(
-                onPressed: _busy ? null : _exportCsv,
-                icon: _actionIcon(
-                  _TransferAction.exportCsv,
-                  Icons.table_view_outlined,
-                ),
-                label: Text(
-                  _busyAction == _TransferAction.exportCsv
-                      ? 'Exporting…'
-                      : 'Export CSV',
-                ),
-              ),
-              secondary: OutlinedButton.icon(
-                onPressed: _busy ? null : _confirmCsvImport,
-                icon: _actionIcon(
-                  _TransferAction.importCsv,
-                  Icons.upload_file_outlined,
-                ),
-                label: Text(
-                  _busyAction == _TransferAction.importCsv
-                      ? 'Importing…'
-                      : 'Import CSV',
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        AppExpansionCard(
+          key: const ValueKey('csv-tools-expansion'),
+          icon: Icons.table_view_outlined,
+          title: 'CSV spreadsheet',
+          subtitle: 'Edit catalog fields and prices in a spreadsheet',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'CSV contains catalog fields and prices, not photos or settings. Import adds or updates rows and never deletes missing products.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ResponsiveButtons(
+                primary: OutlinedButton.icon(
+                  onPressed: _busy ? null : _exportCsv,
+                  icon: _actionIcon(
+                    _TransferAction.exportCsv,
+                    Icons.table_view_outlined,
+                  ),
+                  label: Text(
+                    _busyAction == _TransferAction.exportCsv
+                        ? 'Exporting…'
+                        : 'Export CSV',
+                  ),
+                ),
+                secondary: OutlinedButton.icon(
+                  onPressed: _busy ? null : _confirmCsvImport,
+                  icon: _actionIcon(
+                    _TransferAction.importCsv,
+                    Icons.upload_file_outlined,
+                  ),
+                  label: Text(
+                    _busyAction == _TransferAction.importCsv
+                        ? 'Importing…'
+                        : 'Import CSV',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
