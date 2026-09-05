@@ -282,6 +282,43 @@ fvm flutter devices
 fvm flutter run -d <device-id>
 ```
 
+The connected-device helper runs release mode and automatically selects the
+device when exactly one Android or iOS target is connected:
+
+```sh
+sh build.sh android
+sh build.sh ios
+sh build.sh android <device-id> # Use an explicit ID when several are connected.
+```
+
+Create release files separately with:
+
+```sh
+sh release.sh android          # Uses version 1.0.0+1 from pubspec.yaml.
+sh release.sh android 1.1      # Builds 1.1.0 with the existing build number.
+sh release.sh android 1.1.0+2  # Overrides both version and build number.
+sh release.sh ios 1.1.0+2
+```
+
+The optional version applies only to that build and never rewrites
+`pubspec.yaml`. Finished files are copied to `outputs/releases/` with their
+version and build number in the filename. A repeat build keeps the earlier file
+and adds a UTC timestamp to the new filename. Android produces an `.apk`; iOS
+attempts to produce a signed development `.ipa` by default and requires a valid
+Apple signing identity, team, and provisioning profile. The current Android
+release configuration uses the debug signing key, so its APK is suitable for
+sideload testing but needs a private release key before store publication.
+
+An IPA is not a universally installable download: a development IPA works only
+on devices allowed by its Apple provisioning profile. Use TestFlight/App Store
+for general friend testing. When the required Apple distribution certificate
+and profile are installed, choose another export method, for example:
+
+```sh
+RAZE_IOS_EXPORT_METHOD=app-store sh release.sh ios 1.1.0+2
+RAZE_IOS_EXPORT_METHOD=ad-hoc sh release.sh ios 1.1.0+2
+```
+
 The project pins Flutter 3.44.7 in `.fvmrc`. For iOS, open
 `ios/Runner.xcworkspace` (not `Runner.xcodeproj`) when using Xcode. The iOS
 plugins intentionally use CocoaPods, so run `pod install` after a dependency
