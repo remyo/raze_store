@@ -98,6 +98,14 @@ void main() {
       await _writeBytes(
         p.join(
           temporaryDirectory.path,
+          'raze_store_receipts',
+          '123456-raze-store-receipt-20260903-143001.png',
+        ),
+        8,
+      );
+      await _writeBytes(
+        p.join(
+          temporaryDirectory.path,
           'raze_store_transfer_stale',
           'backup.razestore',
         ),
@@ -123,16 +131,16 @@ void main() {
       expect(usage.productImageFileCount, 2);
       expect(usage.databaseBytes, 46);
       expect(usage.databaseFileCount, 4);
-      expect(usage.temporaryReceiptBytes, 9);
-      expect(usage.temporaryReceiptFileCount, 1);
+      expect(usage.temporaryReceiptBytes, 17);
+      expect(usage.temporaryReceiptFileCount, 2);
       expect(usage.backgroundRemovalBytes, 5);
       expect(usage.backgroundRemovalFileCount, 1);
       expect(usage.cacheBytes, 10);
       expect(usage.cacheFileCount, 2);
-      expect(usage.temporaryBytes, 24);
-      expect(usage.temporaryFileCount, 4);
-      expect(usage.totalManagedBytes, 80);
-      expect(usage.totalFileCount, 10);
+      expect(usage.temporaryBytes, 32);
+      expect(usage.temporaryFileCount, 5);
+      expect(usage.totalManagedBytes, 88);
+      expect(usage.totalFileCount, 11);
       expect(usage.unreadableEntryCount, 0);
       expect(usage.measuredAt, measuredAt);
     },
@@ -242,10 +250,10 @@ void main() {
       p.join(documentsDirectory.path, 'raze_store.sqlite'),
       19,
     );
-    final galleryReceipt = await _writeBytes(
+    final externalReceipt = await _writeBytes(
       p.join(
         testRoot.path,
-        'gallery',
+        'files-export',
         'raze-store-receipt-20260903-143000.png',
       ),
       23,
@@ -259,6 +267,14 @@ void main() {
         'raze-store-receipt-20260903-143000.png',
       ),
       11,
+    );
+    await _writeBytes(
+      p.join(
+        temporaryDirectory.path,
+        'raze_store_receipts',
+        '123456-raze-store-receipt-20260903-143001.png',
+      ),
+      7,
     );
     await _writeBytes(
       p.join(
@@ -293,8 +309,8 @@ void main() {
     final service = buildService();
     final result = await service.clearTemporaryFiles();
 
-    expect(result.clearedBytes, 53);
-    expect(result.clearedFileCount, 5);
+    expect(result.clearedBytes, 60);
+    expect(result.clearedFileCount, 6);
     expect(result.failureCount, 0);
     expect(result.completedWithoutFailures, isTrue);
     expect(await cacheDirectory.exists(), isTrue);
@@ -308,7 +324,7 @@ void main() {
     );
     expect(await productImage.exists(), isTrue);
     expect(await database.exists(), isTrue);
-    expect(await galleryReceipt.exists(), isTrue);
+    expect(await externalReceipt.exists(), isTrue);
     expect(await externalTarget.exists(), isTrue);
     expect(await unrelatedTemporaryFile.exists(), isTrue);
     if (cacheLink != null) expect(await cacheLink.exists(), isFalse);

@@ -66,7 +66,7 @@ class AppPreferencesController extends AsyncNotifier<AppPreferences> {
           _readBool(preferences, scannerVibrationEnabledPreferenceKey) ?? true,
       scannerRepeatCooldownMs: _readCooldown(preferences),
       autoAddMainUnitOnScan:
-          _readBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? true,
+          _readBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? false,
       backupReminderFrequency: _readReminderFrequency(preferences),
       reminderAnchorAtUtc: reminderAnchor,
       lastSuccessfulBackupAtUtc: _readDateTime(

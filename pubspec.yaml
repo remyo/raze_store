@@ -45,7 +45,6 @@ dependencies:
   path_provider: ^2.1.6
   path: ^1.9.1
   share_plus: ^13.3.0
-  gal: ^2.3.3
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3
   image_background_remover: ^2.0.1

@@ -69,12 +69,7 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
               ),
             ],
       body: switch ((sale, liveSale)) {
-        (final CompletedSale sale, _) => _SaleDetailBody(
-          sale: sale,
-          deleting: _deleting,
-          onOpenReceipt: () => _openReceipt(sale),
-          onDelete: () => _confirmDelete(sale),
-        ),
+        (final CompletedSale sale, _) => _SaleDetailBody(sale: sale),
         (null, AsyncLoading()) => const AppLoadingState(
           message: 'Loading sale…',
         ),
@@ -160,17 +155,9 @@ class _SaleDetailScreenState extends ConsumerState<SaleDetailScreen> {
 }
 
 class _SaleDetailBody extends StatelessWidget {
-  const _SaleDetailBody({
-    required this.sale,
-    required this.deleting,
-    required this.onOpenReceipt,
-    required this.onDelete,
-  });
+  const _SaleDetailBody({required this.sale});
 
   final CompletedSale sale;
-  final bool deleting;
-  final VoidCallback onOpenReceipt;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -237,41 +224,6 @@ class _SaleDetailBody extends StatelessWidget {
               ],
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const AppSectionHeader(title: 'Payment'),
-        const SizedBox(height: AppSpacing.sm),
-        _SalePaymentCard(sale: sale),
-        const SizedBox(height: AppSpacing.lg),
-        FilledButton.icon(
-          key: const ValueKey('sale-detail-view-receipt'),
-          onPressed: deleting ? null : onOpenReceipt,
-          icon: const Icon(Icons.receipt_long_outlined),
-          label: const Text('View receipt'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton.icon(
-          key: const ValueKey('sale-detail-delete-bottom'),
-          onPressed: deleting ? null : onDelete,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: scheme.error,
-            side: BorderSide(color: scheme.error.withValues(alpha: 0.65)),
-          ),
-          icon: deleting
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.delete_outline_rounded),
-          label: Text(deleting ? 'Deleting…' : 'Delete sale'),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Deleting this record does not delete products from your catalog.',
-          textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: AppSpacing.xl),
         SelectionArea(
@@ -426,83 +378,6 @@ class _SaleLineImage extends StatelessWidget {
               semanticLabel: line.nameSnapshot,
               errorBuilder: (_, _, _) => fallback,
             ),
-    );
-  }
-}
-
-class _SalePaymentCard extends StatelessWidget {
-  const _SalePaymentCard({required this.sale});
-
-  final CompletedSale sale;
-
-  @override
-  Widget build(BuildContext context) {
-    final cash = sale.cashReceivedCentavos;
-    final change = sale.changeCentavos;
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      key: const ValueKey('sale-detail-payment'),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: cash == null
-            ? Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: scheme.primary),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Expanded(
-                    child: Text(
-                      'Cash received was not recorded for this sale.',
-                    ),
-                  ),
-                ],
-              )
-            : Column(
-                children: [
-                  _PaymentRow(label: 'Total', centavos: sale.totalCentavos),
-                  const SizedBox(height: AppSpacing.sm),
-                  _PaymentRow(label: 'Cash received', centavos: cash),
-                  Divider(height: AppSpacing.lg, color: scheme.outlineVariant),
-                  _PaymentRow(
-                    label: (change ?? 0) < 0 ? 'Balance due' : 'Change',
-                    centavos: (change ?? 0).abs(),
-                    emphasized: true,
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-class _PaymentRow extends StatelessWidget {
-  const _PaymentRow({
-    required this.label,
-    required this.centavos,
-    this.emphasized = false,
-  });
-
-  final String label;
-  final int centavos;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: emphasized
-                ? Theme.of(context).textTheme.titleMedium
-                : Theme.of(context).textTheme.bodyMedium,
-          ),
-        ),
-        PriceText(
-          centavos: centavos,
-          size: PriceTextSize.small,
-          semanticLabel: label,
-        ),
-      ],
     );
   }
 }

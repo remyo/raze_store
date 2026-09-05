@@ -1,9 +1,9 @@
 /// A point-in-time measurement of files managed by Raze Store.
 ///
-/// Receipt images saved to the gallery and catalog files exported through the
-/// system file picker are outside the app's storage and are intentionally not
-/// represented here. [temporaryReceiptBytes] covers only app-owned copies
-/// created while opening the system share sheet.
+/// Receipt PNGs and catalog files exported through the system file picker are
+/// outside the app's storage and are intentionally not represented here.
+/// [temporaryReceiptBytes] covers only app-owned working copies created while
+/// opening the file picker or system share sheet.
 class AppStorageUsage {
   const AppStorageUsage({
     required this.databaseBytes,
@@ -33,7 +33,7 @@ class AppStorageUsage {
   final int databaseBytes;
   final int productImageBytes;
 
-  /// Receipt PNGs still inside app-owned temporary storage after sharing.
+  /// Receipt PNGs still inside app-owned temporary storage after an export.
   final int temporaryReceiptBytes;
 
   /// Working PNGs created by the on-device background-removal tool.

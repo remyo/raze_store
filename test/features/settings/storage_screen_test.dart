@@ -35,8 +35,8 @@ void main() {
       const ValueKey('storage-external-files-notice'),
     );
     await tester.ensureVisible(externalNotice);
-    expect(find.textContaining('saved to your gallery'), findsOneWidget);
-    expect(find.textContaining('Backups and CSV files'), findsOneWidget);
+    expect(find.textContaining('Receipt PNGs'), findsOneWidget);
+    expect(find.textContaining('backups, and CSV files'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('storage-installed-app-notice')),
       findsOneWidget,
@@ -66,7 +66,7 @@ void main() {
     expect(find.text('Clear temporary files?'), findsOneWidget);
     expect(
       find.textContaining(
-        'Products, sales, product images, the database, gallery receipts, and exported files will stay untouched.',
+        'Products, sales, product images, the database, and exported files will stay untouched.',
       ),
       findsOneWidget,
     );

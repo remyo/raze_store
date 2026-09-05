@@ -42,6 +42,41 @@ void main() {
   });
 
   test(
+    'centers and enlarges a background-removed subject on a square canvas',
+    () async {
+      final source = await _subjectPng(
+        width: 240,
+        height: 120,
+        // Deliberately off-center so this verifies both cropping and
+        // re-centering instead of only the scale calculation.
+        subject: const ui.Rect.fromLTWH(8, 5, 30, 40),
+      );
+
+      final normalized = await normalizeBackgroundRemovedProductBytes(
+        source,
+        paddingFraction: 0.1,
+      );
+
+      expect(await _dimensions(normalized), (240, 240));
+      final (left, top, right, bottom) = (await _alphaBounds(normalized))!;
+      final visibleWidth = right - left + 1;
+      final visibleHeight = bottom - top + 1;
+      expect(visibleHeight, closeTo(192, 2));
+      expect(visibleWidth / visibleHeight, closeTo(0.75, 0.02));
+      expect((left + right) / 2, closeTo(119.5, 1));
+      expect((top + bottom) / 2, closeTo(119.5, 1));
+    },
+  );
+
+  test('preserves an opaque background-removal result', () async {
+    final source = await _solidPng(width: 200, height: 100);
+
+    final normalized = await normalizeBackgroundRemovedProductBytes(source);
+
+    expect(await _dimensions(normalized), (200, 100));
+  });
+
+  test(
     'only deletes UUID-named output files in its temporary directory',
     () async {
       final root = await Directory.systemTemp.createTemp(
@@ -87,6 +122,64 @@ Future<Uint8List> _solidPng({required int width, required int height}) async {
     }
   } finally {
     picture.dispose();
+  }
+}
+
+Future<Uint8List> _subjectPng({
+  required int width,
+  required int height,
+  required ui.Rect subject,
+}) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+  canvas.drawRect(
+    subject,
+    ui.Paint()
+      ..color = const ui.Color(0xFF1565C0)
+      ..isAntiAlias = false,
+  );
+  final picture = recorder.endRecording();
+  try {
+    final image = await picture.toImage(width, height);
+    try {
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      return data!.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } finally {
+      image.dispose();
+    }
+  } finally {
+    picture.dispose();
+  }
+}
+
+Future<(int, int, int, int)?> _alphaBounds(Uint8List bytes) async {
+  final codec = await ui.instantiateImageCodec(bytes);
+  try {
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    try {
+      final rgba = (await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!;
+      var minX = image.width;
+      var minY = image.height;
+      var maxX = -1;
+      var maxY = -1;
+      for (var y = 0; y < image.height; y++) {
+        for (var x = 0; x < image.width; x++) {
+          if (rgba.getUint8(((y * image.width) + x) * 4 + 3) <= 12) continue;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+      return maxX < minX ? null : (minX, minY, maxX, maxY);
+    } finally {
+      image.dispose();
+    }
+  } finally {
+    codec.dispose();
   }
 }
 

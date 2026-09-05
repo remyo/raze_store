@@ -15,6 +15,36 @@ import 'package:raze_store/features/catalog/presentation/product_quick_view.dart
 
 enum _ProductBrowseLayout { grid, list }
 
+enum _ProductSortOrder {
+  defaultOrder('Default order', 'default'),
+  priceHighToLow('Price: highest first', 'price-high-low'),
+  priceLowToHigh('Price: lowest first', 'price-low-high'),
+  nameAToZ('Name: A–Z', 'name-a-z'),
+  nameZToA('Name: Z–A', 'name-z-a'),
+  newest('Newest added', 'newest');
+
+  const _ProductSortOrder(this.label, this.keySuffix);
+
+  final String label;
+  final String keySuffix;
+}
+
+enum _ProductBrowseFilter {
+  all('All products', 'all'),
+  withPhoto('With photo', 'with-photo'),
+  withoutPhoto('Without photo', 'without-photo'),
+  withAdditionalUnits('With additional units', 'additional-units'),
+  priced('With a price', 'priced'),
+  missingPrice('Price missing', 'missing-price');
+
+  const _ProductBrowseFilter(this.label, this.keySuffix);
+
+  final String label;
+  final String keySuffix;
+}
+
+enum _ProductBrowseMenuAction { reset }
+
 class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
@@ -32,6 +62,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   String? _selectedCategory;
   int _visibleProductLimit = _pageSize;
   _ProductBrowseLayout _layout = _ProductBrowseLayout.grid;
+  _ProductSortOrder _sortOrder = _ProductSortOrder.defaultOrder;
+  _ProductBrowseFilter _productFilter = _ProductBrowseFilter.all;
 
   @override
   void initState() {
@@ -85,6 +117,34 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     });
   }
 
+  void _changeSortOrder(_ProductSortOrder sortOrder) {
+    if (_sortOrder == sortOrder) return;
+    setState(() {
+      _sortOrder = sortOrder;
+      _visibleProductLimit = _pageSize;
+    });
+  }
+
+  void _changeProductFilter(_ProductBrowseFilter productFilter) {
+    if (_productFilter == productFilter) return;
+    setState(() {
+      _productFilter = productFilter;
+      _visibleProductLimit = _pageSize;
+    });
+  }
+
+  void _resetBrowseOptions() {
+    if (_sortOrder == _ProductSortOrder.defaultOrder &&
+        _productFilter == _ProductBrowseFilter.all) {
+      return;
+    }
+    setState(() {
+      _sortOrder = _ProductSortOrder.defaultOrder;
+      _productFilter = _ProductBrowseFilter.all;
+      _visibleProductLimit = _pageSize;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(catalogProductsProvider);
@@ -121,9 +181,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           isSearching: products.isLoading,
           visibleProductLimit: _visibleProductLimit,
           layout: _layout,
+          sortOrder: _sortOrder,
+          productFilter: _productFilter,
           onSearch: _onSearchChanged,
           onCategorySelected: _selectCategory,
           onLayoutChanged: _changeLayout,
+          onSortOrderChanged: _changeSortOrder,
+          onProductFilterChanged: _changeProductFilter,
+          onBrowseOptionsReset: _resetBrowseOptions,
           onLoadMore: _showNextPage,
           onOpen: (product) async {
             final added = await showProductQuickView(context, product: product);
@@ -135,6 +200,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
           },
           onAddFirst: () => context.push('/products/quick-add'),
           onScan: () => context.go('/scan'),
+          onQuickUnits: () => context.push('/quick-sell'),
         ),
       ),
     );
@@ -151,13 +217,19 @@ class _ProductsBody extends StatelessWidget {
     required this.isSearching,
     required this.visibleProductLimit,
     required this.layout,
+    required this.sortOrder,
+    required this.productFilter,
     required this.onSearch,
     required this.onCategorySelected,
     required this.onLayoutChanged,
+    required this.onSortOrderChanged,
+    required this.onProductFilterChanged,
+    required this.onBrowseOptionsReset,
     required this.onLoadMore,
     required this.onOpen,
     required this.onAddFirst,
     required this.onScan,
+    required this.onQuickUnits,
   });
 
   final List<StoreProduct> products;
@@ -168,13 +240,19 @@ class _ProductsBody extends StatelessWidget {
   final bool isSearching;
   final int visibleProductLimit;
   final _ProductBrowseLayout layout;
+  final _ProductSortOrder sortOrder;
+  final _ProductBrowseFilter productFilter;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onCategorySelected;
   final ValueChanged<_ProductBrowseLayout> onLayoutChanged;
+  final ValueChanged<_ProductSortOrder> onSortOrderChanged;
+  final ValueChanged<_ProductBrowseFilter> onProductFilterChanged;
+  final VoidCallback onBrowseOptionsReset;
   final VoidCallback onLoadMore;
   final ValueChanged<StoreProduct> onOpen;
   final VoidCallback onAddFirst;
   final VoidCallback onScan;
+  final VoidCallback onQuickUnits;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +266,7 @@ class _ProductsBody extends StatelessWidget {
             (category) => category?.toLowerCase() == selectedKey,
             orElse: () => null,
           );
-    final visible = activeCategory == null
+    final categoryProducts = activeCategory == null
         ? products
         : products
               .where(
@@ -196,6 +274,10 @@ class _ProductsBody extends StatelessWidget {
                     product.category?.trim().toLowerCase() == selectedKey,
               )
               .toList(growable: false);
+    final visible = categoryProducts
+        .where((product) => _matchesProductFilter(product, productFilter))
+        .toList(growable: true);
+    _sortProducts(visible, sortOrder);
     final shownProducts = visible
         .take(visibleProductLimit)
         .toList(growable: false);
@@ -223,10 +305,16 @@ class _ProductsBody extends StatelessWidget {
                 searchFocusNode: searchFocusNode,
                 isSearching: isSearching,
                 layout: layout,
+                sortOrder: sortOrder,
+                productFilter: productFilter,
                 onSearch: onSearch,
                 onCategorySelected: onCategorySelected,
                 onLayoutChanged: onLayoutChanged,
+                onSortOrderChanged: onSortOrderChanged,
+                onProductFilterChanged: onProductFilterChanged,
+                onBrowseOptionsReset: onBrowseOptionsReset,
                 onScan: onScan,
+                onQuickUnits: onQuickUnits,
               ),
             ),
           ),
@@ -249,6 +337,8 @@ class _ProductsBody extends StatelessWidget {
                         : 'No matching products',
                     message: products.isEmpty && query.isEmpty
                         ? 'Add the products your family sells. They stay available even when the phone is offline.'
+                        : productFilter != _ProductBrowseFilter.all
+                        ? 'No products match the selected filter.'
                         : activeCategory != null
                         ? 'There are no products left in this category.'
                         : 'Try a different name, brand, barcode, or category.',
@@ -335,6 +425,56 @@ class _ProductsBody extends StatelessWidget {
   );
 }
 
+bool _matchesProductFilter(StoreProduct product, _ProductBrowseFilter filter) =>
+    switch (filter) {
+      _ProductBrowseFilter.all => true,
+      _ProductBrowseFilter.withPhoto => _hasProductPhoto(product),
+      _ProductBrowseFilter.withoutPhoto => !_hasProductPhoto(product),
+      _ProductBrowseFilter.withAdditionalUnits =>
+        product.sellingUnits.isNotEmpty,
+      _ProductBrowseFilter.priced => product.priceCentavos > 0,
+      _ProductBrowseFilter.missingPrice => product.priceCentavos == 0,
+    };
+
+bool _hasProductPhoto(StoreProduct product) =>
+    _hasText(product.localImagePath) ||
+    _hasText(product.catalogImagePath) ||
+    _hasText(product.remoteImageUrl);
+
+bool _hasText(String? value) => value?.trim().isNotEmpty == true;
+
+void _sortProducts(List<StoreProduct> products, _ProductSortOrder sortOrder) {
+  if (sortOrder == _ProductSortOrder.defaultOrder) return;
+
+  products.sort((left, right) {
+    final primary = switch (sortOrder) {
+      _ProductSortOrder.defaultOrder => 0,
+      _ProductSortOrder.priceHighToLow => right.priceCentavos.compareTo(
+        left.priceCentavos,
+      ),
+      _ProductSortOrder.priceLowToHigh => left.priceCentavos.compareTo(
+        right.priceCentavos,
+      ),
+      _ProductSortOrder.nameAToZ => _compareProductNames(left, right),
+      _ProductSortOrder.nameZToA => _compareProductNames(right, left),
+      _ProductSortOrder.newest => right.createdAt.compareTo(left.createdAt),
+    };
+    if (primary != 0) return primary;
+
+    final nameTieBreak = _compareProductNames(left, right);
+    if (nameTieBreak != 0) return nameTieBreak;
+    return left.id.compareTo(right.id);
+  });
+}
+
+int _compareProductNames(StoreProduct left, StoreProduct right) {
+  final normalized = left.name.toLowerCase().compareTo(
+    right.name.toLowerCase(),
+  );
+  if (normalized != 0) return normalized;
+  return left.name.compareTo(right.name);
+}
+
 class _ProductsHeader extends StatelessWidget {
   const _ProductsHeader({
     required this.categories,
@@ -345,10 +485,16 @@ class _ProductsHeader extends StatelessWidget {
     required this.searchFocusNode,
     required this.isSearching,
     required this.layout,
+    required this.sortOrder,
+    required this.productFilter,
     required this.onSearch,
     required this.onCategorySelected,
     required this.onLayoutChanged,
+    required this.onSortOrderChanged,
+    required this.onProductFilterChanged,
+    required this.onBrowseOptionsReset,
     required this.onScan,
+    required this.onQuickUnits,
   });
 
   final List<String> categories;
@@ -359,10 +505,16 @@ class _ProductsHeader extends StatelessWidget {
   final FocusNode searchFocusNode;
   final bool isSearching;
   final _ProductBrowseLayout layout;
+  final _ProductSortOrder sortOrder;
+  final _ProductBrowseFilter productFilter;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onCategorySelected;
   final ValueChanged<_ProductBrowseLayout> onLayoutChanged;
+  final ValueChanged<_ProductSortOrder> onSortOrderChanged;
+  final ValueChanged<_ProductBrowseFilter> onProductFilterChanged;
+  final VoidCallback onBrowseOptionsReset;
   final VoidCallback onScan;
+  final VoidCallback onQuickUnits;
 
   @override
   Widget build(BuildContext context) {
@@ -370,6 +522,8 @@ class _ProductsHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _ScanCallout(onScan: onScan),
+        const SizedBox(height: AppSpacing.xs),
+        _QuickUnitsShortcut(onPressed: onQuickUnits),
         const SizedBox(height: AppSpacing.md),
         AppSearchField(
           controller: searchController,
@@ -400,12 +554,76 @@ class _ProductsHeader extends StatelessWidget {
           title: query.isEmpty ? 'Store products' : 'Search results',
           subtitle:
               '$productCount ${productCount == 1 ? 'product' : 'products'}',
-          action: _ProductLayoutToggle(
-            value: layout,
-            onChanged: onLayoutChanged,
+          action: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ProductSortFilterMenu(
+                sortOrder: sortOrder,
+                productFilter: productFilter,
+                onSortOrderChanged: onSortOrderChanged,
+                onProductFilterChanged: onProductFilterChanged,
+                onReset: onBrowseOptionsReset,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _ProductLayoutToggle(value: layout, onChanged: onLayoutChanged),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _QuickUnitsShortcut extends StatelessWidget {
+  const _QuickUnitsShortcut({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return OutlinedButton(
+      key: const ValueKey('home-quick-units'),
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.format_list_numbered_rounded, size: AppSize.icon),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Quick units',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'Punch pieces, sticks, sachets, and packs',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+        ],
+      ),
     );
   }
 }
@@ -538,6 +756,187 @@ class _ProductCategoryRow extends StatelessWidget {
           tooltip: label,
           selected: selectedCategory == category,
           onSelected: (_) => onSelected(category),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductSortFilterMenu extends StatelessWidget {
+  const _ProductSortFilterMenu({
+    required this.sortOrder,
+    required this.productFilter,
+    required this.onSortOrderChanged,
+    required this.onProductFilterChanged,
+    required this.onReset,
+  });
+
+  final _ProductSortOrder sortOrder;
+  final _ProductBrowseFilter productFilter;
+  final ValueChanged<_ProductSortOrder> onSortOrderChanged;
+  final ValueChanged<_ProductBrowseFilter> onProductFilterChanged;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final activeCount =
+        (sortOrder == _ProductSortOrder.defaultOrder ? 0 : 1) +
+        (productFilter == _ProductBrowseFilter.all ? 0 : 1);
+    final status = [
+      if (sortOrder != _ProductSortOrder.defaultOrder) sortOrder.label,
+      if (productFilter != _ProductBrowseFilter.all) productFilter.label,
+    ].join(', ');
+
+    return Semantics(
+      label:
+          'Sort and filter products${status.isEmpty ? '' : '. Active: $status'}',
+      button: true,
+      child: PopupMenuButton<Object>(
+        key: const ValueKey('product-sort-filter-menu'),
+        tooltip: 'Sort and filter products',
+        constraints: const BoxConstraints(minWidth: 224, maxWidth: 320),
+        position: PopupMenuPosition.under,
+        itemBuilder: (context) => [
+          if (activeCount > 0) ...[
+            const PopupMenuItem<Object>(
+              key: ValueKey('product-filter-reset'),
+              value: _ProductBrowseMenuAction.reset,
+              height: AppSize.minimumTouchTarget,
+              child: Row(
+                children: [
+                  Icon(Icons.restart_alt_rounded, size: AppSize.icon),
+                  SizedBox(width: AppSpacing.sm),
+                  Expanded(child: Text('Reset sort & filters')),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+          ],
+          PopupMenuItem<Object>(
+            enabled: false,
+            height: AppSize.compactControl,
+            child: Text(
+              'Sort by',
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          for (final option in _ProductSortOrder.values)
+            CheckedPopupMenuItem<Object>(
+              key: ValueKey('product-sort-${option.keySuffix}'),
+              value: option,
+              checked: sortOrder == option,
+              height: AppSize.compactControl,
+              child: Text(option.label),
+            ),
+          const PopupMenuDivider(),
+          PopupMenuItem<Object>(
+            enabled: false,
+            height: AppSize.compactControl,
+            child: Text(
+              'Show',
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          for (final option in _ProductBrowseFilter.values)
+            CheckedPopupMenuItem<Object>(
+              key: ValueKey('product-filter-${option.keySuffix}'),
+              value: option,
+              checked: productFilter == option,
+              height: AppSize.compactControl,
+              child: Text(option.label),
+            ),
+        ],
+        onSelected: (selection) {
+          switch (selection) {
+            case final _ProductSortOrder sortOrder:
+              onSortOrderChanged(sortOrder);
+              break;
+            case final _ProductBrowseFilter productFilter:
+              onProductFilterChanged(productFilter);
+              break;
+            case _ProductBrowseMenuAction.reset:
+              onReset();
+              break;
+            default:
+              break;
+          }
+        },
+        child: SizedBox(
+          width: 92,
+          height: AppSize.minimumTouchTarget,
+          child: Center(
+            child: Container(
+              height: AppSize.compactControl,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              decoration: BoxDecoration(
+                color: activeCount == 0
+                    ? scheme.surfaceContainerLow
+                    : scheme.secondaryContainer,
+                border: Border.all(color: scheme.outlineVariant),
+                borderRadius: AppRadius.control,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: AppSize.icon,
+                    color: activeCount == 0
+                        ? scheme.onSurfaceVariant
+                        : scheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Filter',
+                        maxLines: 1,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: activeCount == 0
+                                  ? scheme.onSurfaceVariant
+                                  : scheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                  ),
+                  if (activeCount > 0) ...[
+                    const SizedBox(width: AppSpacing.xxs),
+                    Container(
+                      key: const ValueKey('product-filter-active-count'),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: scheme.secondary,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      alignment: Alignment.center,
+                      child: FittedBox(
+                        child: Text(
+                          '$activeCount',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: scheme.onSecondary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

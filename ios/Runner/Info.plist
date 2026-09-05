@@ -69,10 +69,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Raze Store uses the camera to scan product barcodes and take product photos.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Raze Store saves receipt images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Raze Store lets you choose product photos and save receipt images.</string>
+	<string>Raze Store lets you choose existing product photos from your photo library.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

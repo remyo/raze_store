@@ -45,9 +45,10 @@ class AppStorageService {
   static const _databaseBaseNames = <String>['raze_store.sqlite'];
   static const _databaseSuffixes = <String>['', '-wal', '-shm', '-journal'];
   static final _temporaryReceiptFileName = RegExp(
-    r'^raze-store-receipt-\d{8}-\d{6}\.png$',
+    r'^(?:\d+-)?raze-store-receipt-\d{8}-\d{6}\.png$',
     caseSensitive: false,
   );
+  static const _receiptExportTemporaryDirectoryName = 'raze_store_receipts';
   static final _shareTemporaryDirectoryName = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   );
@@ -122,8 +123,8 @@ class AppStorageService {
   /// On desktop platforms `getTemporaryDirectory()` may return a shared user
   /// directory such as `/tmp`. This method never clears that root wholesale;
   /// it selects only Raze Store background-removal/transfer directories and
-  /// exact receipt files created by the share flow. Database files, durable
-  /// product images, gallery receipts, and Files exports are never candidates.
+  /// exact receipt files created by the export flow. Database files, durable
+  /// product images, and user-selected Files exports are never candidates.
   Future<AppStorageCleanupResult> clearTemporaryFiles() async {
     final cacheFuture = _resolveDirectory(_cacheDirectoryResolver);
     final temporaryFuture = _resolveDirectory(_temporaryDirectoryResolver);
@@ -343,7 +344,8 @@ class AppStorageService {
           backgroundRemoval += await _measureDirectory(entity);
         } else if (_isOwnedTransferDirectoryName(name)) {
           cache += await _measureDirectory(entity);
-        } else if (_shareTemporaryDirectoryName.hasMatch(name)) {
+        } else if (name == _receiptExportTemporaryDirectoryName ||
+            _shareTemporaryDirectoryName.hasMatch(name)) {
           receipts += await _measureTemporaryReceiptsIn(entity);
         }
       }
@@ -435,7 +437,8 @@ class AppStorageService {
             links: links,
             directories: directories,
           );
-        } else if (_shareTemporaryDirectoryName.hasMatch(name)) {
+        } else if (name == _receiptExportTemporaryDirectoryName ||
+            _shareTemporaryDirectoryName.hasMatch(name)) {
           var foundReceipt = false;
           try {
             await for (final candidate in entity.list(followLinks: false)) {

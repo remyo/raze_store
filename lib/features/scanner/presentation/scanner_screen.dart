@@ -7,11 +7,14 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/barcode/barcode.dart' as store_barcode;
+import 'package:raze_store/core/database/cart_line_id.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/cart/application/cart_providers.dart';
+import 'package:raze_store/features/cart/domain/cart.dart';
 import 'package:raze_store/features/catalog/application/catalog_lookup_providers.dart';
 import 'package:raze_store/features/catalog/application/catalog_lookup_service.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
+import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog/presentation/product_quick_view.dart';
 import 'package:raze_store/features/scanner/application/scan_feedback_service.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
@@ -35,6 +38,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   bool? _routeForeground;
   bool _appActive = true;
   int _lookupGeneration = 0;
+  Future<void> _cartMutationQueue = Future<void>.value();
 
   @override
   void initState() {
@@ -337,52 +341,60 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
       if (result.kind == CatalogLookupKind.local) {
         final product = result.localProduct!;
+        final hasPricedSaleOption = product.saleOptions.any(
+          (option) => option.priceCentavos > 0,
+        );
+        if (!hasPricedSaleOption) {
+          if (!fromCamera) {
+            _manualController.clear();
+          }
+          _showMissingSellingPrice(product);
+          return;
+        }
         final hasPricedSubUnit = product.sellingUnits.any(
           (unit) => unit.priceCentavos > 0,
         );
         if (product.sellingUnits.isNotEmpty &&
             (!preferences.autoAddMainUnitOnScan ||
                 (product.priceCentavos <= 0 && hasPricedSubUnit))) {
-          final added = await showProductQuickView(context, product: product);
+          final option = await _showScannerUnitChooser(product);
           if (!fromCamera) {
             _manualController.clear();
           }
-          if (added == true &&
-              mounted &&
-              generation == _lookupGeneration &&
-              _branchVisible == true &&
-              _routeForeground == true &&
-              _appActive) {
+          if (option == null || !_canPublishResult(generation)) return;
+          try {
+            final undo = await _addProduct(product, saleOption: option);
+            if (!_canPublishResult(generation)) return;
             await _playSuccessFeedback(
               fromCamera: fromCamera,
               preferences: preferences,
             );
             if (!_canPublishResult(generation)) return;
-            _showAddedToCart(product.name);
-          }
-          return;
-        }
-        if (product.priceCentavos <= 0) {
-          if (!fromCamera) {
-            _manualController.clear();
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Set a selling price for ${product.name} before adding it to the cart.',
+            _showAddedToCart(product.name, unitLabel: option.label, undo: undo);
+          } catch (_) {
+            if (!mounted || !_canPublishResult(generation)) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Could not add this product to the cart.'),
               ),
-              action: SnackBarAction(
-                label: 'Set price',
-                onPressed: () => context.push(
-                  '/products/${Uri.encodeComponent(product.id)}/edit',
-                ),
-              ),
-            ),
-          );
+            );
+          }
           return;
         }
         try {
-          await ref.read(cartRepositoryProvider).addProduct(product);
+          final option = product.saleOptions.first;
+          final undo = await _addProduct(product, saleOption: option);
+          if (!fromCamera) {
+            _manualController.clear();
+          }
+          if (_canPublishResult(generation)) {
+            await _playSuccessFeedback(
+              fromCamera: fromCamera,
+              preferences: preferences,
+            );
+            if (!_canPublishResult(generation)) return;
+            _showAddedToCart(product.name, unitLabel: option.label, undo: undo);
+          }
         } catch (_) {
           if (mounted &&
               generation == _lookupGeneration &&
@@ -396,21 +408,6 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             );
           }
           return;
-        }
-        if (!fromCamera) {
-          _manualController.clear();
-        }
-        if (mounted &&
-            generation == _lookupGeneration &&
-            _branchVisible == true &&
-            _routeForeground == true &&
-            _appActive) {
-          await _playSuccessFeedback(
-            fromCamera: fromCamera,
-            preferences: preferences,
-          );
-          if (!_canPublishResult(generation)) return;
-          _showAddedToCart(product.name);
         }
       } else if (result.kind == CatalogLookupKind.remote) {
         final remote = result.remoteProduct!;
@@ -441,7 +438,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               preferences: preferences,
             );
             if (!_canPublishResult(generation)) return;
-            _showAddedToCart(created.name);
+            _showAddedToCart(
+              created.name,
+              unitLabel: created.defaultSellingUnitLabel,
+            );
           }
         }
       } else {
@@ -548,7 +548,98 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       _routeForeground == true &&
       _appActive;
 
-  void _showAddedToCart(String productName) {
+  Future<ProductSaleOption?> _showScannerUnitChooser(StoreProduct product) {
+    return showModalBottomSheet<ProductSaleOption>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) => _ScannerUnitChooser(product: product),
+    );
+  }
+
+  Future<_CartAdditionUndo?> _addProduct(
+    StoreProduct product, {
+    required ProductSaleOption saleOption,
+  }) {
+    return _serializeCartMutation(() async {
+      final repository = ref.read(cartRepositoryProvider);
+      final lineId = buildCartLineId(product.id, saleOption.sellingUnitId);
+      int? previousQuantity;
+      try {
+        final draft = await repository.getDraft();
+        previousQuantity = _findCartLine(draft, lineId)?.quantity ?? 0;
+      } catch (_) {
+        // Adding may still succeed even when a pre-add snapshot is unavailable.
+        // In that case we simply omit Undo rather than risk removing the wrong
+        // quantity.
+      }
+      if (saleOption.isDefault) {
+        await repository.addProduct(product);
+      } else {
+        await repository.addProduct(product, saleOption: saleOption);
+      }
+      if (previousQuantity == null) return null;
+      return _CartAdditionUndo(
+        lineId: lineId,
+        previousQuantity: previousQuantity,
+        productName: product.name,
+        unitLabel: saleOption.label,
+      );
+    });
+  }
+
+  Future<void> _undoCartAddition(_CartAdditionUndo undo) async {
+    try {
+      final removed = await _serializeCartMutation(() async {
+        final repository = ref.read(cartRepositoryProvider);
+        final current = _findCartLine(await repository.getDraft(), undo.lineId);
+        if (current == null || current.quantity <= undo.previousQuantity) {
+          return false;
+        }
+
+        final nextQuantity = current.quantity - 1;
+        if (nextQuantity == 0) {
+          await repository.removeProduct(undo.lineId);
+        } else {
+          await repository.updateQuantity(undo.lineId, nextQuantity);
+        }
+        return true;
+      });
+      if (!mounted || !removed) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${undo.productName} · ${undo.unitLabel} removed from cart.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not undo the last cart addition.')),
+      );
+    }
+  }
+
+  Future<T> _serializeCartMutation<T>(Future<T> Function() operation) {
+    final result = _cartMutationQueue.then((_) => operation());
+    _cartMutationQueue = result.then<void>((_) {}, onError: (_, _) {});
+    return result;
+  }
+
+  CartItem? _findCartLine(CartDraft draft, String lineId) {
+    for (final item in draft.items) {
+      if (item.lineId == lineId) return item;
+    }
+    return null;
+  }
+
+  void _showAddedToCart(
+    String productName, {
+    required String unitLabel,
+    _CartAdditionUndo? undo,
+  }) {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
     messenger.hideCurrentSnackBar();
@@ -556,23 +647,44 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       SnackBar(
         key: const ValueKey('scan-added-feedback'),
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(milliseconds: 1800),
+        duration: const Duration(seconds: 4),
         content: Semantics(
           liveRegion: true,
-          label: '$productName added to cart',
+          label: '$productName, $unitLabel, added to cart',
           child: Row(
             children: [
               Icon(Icons.check_circle_rounded, color: scheme.onInverseSurface),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  '$productName added to cart.',
+                  '$productName · $unitLabel +1 added.',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
+        ),
+        action: undo == null
+            ? null
+            : SnackBarAction(
+                label: 'Undo',
+                onPressed: () => unawaited(_undoCartAddition(undo)),
+              ),
+      ),
+    );
+  }
+
+  void _showMissingSellingPrice(StoreProduct product) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Set a selling price for ${product.name} before adding it to the cart.',
+        ),
+        action: SnackBarAction(
+          label: 'Set price',
+          onPressed: () =>
+              context.push('/products/${Uri.encodeComponent(product.id)}/edit'),
         ),
       ),
     );
@@ -645,6 +757,175 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
 
   void _focusManualField(BuildContext context) {
     _manualFocusNode.requestFocus();
+  }
+}
+
+final class _CartAdditionUndo {
+  const _CartAdditionUndo({
+    required this.lineId,
+    required this.previousQuantity,
+    required this.productName,
+    required this.unitLabel,
+  });
+
+  final String lineId;
+  final int previousQuantity;
+  final String productName;
+  final String unitLabel;
+}
+
+class _ScannerUnitChooser extends StatelessWidget {
+  const _ScannerUnitChooser({required this.product});
+
+  final StoreProduct product;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final options = product.saleOptions;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  ProductImage(
+                    product: product,
+                    width: 64,
+                    height: 64,
+                    borderRadius: AppRadius.control,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          'Choose how it is sold',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          'Tap the unit to add 1 immediately',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              for (var index = 0; index < options.length; index++) ...[
+                _ScannerUnitButton(option: options[index]),
+                if (index < options.length - 1)
+                  const SizedBox(height: AppSpacing.xs),
+              ],
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScannerUnitButton extends StatelessWidget {
+  const _ScannerUnitButton({required this.option});
+
+  final ProductSaleOption option;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final priced = option.priceCentavos > 0;
+    final keyPart = option.sellingUnitId ?? 'main';
+    return Semantics(
+      button: true,
+      enabled: priced,
+      label: priced
+          ? 'Add 1 ${option.label} to cart'
+          : '${option.label} needs a price',
+      child: Material(
+        color: priced
+            ? scheme.primaryContainer.withValues(alpha: 0.55)
+            : scheme.surfaceContainerLow,
+        borderRadius: AppRadius.control,
+        child: InkWell(
+          key: ValueKey('scanner-unit-$keyPart'),
+          onTap: priced ? () => Navigator.of(context).pop(option) : null,
+          borderRadius: AppRadius.control,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  option.isDefault
+                      ? Icons.inventory_2_outlined
+                      : Icons.sell_outlined,
+                  color: priced ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option.label,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      if (option.isDefault)
+                        Text(
+                          'Main barcode unit',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                if (priced) ...[
+                  PriceText(centavos: option.priceCentavos),
+                  const SizedBox(width: AppSpacing.xs),
+                  const Icon(Icons.add_circle_rounded),
+                ] else
+                  Text(
+                    'Set price',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(color: scheme.error),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

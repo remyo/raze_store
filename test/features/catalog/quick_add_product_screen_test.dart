@@ -9,6 +9,7 @@ import 'package:raze_store/core/money/money.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
+import 'package:raze_store/features/catalog/presentation/product_barcode_capture_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:raze_store/features/catalog/presentation/quick_add_product_screen.dart';
 
@@ -82,6 +83,114 @@ void main() {
           .controller
           ?.text,
       '4800012345678',
+    );
+  });
+
+  testWidgets('barcode reader replaces and canonicalizes the entered value', (
+    tester,
+  ) async {
+    final scanner = _FakeProductBarcodeScannerLauncher('012345678905');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(
+            _RecordingCatalogRepository(),
+          ),
+          productBarcodeScannerLauncherProvider.overrideWithValue(scanner),
+        ],
+        child: const MaterialApp(
+          home: QuickAddProductScreen(initialBarcode: 'MANUAL-CODE'),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('quick-add-scan-barcode')));
+    await tester.pumpAndSettle();
+
+    expect(scanner.calls, 1);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('quick-add-barcode')),
+          )
+          .controller
+          ?.text,
+      '0012345678905',
+    );
+  });
+
+  testWidgets('canceling the barcode reader preserves the entered value', (
+    tester,
+  ) async {
+    final scanner = _FakeProductBarcodeScannerLauncher(null);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(
+            _RecordingCatalogRepository(),
+          ),
+          productBarcodeScannerLauncherProvider.overrideWithValue(scanner),
+        ],
+        child: const MaterialApp(
+          home: QuickAddProductScreen(initialBarcode: 'KEEP-ME'),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('quick-add-scan-barcode')));
+    await tester.pumpAndSettle();
+
+    expect(scanner.calls, 1);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('quick-add-barcode')),
+          )
+          .controller
+          ?.text,
+      'KEEP-ME',
+    );
+  });
+
+  testWidgets('a barcode reader failure preserves the entered value', (
+    tester,
+  ) async {
+    final scanner = _FakeProductBarcodeScannerLauncher(
+      null,
+      error: StateError('camera unavailable'),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogRepositoryProvider.overrideWithValue(
+            _RecordingCatalogRepository(),
+          ),
+          productBarcodeScannerLauncherProvider.overrideWithValue(scanner),
+        ],
+        child: const MaterialApp(
+          home: QuickAddProductScreen(initialBarcode: 'KEEP-ME'),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('quick-add-scan-barcode')));
+    await tester.pumpAndSettle();
+
+    expect(scanner.calls, 1);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('quick-add-barcode')),
+          )
+          .controller
+          ?.text,
+      'KEEP-ME',
+    );
+    expect(
+      find.text(
+        'Could not open the barcode scanner. Your barcode was not changed.',
+      ),
+      findsOneWidget,
     );
   });
 
@@ -369,4 +478,20 @@ final class _RecordingCatalogRepository implements CatalogRepository {
   @override
   Stream<List<StoreProduct>> watchProducts({String query = ''}) =>
       const Stream.empty();
+}
+
+final class _FakeProductBarcodeScannerLauncher
+    implements ProductBarcodeScannerLauncher {
+  _FakeProductBarcodeScannerLauncher(this.result, {this.error});
+
+  final String? result;
+  final Object? error;
+  int calls = 0;
+
+  @override
+  Future<String?> scan(BuildContext context) async {
+    calls++;
+    if (error case final error?) throw error;
+    return result;
+  }
 }

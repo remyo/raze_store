@@ -4,10 +4,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:gal/gal.dart';
+import 'package:raze_store/features/receipt/application/receipt_export_service.dart';
 import 'package:raze_store/features/receipt/domain/receipt_draft.dart';
 import 'package:raze_store/features/receipt/presentation/receipt_view.dart';
-import 'package:share_plus/share_plus.dart';
 
 typedef ReceiptImageSaveCallback =
     Future<void> Function(Uint8List pngBytes, String fileName);
@@ -17,6 +16,7 @@ typedef ReceiptImageShareCallback =
       String fileName,
       Rect? sharePositionOrigin,
     );
+typedef ReceiptImageCaptureCallback = Future<Uint8List> Function();
 
 /// Previews a receipt snapshot and exports the rendered customer copy.
 ///
@@ -30,17 +30,25 @@ class ReceiptPreviewScreen extends StatefulWidget {
     this.onSaveImage,
     this.onShareImage,
     this.onClose,
+    this.exportService,
+    this.onCaptureImage,
   });
 
   final ReceiptDraft draft;
 
   /// Optional injection point for tests or a custom image destination.
-  /// Defaults to saving the PNG to the device gallery with `gal`.
+  /// Defaults to opening the system file-save dialog for the PNG.
   final ReceiptImageSaveCallback? onSaveImage;
 
   /// Optional injection point for tests or a custom sharing flow.
   /// Defaults to the native share sheet from `share_plus`.
   final ReceiptImageShareCallback? onShareImage;
+
+  /// Platform exporter used when callback overrides are not supplied.
+  final ReceiptExportService? exportService;
+
+  /// Optional renderer override used by tests and custom host integrations.
+  final ReceiptImageCaptureCallback? onCaptureImage;
 
   /// Called by the close button. Defaults to [Navigator.maybePop].
   final VoidCallback? onClose;
@@ -54,6 +62,9 @@ enum _ReceiptAction { save, share }
 class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
   final GlobalKey _receiptKey = GlobalKey();
   _ReceiptAction? _busyAction;
+
+  late final ReceiptExportService _exportService =
+      widget.exportService ?? ReceiptExportService.device();
 
   bool get _isBusy => _busyAction != null;
 
@@ -148,19 +159,39 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
 
   Future<void> _save() async {
     await _runAction(_ReceiptAction.save, (image) async {
-      final save = widget.onSaveImage ?? _saveToGallery;
-      await save(image.bytes, image.fileName);
-      if (mounted) {
-        _showMessage('Receipt saved to your gallery.');
+      final saveOverride = widget.onSaveImage;
+      if (saveOverride != null) {
+        await saveOverride(image.bytes, image.fileName);
+        if (mounted) _showMessage('Receipt PNG saved.');
+        return;
+      } else {
+        final result = await _exportService.savePng(
+          bytes: image.bytes,
+          fileName: image.fileName,
+        );
+        if (result == ReceiptSaveResult.cancelled) {
+          if (mounted) _showMessage('Receipt download cancelled.');
+          return;
+        }
       }
+      if (mounted) _showMessage('Receipt PNG saved to Files.');
     });
   }
 
   Future<void> _share(BuildContext buttonContext) async {
     final origin = _shareOrigin(buttonContext);
     await _runAction(_ReceiptAction.share, (image) async {
-      final share = widget.onShareImage ?? _shareWithSystemSheet;
-      await share(image.bytes, image.fileName, origin);
+      final shareOverride = widget.onShareImage;
+      if (shareOverride != null) {
+        await shareOverride(image.bytes, image.fileName, origin);
+        return;
+      }
+      await _exportService.sharePng(
+        bytes: image.bytes,
+        fileName: image.fileName,
+        storeName: widget.draft.storeName,
+        sharePositionOrigin: origin,
+      );
     });
   }
 
@@ -174,9 +205,8 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
     try {
       final image = await _captureReceipt();
       await operation(image);
-    } on GalException catch (error) {
-      if (mounted) _showMessage(_galleryErrorMessage(error), isError: true);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Receipt ${action.name} failed: $error\n$stackTrace');
       if (mounted) {
         _showMessage(
           action == _ReceiptAction.save
@@ -191,8 +221,15 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
   }
 
   Future<_CapturedReceipt> _captureReceipt() async {
+    final captureOverride = widget.onCaptureImage;
+    if (captureOverride != null) {
+      return _CapturedReceipt(
+        bytes: await captureOverride(),
+        fileName: _receiptFileName(widget.draft.createdAt),
+      );
+    }
+
     final mediaRatio = MediaQuery.devicePixelRatioOf(context);
-    await WidgetsBinding.instance.endOfFrame;
     final receiptContext = _receiptKey.currentContext;
     final boundary = receiptContext?.findRenderObject();
     if (boundary is! RenderRepaintBoundary || boundary.size.isEmpty) {
@@ -200,21 +237,17 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
     }
 
     if (boundary.debugNeedsPaint) {
+      WidgetsBinding.instance.ensureVisualUpdate();
       await WidgetsBinding.instance.endOfFrame;
+      if (boundary.debugNeedsPaint) {
+        throw StateError('The receipt is still being painted.');
+      }
     }
 
-    final preferredRatio = math.max(2.0, math.min(3.0, mediaRatio));
-    const maxPixels = 16000000.0;
-    const maxImageDimension = 8192.0;
     final size = boundary.size;
-    final safePixelRatio = math.sqrt(maxPixels / (size.width * size.height));
-    final safeDimensionRatio = math.min(
-      maxImageDimension / size.width,
-      maxImageDimension / size.height,
-    );
-    final pixelRatio = math.max(
-      0.25,
-      math.min(preferredRatio, math.min(safePixelRatio, safeDimensionRatio)),
+    final pixelRatio = receiptCapturePixelRatio(
+      logicalSize: size,
+      devicePixelRatio: mediaRatio,
     );
 
     final renderedImage = await boundary.toImage(pixelRatio: pixelRatio);
@@ -226,36 +259,12 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
         throw StateError('Flutter could not encode the receipt image.');
       }
       return _CapturedReceipt(
-        bytes: data.buffer.asUint8List(),
+        bytes: data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
         fileName: _receiptFileName(widget.draft.createdAt),
       );
     } finally {
       renderedImage.dispose();
     }
-  }
-
-  Future<void> _saveToGallery(Uint8List bytes, String fileName) {
-    final imageName = fileName.endsWith('.png')
-        ? fileName.substring(0, fileName.length - 4)
-        : fileName;
-    return Gal.putImageBytes(bytes, name: imageName);
-  }
-
-  Future<void> _shareWithSystemSheet(
-    Uint8List bytes,
-    String fileName,
-    Rect? sharePositionOrigin,
-  ) async {
-    await SharePlus.instance.share(
-      ShareParams(
-        title: 'Receipt from ${widget.draft.storeName}',
-        subject: 'Receipt from ${widget.draft.storeName}',
-        text: 'Here is your receipt from ${widget.draft.storeName}.',
-        files: [XFile.fromData(bytes, mimeType: 'image/png', name: fileName)],
-        fileNameOverrides: [fileName],
-        sharePositionOrigin: sharePositionOrigin,
-      ),
-    );
   }
 
   Rect? _shareOrigin(BuildContext buttonContext) {
@@ -275,6 +284,28 @@ class _ReceiptPreviewScreenState extends State<ReceiptPreviewScreen> {
         ),
       );
   }
+}
+
+double receiptCapturePixelRatio({
+  required Size logicalSize,
+  required double devicePixelRatio,
+}) {
+  if (logicalSize.isEmpty ||
+      !logicalSize.width.isFinite ||
+      !logicalSize.height.isFinite) {
+    throw ArgumentError.value(logicalSize, 'logicalSize');
+  }
+  final preferredRatio = math.max(2.0, math.min(3.0, devicePixelRatio));
+  const maxPixels = 16000000.0;
+  const maxImageDimension = 8192.0;
+  final safePixelRatio = math.sqrt(
+    maxPixels / (logicalSize.width * logicalSize.height),
+  );
+  final safeDimensionRatio = math.min(
+    maxImageDimension / logicalSize.width,
+    maxImageDimension / logicalSize.height,
+  );
+  return math.min(preferredRatio, math.min(safePixelRatio, safeDimensionRatio));
 }
 
 class _ReceiptActionBar extends StatelessWidget {
@@ -307,7 +338,7 @@ class _ReceiptActionBar extends StatelessWidget {
                 idleIcon: Icons.download_rounded,
               ),
               label: Text(
-                busyAction == _ReceiptAction.save ? 'Saving…' : 'Save image',
+                busyAction == _ReceiptAction.save ? 'Saving…' : 'Download PNG',
               ),
             );
             final shareButton = Builder(
@@ -381,17 +412,4 @@ String _receiptFileName(DateTime createdAt) {
   return 'raze-store-receipt-'
       '${local.year}${twoDigits(local.month)}${twoDigits(local.day)}-'
       '${twoDigits(local.hour)}${twoDigits(local.minute)}${twoDigits(local.second)}.png';
-}
-
-String _galleryErrorMessage(GalException error) {
-  return switch (error.type) {
-    GalExceptionType.accessDenied =>
-      'Gallery access was denied. Allow photo access in device settings, then try again.',
-    GalExceptionType.notEnoughSpace =>
-      'There is not enough device storage to save the receipt.',
-    GalExceptionType.notSupportedFormat =>
-      'This device could not save the receipt image format.',
-    GalExceptionType.unexpected =>
-      'Could not save the receipt to the gallery. Please try again.',
-  };
 }

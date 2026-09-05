@@ -32,7 +32,7 @@ final class AppPreferences {
     scannerSoundEnabled: true,
     scannerVibrationEnabled: true,
     scannerRepeatCooldownMs: defaultScannerRepeatCooldownMilliseconds,
-    autoAddMainUnitOnScan: true,
+    autoAddMainUnitOnScan: false,
     backupReminderFrequency: BackupReminderFrequency.weekly,
     reminderAnchorAtUtc: anchor.toUtc(),
   );

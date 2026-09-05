@@ -13,7 +13,7 @@ import 'package:raze_store/features/sales/domain/sales_repository.dart';
 import 'package:raze_store/features/sales/presentation/sale_detail_screen.dart';
 
 void main() {
-  testWidgets('shows captured lines, payment, and the saved receipt snapshot', (
+  testWidgets('shows captured lines and opens the saved receipt from app bar', (
     tester,
   ) async {
     _useTallView(tester);
@@ -41,15 +41,17 @@ void main() {
     expect(find.text('Instant noodles'), findsOneWidget);
     expect(find.text('Mega · Sold as Can'), findsOneWidget);
     expect(find.text('₱23.50 × 2'), findsOneWidget);
-    expect(find.text('Cash received'), findsOneWidget);
-    expect(find.text('₱100.00'), findsOneWidget);
-    expect(find.text('Change'), findsOneWidget);
-    expect(find.text('₱15.50'), findsOneWidget);
-
-    await tester.ensureVisible(
+    expect(find.byKey(const ValueKey('sale-detail-payment')), findsNothing);
+    expect(
       find.byKey(const ValueKey('sale-detail-view-receipt')),
+      findsNothing,
     );
-    await tester.tap(find.byKey(const ValueKey('sale-detail-view-receipt')));
+    expect(
+      find.byKey(const ValueKey('sale-detail-delete-bottom')),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('sale-detail-receipt')));
 
     expect(openedReceipt?.storeName, 'Original Store Name');
     expect(openedReceipt?.storeAddress, 'Original address');

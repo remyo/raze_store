@@ -13,6 +13,7 @@ import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/application/product_text_recognizer.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
+import 'package:raze_store/features/catalog/presentation/product_barcode_capture_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_form_screen.dart';
 import 'package:image_picker/image_picker.dart';
@@ -46,6 +47,114 @@ void main() {
           .controller
           ?.text,
       '8.50',
+    );
+  });
+
+  testWidgets('barcode reader replaces the manual value after a valid scan', (
+    tester,
+  ) async {
+    final scanner = _FakeProductBarcodeScannerLauncher('012345678905');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productBarcodeScannerLauncherProvider.overrideWithValue(scanner),
+        ],
+        child: const MaterialApp(
+          home: ProductFormScreen(initialBarcode: 'MANUAL-CODE'),
+        ),
+      ),
+    );
+
+    final scanButton = find.byKey(const ValueKey('scan-product-barcode'));
+    await tester.ensureVisible(scanButton);
+    await tester.tap(scanButton);
+    await tester.pumpAndSettle();
+
+    expect(scanner.calls, 1);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-barcode-field')),
+          )
+          .controller
+          ?.text,
+      '0012345678905',
+    );
+  });
+
+  testWidgets('canceling the barcode reader preserves the manual value', (
+    tester,
+  ) async {
+    final scanner = _FakeProductBarcodeScannerLauncher(null);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productBarcodeScannerLauncherProvider.overrideWithValue(scanner),
+        ],
+        child: const MaterialApp(
+          home: ProductFormScreen(initialBarcode: 'KEEP-ME'),
+        ),
+      ),
+    );
+
+    final scanButton = find.byKey(const ValueKey('scan-product-barcode'));
+    await tester.ensureVisible(scanButton);
+    await tester.tap(scanButton);
+    await tester.pumpAndSettle();
+
+    expect(scanner.calls, 1);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-barcode-field')),
+          )
+          .controller
+          ?.text,
+      'KEEP-ME',
+    );
+  });
+
+  testWidgets('a barcode reader failure preserves the manual value', (
+    tester,
+  ) async {
+    final scanner = _FakeProductBarcodeScannerLauncher(
+      null,
+      error: StateError('camera unavailable'),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          catalogCategorySuggestionsProvider.overrideWithValue(const []),
+          productBarcodeScannerLauncherProvider.overrideWithValue(scanner),
+        ],
+        child: const MaterialApp(
+          home: ProductFormScreen(initialBarcode: 'KEEP-ME'),
+        ),
+      ),
+    );
+
+    final scanButton = find.byKey(const ValueKey('scan-product-barcode'));
+    await tester.ensureVisible(scanButton);
+    await tester.tap(scanButton);
+    await tester.pumpAndSettle();
+
+    expect(scanner.calls, 1);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('product-barcode-field')),
+          )
+          .controller
+          ?.text,
+      'KEEP-ME',
+    );
+    expect(
+      find.text(
+        'Could not open the barcode scanner. Your barcode was not changed.',
+      ),
+      findsOneWidget,
     );
   });
 
@@ -183,12 +292,22 @@ void main() {
       const ValueKey('remove-photo-background'),
     );
     expect(removeBackground, findsOneWidget);
+    final originalPreview = tester.widget<Image>(
+      find.byKey(const ValueKey('product-photo-preview')),
+    );
+    expect(originalPreview.fit, BoxFit.cover);
+    expect(originalPreview.alignment, Alignment.center);
     await tester.tap(removeBackground);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(remover.calls, 1);
     expect(find.text('Background removed'), findsOneWidget);
+    final processedPreview = tester.widget<Image>(
+      find.byKey(const ValueKey('product-photo-preview')),
+    );
+    expect(processedPreview.fit, BoxFit.contain);
+    expect(processedPreview.alignment, Alignment.center);
 
     final processedPath = remover.lastOutputPath!;
     expect(File(processedPath).existsSync(), isTrue);
@@ -1152,6 +1271,22 @@ final class _FakeProductCaptureLauncher implements ProductCaptureLauncher {
     calls++;
     purposes.add(purpose);
     return file;
+  }
+}
+
+final class _FakeProductBarcodeScannerLauncher
+    implements ProductBarcodeScannerLauncher {
+  _FakeProductBarcodeScannerLauncher(this.result, {this.error});
+
+  final String? result;
+  final Object? error;
+  int calls = 0;
+
+  @override
+  Future<String?> scan(BuildContext context) async {
+    calls++;
+    if (error case final error?) throw error;
+    return result;
   }
 }
 

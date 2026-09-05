@@ -17,6 +17,7 @@ import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
 import 'package:raze_store/features/catalog/presentation/duplicate_barcode_resolution.dart';
+import 'package:raze_store/features/catalog/presentation/product_barcode_capture_screen.dart';
 import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
 
 class ProductFormScreen extends ConsumerWidget {
@@ -118,6 +119,7 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
   bool _busy = false;
   bool _removingBackground = false;
   bool _readingText = false;
+  bool _scanningBarcode = false;
   bool _backgroundRemoved = false;
   String? _recognizedProductName;
 
@@ -609,13 +611,30 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
                     controller: _barcodeController,
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(
-                      labelText: 'Main product barcode (optional)',
-                      hintText: 'Scan or type the code',
-                      prefixIcon: Icon(Icons.barcode_reader),
-                      helperText:
-                          'Scan this once, then choose the main or loose selling unit.',
-                    ),
+                    decoration:
+                        const InputDecoration(
+                          labelText: 'Main product barcode (optional)',
+                          hintText: 'Scan or type the code',
+                          prefixIcon: Icon(Icons.keyboard_outlined),
+                          helperText:
+                              'Scan this once, then choose the main or loose selling unit.',
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            key: const ValueKey('scan-product-barcode'),
+                            onPressed: _blocked || _scanningBarcode
+                                ? null
+                                : _scanProductBarcode,
+                            tooltip: 'Scan barcode',
+                            icon: _scanningBarcode
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.barcode_reader),
+                          ),
+                        ),
                     validator: (value) {
                       final trimmed = value?.trim() ?? '';
                       if (trimmed.isEmpty) {
@@ -743,6 +762,43 @@ class _ProductEditorState extends ConsumerState<_ProductEditor> {
       text: selected,
       selection: TextSelection.collapsed(offset: selected.length),
     );
+  }
+
+  Future<void> _scanProductBarcode() async {
+    if (_blocked || _scanningBarcode) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _scanningBarcode = true);
+    try {
+      final rawBarcode = await ref
+          .read(productBarcodeScannerLauncherProvider)
+          .scan(context);
+      if (!mounted || rawBarcode == null) return;
+      final barcode = Barcode.tryParse(rawBarcode);
+      if (barcode == null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('The camera did not return a valid barcode.'),
+            ),
+          );
+        return;
+      }
+      _replaceControllerText(_barcodeController, barcode.value);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not open the barcode scanner. Your barcode was not changed.',
+            ),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _scanningBarcode = false);
+    }
   }
 
   Future<void> _choosePhotoSource() async {
@@ -1404,9 +1460,11 @@ class _PhotoEditor extends StatelessWidget {
               child: pendingPhoto != null
                   ? Image.file(
                       File(pendingPhoto!.path),
+                      key: const ValueKey('product-photo-preview'),
                       width: 104,
                       height: 104,
-                      fit: BoxFit.cover,
+                      fit: backgroundRemoved ? BoxFit.contain : BoxFit.cover,
+                      alignment: Alignment.center,
                       cacheWidth: previewCacheSize,
                       errorBuilder: (_, _, _) => const ProductImagePlaceholder(
                         width: 104,
@@ -1416,9 +1474,11 @@ class _PhotoEditor extends StatelessWidget {
                   : existingPath != null
                   ? Image.file(
                       File(existingPath),
+                      key: const ValueKey('product-photo-preview'),
                       width: 104,
                       height: 104,
                       fit: BoxFit.cover,
+                      alignment: Alignment.center,
                       cacheWidth: previewCacheSize,
                       errorBuilder: (_, _, _) => const ProductImagePlaceholder(
                         width: 104,

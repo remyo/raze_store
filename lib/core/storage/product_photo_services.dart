@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -95,9 +96,17 @@ final class OnDeviceProductBackgroundRemover
       // plugin. The model already produces a smooth mask, so retaining mask
       // smoothing while skipping that extra pass keeps memory bounded on
       // lower-end phones without changing the on-device/privacy behavior.
-      final outputBytes = await BackgroundRemover.instance.removeBgBytes(
+      final removedBytes = await BackgroundRemover.instance.removeBgBytes(
         preparedBytes,
         enhanceEdges: false,
+      );
+      if (removedBytes.isEmpty || removedBytes.length > maximumOutputBytes) {
+        throw const ProductBackgroundRemovalException(
+          'The processed product photo is too large.',
+        );
+      }
+      final outputBytes = await normalizeBackgroundRemovedProductBytes(
+        removedBytes,
       );
       if (outputBytes.isEmpty || outputBytes.length > maximumOutputBytes) {
         throw const ProductBackgroundRemovalException(
@@ -238,6 +247,121 @@ Future<Uint8List> prepareProductPhotoBytesForBackgroundRemoval(
     } finally {
       frame.image.dispose();
     }
+  } finally {
+    codec.dispose();
+  }
+}
+
+/// Makes a transparent background-removal result useful in square product
+/// thumbnails.
+///
+/// Background-removal models preserve the source canvas, so a product that was
+/// photographed from far away can remain tiny even after its background is
+/// gone. This finds the visible alpha bounds, scales that subject to a square
+/// canvas with a small safety margin, and centers it without changing its
+/// aspect ratio. The remover already limits its longest input side to 768px,
+/// keeping the extra RGBA buffer and canvas bounded on lower-memory phones.
+Future<Uint8List> normalizeBackgroundRemovedProductBytes(
+  Uint8List sourceBytes, {
+  double paddingFraction = 0.06,
+  int alphaThreshold = 12,
+}) async {
+  if (sourceBytes.isEmpty ||
+      !paddingFraction.isFinite ||
+      paddingFraction < 0 ||
+      paddingFraction >= 0.5 ||
+      alphaThreshold < 0 ||
+      alphaThreshold > 255) {
+    throw const ProductBackgroundRemovalException(
+      'The processed product photo could not be read.',
+    );
+  }
+
+  final codec = await ui.instantiateImageCodec(sourceBytes);
+  try {
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    try {
+      final rgba = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      if (rgba == null) return sourceBytes;
+
+      var minX = image.width;
+      var minY = image.height;
+      var maxX = -1;
+      var maxY = -1;
+      for (var y = 0; y < image.height; y++) {
+        final rowOffset = y * image.width * 4;
+        for (var x = 0; x < image.width; x++) {
+          final alpha = rgba.getUint8(rowOffset + (x * 4) + 3);
+          if (alpha <= alphaThreshold) continue;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+
+      // An entirely transparent or fully edge-to-edge result has no safe
+      // transparent margin to crop. Preserve it instead of guessing.
+      if (maxX < minX || maxY < minY) return sourceBytes;
+      if (minX == 0 &&
+          minY == 0 &&
+          maxX == image.width - 1 &&
+          maxY == image.height - 1) {
+        return sourceBytes;
+      }
+
+      final subjectWidth = maxX - minX + 1;
+      final subjectHeight = maxY - minY + 1;
+      final subjectExtent = math.max(subjectWidth, subjectHeight).toDouble();
+      final canvasSide = math.max(image.width, image.height);
+      final usableExtent = canvasSide * (1 - (paddingFraction * 2));
+      final scale = usableExtent / subjectExtent;
+      final renderedWidth = subjectWidth * scale;
+      final renderedHeight = subjectHeight * scale;
+      final destination = ui.Rect.fromLTWH(
+        (canvasSide - renderedWidth) / 2,
+        (canvasSide - renderedHeight) / 2,
+        renderedWidth,
+        renderedHeight,
+      );
+      final source = ui.Rect.fromLTRB(
+        minX.toDouble(),
+        minY.toDouble(),
+        (maxX + 1).toDouble(),
+        (maxY + 1).toDouble(),
+      );
+
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      canvas.drawImageRect(
+        image,
+        source,
+        destination,
+        ui.Paint()..filterQuality = ui.FilterQuality.high,
+      );
+      final picture = recorder.endRecording();
+      try {
+        final normalized = await picture.toImage(canvasSide, canvasSide);
+        try {
+          final png = await normalized.toByteData(
+            format: ui.ImageByteFormat.png,
+          );
+          if (png == null) return sourceBytes;
+          return png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes);
+        } finally {
+          normalized.dispose();
+        }
+      } finally {
+        picture.dispose();
+      }
+    } finally {
+      image.dispose();
+    }
+  } catch (_) {
+    throw const ProductBackgroundRemovalException(
+      'The processed product photo could not be read.',
+    );
   } finally {
     codec.dispose();
   }

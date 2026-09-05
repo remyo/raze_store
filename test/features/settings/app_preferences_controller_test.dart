@@ -25,7 +25,7 @@ void main() {
         preferences.scannerRepeatCooldownMs,
         defaultScannerRepeatCooldownMilliseconds,
       );
-      expect(preferences.autoAddMainUnitOnScan, isTrue);
+      expect(preferences.autoAddMainUnitOnScan, isFalse);
       expect(
         preferences.backupReminderFrequency,
         BackupReminderFrequency.weekly,
@@ -54,7 +54,7 @@ void main() {
         scannerSoundEnabledPreferenceKey: false,
         scannerVibrationEnabledPreferenceKey: false,
         scannerRepeatCooldownPreferenceKey: 750,
-        autoAddMainUnitOnScanPreferenceKey: false,
+        autoAddMainUnitOnScanPreferenceKey: true,
         backupReminderFrequencyPreferenceKey: 'not-a-frequency',
         backupReminderAnchorPreferenceKey: anchor.toIso8601String(),
         lastSuccessfulBackupPreferenceKey: lastBackup.toIso8601String(),
@@ -71,7 +71,9 @@ void main() {
         preferences.scannerRepeatCooldownMs,
         defaultScannerRepeatCooldownMilliseconds,
       );
-      expect(preferences.autoAddMainUnitOnScan, isFalse);
+      // Existing installs keep an explicitly saved scanner choice even though
+      // new installs now ask for a selling unit by default.
+      expect(preferences.autoAddMainUnitOnScan, isTrue);
       expect(
         preferences.backupReminderFrequency,
         BackupReminderFrequency.weekly,

@@ -95,7 +95,7 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'This removes only other cache, background-removal working files, and temporary receipt copies. It never deletes the database, product images, gallery receipts, or exported files.',
+                          'This removes only other cache, background-removal working files, and temporary receipt copies. It never deletes the database, product images, or exported files.',
                           key: const ValueKey('storage-cleanup-scope'),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
@@ -139,7 +139,7 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
                   icon: Icons.photo_library_outlined,
                   title: 'Saved copies are outside this total',
                   message:
-                      'Receipt images saved to your gallery and copies kept by apps you share with are stored outside Raze Store. Backups and CSV files saved through Files are external too. Only temporary receipt copies still in this app’s cache are counted above.',
+                      'Receipt PNGs, backups, and CSV files saved through Files are stored outside Raze Store. Copies kept by apps you share with are external too. Only temporary receipt working copies still in this app’s cache are counted above.',
                 ),
                 const SizedBox(height: AppSpacing.xl),
               ],
@@ -156,7 +156,7 @@ class _StorageScreenState extends ConsumerState<StorageScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Clear temporary files?'),
         content: const Text(
-          'Raze Store will remove rebuildable cache, background-removal working files, and temporary receipt copies. Products, sales, product images, the database, gallery receipts, and exported files will stay untouched.',
+          'Raze Store will remove rebuildable cache, background-removal working files, and temporary receipt copies. Products, sales, product images, the database, and exported files will stay untouched.',
         ),
         actions: [
           TextButton(

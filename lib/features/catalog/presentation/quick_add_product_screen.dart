@@ -9,6 +9,7 @@ import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
+import 'package:raze_store/features/catalog/presentation/product_barcode_capture_screen.dart';
 
 class QuickAddProductScreen extends ConsumerStatefulWidget {
   const QuickAddProductScreen({
@@ -33,6 +34,7 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _priceController;
   bool _saving = false;
+  bool _scanningBarcode = false;
 
   @override
   void initState() {
@@ -137,11 +139,28 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
                         controller: _barcodeController,
                         keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Barcode (optional)',
-                          hintText: 'Scan or type the main package barcode',
-                          prefixIcon: Icon(Icons.barcode_reader),
-                        ),
+                        decoration:
+                            const InputDecoration(
+                              labelText: 'Barcode (optional)',
+                              hintText: 'Scan or type the main package barcode',
+                              prefixIcon: Icon(Icons.keyboard_outlined),
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                key: const ValueKey('quick-add-scan-barcode'),
+                                onPressed: _saving || _scanningBarcode
+                                    ? null
+                                    : _scanProductBarcode,
+                                tooltip: 'Scan barcode',
+                                icon: _scanningBarcode
+                                    ? const SizedBox.square(
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.barcode_reader),
+                              ),
+                            ),
                         validator: (value) {
                           final input = value?.trim() ?? '';
                           if (input.isEmpty) return null;
@@ -283,6 +302,46 @@ class _QuickAddProductScreenState extends ConsumerState<QuickAddProductScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not save this product.')),
       );
+    }
+  }
+
+  Future<void> _scanProductBarcode() async {
+    if (_saving || _scanningBarcode) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _scanningBarcode = true);
+    try {
+      final rawBarcode = await ref
+          .read(productBarcodeScannerLauncherProvider)
+          .scan(context);
+      if (!mounted || rawBarcode == null) return;
+      final barcode = Barcode.tryParse(rawBarcode);
+      if (barcode == null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('The camera did not return a valid barcode.'),
+            ),
+          );
+        return;
+      }
+      _barcodeController.value = TextEditingValue(
+        text: barcode.value,
+        selection: TextSelection.collapsed(offset: barcode.value.length),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not open the barcode scanner. Your barcode was not changed.',
+            ),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _scanningBarcode = false);
     }
   }
 

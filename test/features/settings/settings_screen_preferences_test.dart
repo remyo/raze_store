@@ -105,7 +105,7 @@ void main() {
             find.byKey(const ValueKey('scanner-auto-main-unit-setting')),
           )
           .value,
-      isTrue,
+      isFalse,
     );
     expect(find.text('500 ms'), findsOneWidget);
 
@@ -122,7 +122,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final stored = await SharedPreferences.getInstance();
-    expect(stored.getBool(autoAddMainUnitOnScanPreferenceKey), isFalse);
+    expect(stored.getBool(autoAddMainUnitOnScanPreferenceKey), isTrue);
   });
 
   testWidgets('offers off, weekly, and monthly backup reminders', (

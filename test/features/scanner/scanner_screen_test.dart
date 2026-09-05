@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:raze_store/app/theme/theme.dart';
+import 'package:raze_store/core/database/cart_line_id.dart';
 import 'package:raze_store/core/money/money.dart';
 import 'package:raze_store/features/cart/application/cart_providers.dart';
 import 'package:raze_store/features/cart/domain/cart.dart';
@@ -79,9 +80,10 @@ void main() {
       expect(cart.totalQuantity, 1);
       expect(cart.saleOptions, [null]);
       expect(find.text('Choose how it is sold'), findsNothing);
-      expect(find.text('Local product added to cart.'), findsOneWidget);
+      expect(find.text('Local product · Pack +1 added.'), findsOneWidget);
       expect(find.byKey(const ValueKey('scan-added-feedback')), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.text('Undo'), findsOneWidget);
       expect(feedback.calls, [(sound: true, vibration: true)]);
       expect(find.text('1 item'), findsOneWidget);
 
@@ -135,6 +137,68 @@ void main() {
     expect(find.text('Cart page'), findsOneWidget);
   });
 
+  testWidgets('scanner feedback can safely undo exactly one cart addition', (
+    tester,
+  ) async {
+    final platform = _FakeMobileScannerPlatform();
+    MobileScannerPlatform.instance = platform;
+    final cart = _RecordingCartRepository(initialQuantity: 2);
+
+    await _pumpScanner(
+      tester,
+      local: _LookupCatalogRepository(_product()),
+      cart: cart,
+    );
+    platform.addBarcode(
+      const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
+    );
+    await _pumpForScan(tester);
+
+    expect(cart.totalQuantity, 3);
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+
+    expect(cart.totalQuantity, 2);
+    expect(cart.updatedQuantities, [2]);
+    expect(
+      find.text('Local product · Pack removed from cart.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('undo and a rapid re-scan serialize cart writes', (tester) async {
+    final platform = _FakeMobileScannerPlatform();
+    MobileScannerPlatform.instance = platform;
+    final cart = _RecordingCartRepository(blockGetDraftCall: 2);
+    final local = _LookupCatalogRepository(_product());
+    const capture = BarcodeCapture(
+      barcodes: [Barcode(rawValue: '4800012345678')],
+    );
+
+    await _pumpScanner(tester, local: local, cart: cart);
+    platform.addBarcode(capture);
+    await _pumpForScan(tester);
+    expect(cart.totalQuantity, 1);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pump();
+    await cart.blockedGetDraftStarted.future;
+
+    // The old label may now be scanned deliberately again while Undo is
+    // waiting on storage. Its add must queue behind that decrement.
+    await tester.pump(const Duration(milliseconds: 600));
+    platform.addBarcode(capture);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(local.lookupCalls, 2);
+    expect(cart.addCalls, 1);
+
+    cart.releaseBlockedGetDraft();
+    await _pumpForScan(tester);
+
+    expect(cart.addCalls, 2);
+    expect(cart.totalQuantity, 1);
+  });
+
   testWidgets('a barcode with sub-unit prices asks which unit to add', (
     tester,
   ) async {
@@ -153,13 +217,7 @@ void main() {
     final cart = _RecordingCartRepository();
     final feedback = _RecordingScanFeedbackService();
 
-    await _pumpScanner(
-      tester,
-      local: local,
-      cart: cart,
-      preferences: _preferences(autoAddMainUnitOnScan: false),
-      feedback: feedback,
-    );
+    await _pumpScanner(tester, local: local, cart: cart, feedback: feedback);
     platform.addBarcode(
       const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
     );
@@ -172,14 +230,14 @@ void main() {
     expect(find.text('Piece'), findsOneWidget);
 
     await tester.tap(find.text('Piece'));
-    await tester.pump();
-    await tester.tap(find.text('Add 1 Piece'));
     await _pumpForScan(tester);
 
     expect(cart.addCalls, 1);
     expect(cart.totalQuantity, 1);
     expect(cart.saleOptions.single?.sellingUnitId, 'piece');
-    expect(find.text('Local product added to cart.'), findsOneWidget);
+    expect(find.text('Choose how it is sold'), findsNothing);
+    expect(find.text('Local product · Piece +1 added.'), findsOneWidget);
+    expect(find.text('Undo'), findsOneWidget);
     expect(feedback.calls, [(sound: true, vibration: true)]);
   });
 
@@ -200,7 +258,12 @@ void main() {
     final local = _LookupCatalogRepository(product);
     final cart = _RecordingCartRepository();
 
-    await _pumpScanner(tester, local: local, cart: cart);
+    await _pumpScanner(
+      tester,
+      local: local,
+      cart: cart,
+      preferences: _preferences(autoAddMainUnitOnScan: true),
+    );
     platform.addBarcode(
       const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
     );
@@ -229,7 +292,12 @@ void main() {
     final local = _LookupCatalogRepository(product);
     final cart = _RecordingCartRepository();
 
-    await _pumpScanner(tester, local: local, cart: cart);
+    await _pumpScanner(
+      tester,
+      local: local,
+      cart: cart,
+      preferences: _preferences(autoAddMainUnitOnScan: true),
+    );
     platform.addBarcode(
       const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
     );
@@ -240,8 +308,6 @@ void main() {
     expect(find.text('Piece'), findsOneWidget);
 
     await tester.tap(find.text('Piece'));
-    await tester.pump();
-    await tester.tap(find.text('Add 1 Piece'));
     await _pumpForScan(tester);
 
     expect(cart.addCalls, 1);
@@ -265,6 +331,7 @@ void main() {
       tester,
       local: _LookupCatalogRepository(product),
       cart: cart,
+      preferences: _preferences(autoAddMainUnitOnScan: true),
     );
     platform.addBarcode(
       const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
@@ -275,6 +342,40 @@ void main() {
     expect(find.textContaining('Set a selling price'), findsOneWidget);
     expect(cart.addCalls, 0);
   });
+
+  testWidgets(
+    'default unit chooser redirects an all-unpriced product to edit',
+    (tester) async {
+      final platform = _FakeMobileScannerPlatform();
+      MobileScannerPlatform.instance = platform;
+      final product = _product(
+        priceCentavos: 0,
+        sellingUnits: const [
+          SellingUnit(
+            id: 'piece',
+            label: 'Piece',
+            price: Money.fromCentavos(0),
+          ),
+        ],
+      );
+      final cart = _RecordingCartRepository();
+
+      await _pumpScanner(
+        tester,
+        local: _LookupCatalogRepository(product),
+        cart: cart,
+      );
+      platform.addBarcode(
+        const BarcodeCapture(barcodes: [Barcode(rawValue: '4800012345678')]),
+      );
+      await _pumpForScan(tester);
+
+      expect(find.text('Choose how it is sold'), findsNothing);
+      expect(find.textContaining('Set a selling price'), findsOneWidget);
+      expect(find.text('Set price'), findsOneWidget);
+      expect(cart.addCalls, 0);
+    },
+  );
 
   testWidgets('sound and vibration settings are passed to scan feedback', (
     tester,
@@ -556,7 +657,7 @@ AppPreferences _preferences({
   bool scannerSoundEnabled = true,
   bool scannerVibrationEnabled = true,
   int scannerRepeatCooldownMs = 500,
-  bool autoAddMainUnitOnScan = true,
+  bool autoAddMainUnitOnScan = false,
 }) => AppPreferences(
   scannerSoundEnabled: scannerSoundEnabled,
   scannerVibrationEnabled: scannerVibrationEnabled,
@@ -589,15 +690,23 @@ StoreProduct _product({
 );
 
 final class _RecordingCartRepository implements CartRepository {
-  _RecordingCartRepository({this.addError, int initialQuantity = 0})
-    : totalQuantity = initialQuantity;
+  _RecordingCartRepository({
+    this.addError,
+    int initialQuantity = 0,
+    this.blockGetDraftCall,
+  }) : totalQuantity = initialQuantity;
 
   final Object? addError;
+  final int? blockGetDraftCall;
   int addCalls = 0;
+  int getDraftCalls = 0;
   int totalQuantity;
   final List<ProductSaleOption?> saleOptions = [];
+  final List<int> updatedQuantities = [];
   final StreamController<CartDraft> _drafts =
       StreamController<CartDraft>.broadcast(sync: true);
+  final Completer<void> blockedGetDraftStarted = Completer<void>();
+  final Completer<void> _blockedGetDraftRelease = Completer<void>();
   StoreProduct? _latestProduct;
 
   @override
@@ -618,13 +727,40 @@ final class _RecordingCartRepository implements CartRepository {
   Future<void> clear() async {}
 
   @override
-  Future<CartDraft> getDraft() async => _draft;
+  Future<CartDraft> getDraft() async {
+    getDraftCalls++;
+    final snapshot = _draft;
+    if (getDraftCalls == blockGetDraftCall) {
+      if (!blockedGetDraftStarted.isCompleted) {
+        blockedGetDraftStarted.complete();
+      }
+      await _blockedGetDraftRelease.future;
+    }
+    return snapshot;
+  }
+
+  void releaseBlockedGetDraft() {
+    if (!_blockedGetDraftRelease.isCompleted) {
+      _blockedGetDraftRelease.complete();
+    }
+  }
 
   @override
-  Future<void> removeProduct(String lineId) async {}
+  Future<void> removeProduct(String lineId) async {
+    final current = _draft.items.firstOrNull;
+    if (current?.lineId != lineId) return;
+    totalQuantity = 0;
+    _drafts.add(_draft);
+  }
 
   @override
-  Future<void> updateQuantity(String lineId, int quantity) async {}
+  Future<void> updateQuantity(String lineId, int quantity) async {
+    final current = _draft.items.firstOrNull;
+    if (current?.lineId != lineId) return;
+    totalQuantity = quantity;
+    updatedQuantities.add(quantity);
+    _drafts.add(_draft);
+  }
 
   @override
   Stream<CartDraft> watchDraft() async* {
@@ -638,7 +774,7 @@ final class _RecordingCartRepository implements CartRepository {
     final saleOption = saleOptions.lastOrNull;
     return CartDraft([
       CartItem(
-        lineId: 'scanner-test-line',
+        lineId: buildCartLineId(product.id, saleOption?.sellingUnitId),
         productId: product.id,
         sellingUnitId: saleOption?.sellingUnitId,
         barcode: product.barcode,

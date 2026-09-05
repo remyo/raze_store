@@ -424,7 +424,7 @@ final class CatalogBackupService {
           true,
       scannerRepeatCooldownMs: _storedScannerCooldown(preferences),
       autoAddMainUnitOnScan:
-          _storedBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? true,
+          _storedBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? false,
       backupReminderFrequency: _storedBackupReminderFrequency(preferences),
     );
   }

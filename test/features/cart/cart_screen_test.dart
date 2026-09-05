@@ -178,7 +178,7 @@ void main() {
     );
     expect(
       tester
-          .widget<IconButton>(find.byKey(const ValueKey('clear-cart')))
+          .widget<IconButton>(find.byKey(const ValueKey('new-customer')))
           .onPressed,
       isNull,
     );
@@ -193,6 +193,201 @@ void main() {
           .onPressed,
       isNotNull,
     );
+  });
+
+  testWidgets('cash panel starts open and quick bills calculate change', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartDraftProvider.overrideWith((ref) => Stream.value(_cart)),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('cash-received-field')), findsOneWidget);
+    expect(find.text('New customer'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('cash-bill-50')));
+    await tester.pump();
+
+    final field = tester.widget<TextField>(
+      find.byKey(const ValueKey('cash-received-field')),
+    );
+    expect(field.controller?.text, '50');
+    expect(find.text('Change'), findsOneWidget);
+    expect(find.text('₱38.00'), findsOneWidget);
+
+    final previewWidth = tester
+        .getSize(find.byKey(const ValueKey('preview-receipt')))
+        .width;
+    final completeWidth = tester
+        .getSize(find.byKey(const ValueKey('complete-sale')))
+        .width;
+    expect(completeWidth / previewWidth, closeTo(1.5, 0.05));
+  });
+
+  testWidgets('keyboard lifts the cash field above its visible edge', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartDraftProvider.overrideWith((ref) => Stream.value(_cart)),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cashField = find.byKey(const ValueKey('cash-received-field'));
+    await tester.tap(cashField);
+    await tester.pump();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 500);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    final visibleBottom =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio -
+        tester.view.viewInsets.bottom / tester.view.devicePixelRatio;
+    expect(
+      tester.getBottomLeft(cashField).dy,
+      lessThanOrEqualTo(visibleBottom),
+    );
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('scrolling a long cart collapses the sticky cash panel', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final longCart = _cartWithItems(18);
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartDraftProvider.overrideWith((ref) => Stream.value(longCart)),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('cash-received-field')), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('cart-items-scroll-view')),
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('cash-received-field')), findsNothing);
+    expect(find.text('Tap or swipe up to open'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('cash-panel-handle')),
+      const Offset(0, -80),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('cash-received-field')), findsOneWidget);
+  });
+
+  testWidgets('app bar new-customer action owns the clear-cart dialog', (
+    tester,
+  ) async {
+    _useTallView(tester);
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartDraftProvider.overrideWith((ref) => Stream.value(_cart)),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Start a new customer'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'New customer'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('new-customer')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Start a new customer?'), findsOneWidget);
+    expect(find.text('Keep cart'), findsOneWidget);
+    expect(find.text('Clear cart'), findsOneWidget);
+  });
+
+  testWidgets('swiping a cart line removes that exact line', (tester) async {
+    _useTallView(tester);
+    final cartRepository = _SwipeCartRepository(_cart);
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartDraftProvider.overrideWith((ref) => Stream.value(_cart)),
+          cartRepositoryProvider.overrideWithValue(cartRepository),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('cart-line-main:coffee')),
+      const Offset(-600, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(cartRepository.removedLineIds, ['main:coffee']);
+  });
+
+  testWidgets('a failed swipe removal restores the cart line', (tester) async {
+    _useTallView(tester);
+    final cartRepository = _SwipeCartRepository(
+      _cart,
+      removeError: StateError('write failed'),
+    );
+    final router = _router();
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cartDraftProvider.overrideWith((ref) => Stream.value(_cart)),
+          cartRepositoryProvider.overrideWithValue(cartRepository),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const ValueKey('cart-line-main:coffee')),
+      const Offset(-600, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(cartRepository.removedLineIds, ['main:coffee']);
+    expect(find.text('Could not remove this product.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('cart-line-main:coffee')), findsOneWidget);
   });
 }
 
@@ -230,6 +425,22 @@ final _cart = CartDraft([
     addedAt: DateTime.utc(2026, 9, 3),
     updatedAt: DateTime.utc(2026, 9, 3),
   ),
+]);
+
+CartDraft _cartWithItems(int count) => CartDraft([
+  for (var index = 0; index < count; index++)
+    CartItem(
+      lineId: 'main:product-$index',
+      productId: 'product-$index',
+      sellingUnitId: null,
+      barcode: '480000000${index.toString().padLeft(3, '0')}',
+      nameSnapshot: 'Product ${index + 1}',
+      unitLabelSnapshot: 'Piece',
+      unitPrice: Money.fromCentavos(100 + index),
+      quantity: 1,
+      addedAt: DateTime.utc(2026, 9, 3, 0, index),
+      updatedAt: DateTime.utc(2026, 9, 3, 0, index),
+    ),
 ]);
 
 final _completedSale = CompletedSale(
@@ -333,6 +544,39 @@ final class _DelayedCartRepository implements CartRepository {
     updateCalls += 1;
     await updateGate.future;
   }
+
+  @override
+  Stream<CartDraft> watchDraft() => Stream.value(cart);
+}
+
+final class _SwipeCartRepository implements CartRepository {
+  _SwipeCartRepository(this.cart, {this.removeError});
+
+  final CartDraft cart;
+  final Object? removeError;
+  final List<String> removedLineIds = [];
+
+  @override
+  Future<void> addProduct(
+    StoreProduct product, {
+    ProductSaleOption? saleOption,
+    int quantity = 1,
+  }) async {}
+
+  @override
+  Future<void> clear() async {}
+
+  @override
+  Future<CartDraft> getDraft() async => cart;
+
+  @override
+  Future<void> removeProduct(String lineId) async {
+    removedLineIds.add(lineId);
+    if (removeError case final error?) throw error;
+  }
+
+  @override
+  Future<void> updateQuantity(String lineId, int quantity) async {}
 
   @override
   Stream<CartDraft> watchDraft() => Stream.value(cart);

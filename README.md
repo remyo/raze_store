@@ -255,9 +255,10 @@ never deletes products from the catalog.
 Open **Profile → Settings → Storage manager** to measure the local database, managed
 product images, temporary receipt copies, background-removal files, and other
 cache. Safe cleanup removes only rebuildable temporary files. Product data,
-sales, managed product images, gallery receipts, `.razestore` backups, and
-catalog/CSV exports are never cleanup targets. Gallery and Files copies live
-outside the app, so their sizes are not included in the displayed total. The
+sales, managed product images, receipt PNGs, `.razestore` backups, and catalog/CSV
+exports are never cleanup targets. Files exports and copies kept by apps you
+share with live outside the app, so their sizes are not included in the
+displayed total. The
 installed app binary, bundled background-removal model, and OS/native support
 data are also outside this measured total; use the phone's system Storage page
 for the complete installed size. SQLite can reuse freed database space, so
