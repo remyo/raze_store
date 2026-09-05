@@ -14,8 +14,15 @@ import 'package:raze_store/features/catalog/application/quick_sell_providers.dar
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/domain/catalog_repository.dart';
 import 'package:raze_store/features/catalog/presentation/quick_sell_screen.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   test(
     'quick-sell provider keeps only products with alternate units',
     () async {
@@ -295,6 +302,35 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('quick-sell-results-list')), findsNothing);
+  });
+
+  testWidgets('Quick units saves and restores its list layout', (tester) async {
+    _usePhoneView(tester, height: 1400);
+    final products = [
+      for (var index = 0; index < 3; index++) _unitProductAt(index),
+    ];
+    final repository = _RecordingCartRepository(CartDraft(const []));
+    await _pumpScreen(tester, repository: repository, products: products);
+
+    await tester.tap(find.byKey(const ValueKey('quick-sell-layout-list')));
+    await tester.pumpAndSettle();
+
+    final stored = await SharedPreferences.getInstance();
+    expect(
+      stored.getString(quickUnitsViewLayoutPreferenceKey),
+      CatalogViewLayout.list.name,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await _pumpScreen(tester, repository: repository, products: products);
+
+    expect(find.byKey(const ValueKey('quick-sell-list')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('quick-sell-results-list')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('quick-sell-results-grid')), findsNothing);
   });
 
   testWidgets('three-column grid keeps usable controls at 320px and 2x text', (

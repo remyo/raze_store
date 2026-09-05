@@ -197,21 +197,17 @@ Sep 5, 2026 12:30 PM''', GcashKind.cashIn);
   testWidgets('manual cash in requires details and date before saving', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(database)],
         child: const MaterialApp(home: GcashFormScreen(kind: GcashKind.cashIn)),
       ),
     );
-    await tester.scrollUntilVisible(
-      find.text('Save GCash record'),
-      200,
-      scrollable: find
-          .descendant(
-            of: find.byType(ListView),
-            matching: find.byType(Scrollable),
-          )
-          .first,
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('gcash-save-record')).hitTestable(),
+      findsOneWidget,
     );
     await tester.tap(find.text('Save GCash record'));
     await tester.pumpAndSettle();

@@ -16,6 +16,9 @@ const scannerRepeatCooldownPreferenceKey =
     'raze_store.settings.scanner_repeat_cooldown_ms';
 const autoAddMainUnitOnScanPreferenceKey =
     'raze_store.settings.auto_add_main_unit_on_scan';
+const productsViewLayoutPreferenceKey = 'raze_store.catalog.products_layout';
+const quickUnitsViewLayoutPreferenceKey =
+    'raze_store.catalog.quick_units_layout';
 const backupReminderFrequencyPreferenceKey =
     'raze_store.settings.backup_reminder_frequency';
 const backupReminderAnchorPreferenceKey =
@@ -67,6 +70,14 @@ class AppPreferencesController extends AsyncNotifier<AppPreferences> {
       scannerRepeatCooldownMs: _readCooldown(preferences),
       autoAddMainUnitOnScan:
           _readBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? false,
+      productsViewLayout: _readCatalogViewLayout(
+        preferences,
+        productsViewLayoutPreferenceKey,
+      ),
+      quickUnitsViewLayout: _readCatalogViewLayout(
+        preferences,
+        quickUnitsViewLayoutPreferenceKey,
+      ),
       backupReminderFrequency: _readReminderFrequency(preferences),
       reminderAnchorAtUtc: reminderAnchor,
       lastSuccessfulBackupAtUtc: _readDateTime(
@@ -111,6 +122,18 @@ class AppPreferencesController extends AsyncNotifier<AppPreferences> {
     (current) => current.copyWith(autoAddMainUnitOnScan: enabled),
     (preferences, _) =>
         preferences.setBool(autoAddMainUnitOnScanPreferenceKey, enabled),
+  );
+
+  Future<void> setProductsViewLayout(CatalogViewLayout layout) => _update(
+    (current) => current.copyWith(productsViewLayout: layout),
+    (preferences, _) =>
+        preferences.setString(productsViewLayoutPreferenceKey, layout.name),
+  );
+
+  Future<void> setQuickUnitsViewLayout(CatalogViewLayout layout) => _update(
+    (current) => current.copyWith(quickUnitsViewLayout: layout),
+    (preferences, _) =>
+        preferences.setString(quickUnitsViewLayoutPreferenceKey, layout.name),
   );
 
   Future<void> setBackupReminderFrequency(BackupReminderFrequency frequency) {
@@ -225,6 +248,19 @@ class AppPreferencesController extends AsyncNotifier<AppPreferences> {
       }
     }
     return BackupReminderFrequency.weekly;
+  }
+
+  static CatalogViewLayout _readCatalogViewLayout(
+    SharedPreferences preferences,
+    String key,
+  ) {
+    final value = preferences.get(key);
+    if (value is String) {
+      for (final layout in CatalogViewLayout.values) {
+        if (layout.name == value) return layout;
+      }
+    }
+    return CatalogViewLayout.grid;
   }
 
   static DateTime? _readDateTime(SharedPreferences preferences, String key) {

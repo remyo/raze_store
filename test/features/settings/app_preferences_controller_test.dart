@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:raze_store/app/theme_mode_controller.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/app_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +29,8 @@ void main() {
         defaultScannerRepeatCooldownMilliseconds,
       );
       expect(preferences.autoAddMainUnitOnScan, isFalse);
+      expect(preferences.productsViewLayout, CatalogViewLayout.grid);
+      expect(preferences.quickUnitsViewLayout, CatalogViewLayout.grid);
       expect(
         preferences.backupReminderFrequency,
         BackupReminderFrequency.weekly,
@@ -55,6 +60,8 @@ void main() {
         scannerVibrationEnabledPreferenceKey: false,
         scannerRepeatCooldownPreferenceKey: 750,
         autoAddMainUnitOnScanPreferenceKey: true,
+        productsViewLayoutPreferenceKey: 'not-a-layout',
+        quickUnitsViewLayoutPreferenceKey: 1,
         backupReminderFrequencyPreferenceKey: 'not-a-frequency',
         backupReminderAnchorPreferenceKey: anchor.toIso8601String(),
         lastSuccessfulBackupPreferenceKey: lastBackup.toIso8601String(),
@@ -74,6 +81,8 @@ void main() {
       // Existing installs keep an explicitly saved scanner choice even though
       // new installs now ask for a selling unit by default.
       expect(preferences.autoAddMainUnitOnScan, isTrue);
+      expect(preferences.productsViewLayout, CatalogViewLayout.grid);
+      expect(preferences.quickUnitsViewLayout, CatalogViewLayout.grid);
       expect(
         preferences.backupReminderFrequency,
         BackupReminderFrequency.weekly,
@@ -83,6 +92,74 @@ void main() {
       expect(preferences.snoozedUntilUtc, isNull);
     },
   );
+
+  test('loads and persists product layouts independently', () async {
+    SharedPreferences.setMockInitialValues({
+      productsViewLayoutPreferenceKey: CatalogViewLayout.list.name,
+      quickUnitsViewLayoutPreferenceKey: CatalogViewLayout.grid.name,
+    });
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final loaded = await container.read(appPreferencesProvider.future);
+    expect(loaded.productsViewLayout, CatalogViewLayout.list);
+    expect(loaded.quickUnitsViewLayout, CatalogViewLayout.grid);
+
+    final controller = container.read(appPreferencesProvider.notifier);
+    await controller.setQuickUnitsViewLayout(CatalogViewLayout.list);
+
+    final quickUnitsUpdated = container
+        .read(appPreferencesProvider)
+        .requireValue;
+    expect(quickUnitsUpdated.productsViewLayout, CatalogViewLayout.list);
+    expect(quickUnitsUpdated.quickUnitsViewLayout, CatalogViewLayout.list);
+
+    await controller.setProductsViewLayout(CatalogViewLayout.grid);
+
+    final productsUpdated = container.read(appPreferencesProvider).requireValue;
+    expect(productsUpdated.productsViewLayout, CatalogViewLayout.grid);
+    expect(productsUpdated.quickUnitsViewLayout, CatalogViewLayout.list);
+
+    final stored = await SharedPreferences.getInstance();
+    expect(
+      stored.getString(productsViewLayoutPreferenceKey),
+      CatalogViewLayout.grid.name,
+    );
+    expect(
+      stored.getString(quickUnitsViewLayoutPreferenceKey),
+      CatalogViewLayout.list.name,
+    );
+  });
+
+  test('a layout change requested during initialization is not lost', () async {
+    SharedPreferences.setMockInitialValues({
+      productsViewLayoutPreferenceKey: CatalogViewLayout.grid.name,
+    });
+    final stored = await SharedPreferences.getInstance();
+    final preferencesGate = Completer<SharedPreferences>();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWith((ref) => preferencesGate.future),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final initialization = container.read(appPreferencesProvider.future);
+    final update = container
+        .read(appPreferencesProvider.notifier)
+        .setProductsViewLayout(CatalogViewLayout.list);
+
+    preferencesGate.complete(stored);
+    await Future.wait([initialization, update]);
+
+    final value = container.read(appPreferencesProvider).requireValue;
+    expect(value.productsViewLayout, CatalogViewLayout.list);
+    expect(value.quickUnitsViewLayout, CatalogViewLayout.grid);
+    expect(
+      stored.getString(productsViewLayoutPreferenceKey),
+      CatalogViewLayout.list.name,
+    );
+  });
 
   test(
     'controller updates and persists scanner and reminder settings',

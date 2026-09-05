@@ -1,38 +1,273 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/camera_scan_frame.dart';
 import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
+import 'package:raze_store/features/gcash/gcash_theme.dart';
 
 void main() {
+  test('receipt source crop reverses the centered cover preview', () {
+    for (final viewport in const [
+      Size(300, 400),
+      Size(700, 300),
+      Size(1200, 900),
+    ]) {
+      final geometry = GcashReceiptFrameGeometry(viewport);
+      expect(geometry.frame.width / geometry.frame.height, 1);
+      expect(geometry.frame.width, lessThanOrEqualTo(600));
+      expect((Offset.zero & viewport).contains(geometry.frame.topLeft), isTrue);
+      expect(
+        (Offset.zero & viewport).contains(geometry.frame.bottomRight),
+        isTrue,
+      );
+      for (final source in const [Size(1200, 1600), Size(1600, 1200)]) {
+        final crop = geometry.sourceRect(source);
+        final fit = applyBoxFit(BoxFit.cover, source, viewport);
+        final visibleSource = Alignment.center.inscribe(
+          fit.source,
+          Offset.zero & source,
+        );
+        final sourceScale = fit.destination.width / fit.source.width;
+        final roundTrip = Rect.fromLTWH(
+          (crop.left - visibleSource.left) * sourceScale,
+          (crop.top - visibleSource.top) * sourceScale,
+          crop.width * sourceScale,
+          crop.height * sourceScale,
+        );
+        expect(roundTrip.left, closeTo(geometry.frame.left, 0.0001));
+        expect(roundTrip.top, closeTo(geometry.frame.top, 0.0001));
+        expect(roundTrip.width, closeTo(geometry.frame.width, 0.0001));
+        expect(roundTrip.height, closeTo(geometry.frame.height, 0.0001));
+        expect(crop.left, greaterThanOrEqualTo(0));
+        expect(crop.top, greaterThanOrEqualTo(0));
+        expect(crop.right, lessThanOrEqualTo(source.width));
+        expect(crop.bottom, lessThanOrEqualTo(source.height));
+      }
+    }
+    final geometry = GcashReceiptFrameGeometry(const Size(300, 300));
+    expect(
+      geometry.sourceRect(
+        const Size(4000, 3000),
+        previewSize: const Size(1600, 900),
+      ),
+      rectMoreOrLessEquals(const Rect.fromLTWH(987.5, 487.5, 2025, 2025)),
+    );
+  });
+
+  for (final viewport in const [
+    Size(320, 568),
+    Size(390, 844),
+    Size(844, 390),
+  ]) {
+    for (final textScale in [1.0, 2.0]) {
+      testWidgets(
+        'GCash information frame, guidance and controls fit $viewport at text scale $textScale',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = viewport;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final session = _SanitizedReceiptCameraSession();
+          await tester.pumpWidget(
+            RepaintBoundary(
+              key: const ValueKey('receipt-qa-boundary'),
+              child: MaterialApp(
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.light,
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(textScale)),
+                  child: child!,
+                ),
+                home: GcashTheme(
+                  builder: (_) => ProductCaptureScreen(
+                    purpose: ProductCapturePurpose.gcashReceipt,
+                    sessionFactory: () async => session,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Read GCash receipt'), findsOneWidget);
+          expect(
+            find.byKey(const ValueKey('gcash-receipt-guide-frame')),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+          expect(
+            find.text('Skip blank space and the green footer. Avoid glare.'),
+            findsOneWidget,
+          );
+          final previewFinder = find.byKey(
+            const ValueKey('gcash-receipt-preview'),
+          );
+          final frameFinder = find.byKey(
+            const ValueKey('gcash-receipt-guide-window'),
+          );
+          final preview = tester.getRect(previewFinder);
+          final geometry = GcashReceiptFrameGeometry(preview.size);
+          expect(
+            tester.getRect(frameFinder),
+            rectMoreOrLessEquals(geometry.frame.shift(preview.topLeft)),
+          );
+          expect(geometry.frame.width, greaterThanOrEqualTo(160));
+          final instructions = tester.getRect(
+            find.byKey(const ValueKey('gcash-receipt-instruction')),
+          );
+          expect(instructions.overlaps(tester.getRect(frameFinder)), isFalse);
+          final footerFinder = find.byKey(
+            const ValueKey('gcash-receipt-support-note'),
+          );
+          final shutterFinder = find.byKey(
+            const ValueKey('product-capture-shutter-button'),
+          );
+          if (textScale == 1) {
+            expect(footerFinder.hitTestable(), findsOneWidget);
+            expect(shutterFinder.hitTestable(), findsOneWidget);
+          }
+
+          session
+            ..emitLuminance(0.1)
+            ..emitLuminance(0.1)
+            ..emitLuminance(0.1);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(
+            find.byKey(const ValueKey('product-capture-low-light-warning')),
+            findsOneWidget,
+          );
+          await tester.ensureVisible(footerFinder);
+          await tester.pumpAndSettle();
+          expect(footerFinder.hitTestable(), findsOneWidget);
+          await tester.ensureVisible(shutterFinder);
+          expect(shutterFinder.hitTestable(), findsOneWidget);
+          final torchFinder = find.byKey(
+            const ValueKey('product-capture-torch-button'),
+          );
+          await tester.ensureVisible(torchFinder);
+          await tester.tap(torchFinder);
+          await tester.pumpAndSettle();
+          expect(session.torchValues, [true]);
+          expect(
+            find.text('Still too dark? Move somewhere brighter.'),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
   testWidgets(
-    'GCash receipt frame fits portrait and landscape without overflow',
+    'receipt capture saves the displayed window at native resolution',
     (tester) async {
-      final session = _FakeSwitchableProductCameraSession();
-      addTearDown(() => tester.view.resetPhysicalSize());
-      addTearDown(() => tester.view.resetDevicePixelRatio());
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final temporary = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp('gcash-crop-test-'),
+      ))!;
+      addTearDown(
+        () => tester.runAsync(() => temporary.delete(recursive: true)),
+      );
+      const channel = MethodChannel('plugins.flutter.io/path_provider');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async => temporary.path,
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder)..scale(2);
+      const _SanitizedReceiptPainter().paint(canvas, const Size(1200, 1600));
+      final picture = recorder.endRecording();
+      final source = await tester.runAsync(() => picture.toImage(2400, 3200));
+      picture.dispose();
+      final bytes = await tester.runAsync(
+        () => source!.toByteData(format: ui.ImageByteFormat.png),
+      );
+      source!.dispose();
+      final session = _FakeProductCameraSession(
+        picture: XFile.fromData(
+          bytes!.buffer.asUint8List(),
+          mimeType: 'image/png',
+        ),
+      );
+      final returned = Completer<XFile?>();
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light,
-          home: ProductCaptureScreen(
-            purpose: ProductCapturePurpose.gcashReceipt,
-            sessionFactory: () async => session,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: FilledButton(
+                onPressed: () async => returned.complete(
+                  await Navigator.of(context).push<XFile>(
+                    MaterialPageRoute(
+                      builder: (_) => ProductCaptureScreen(
+                        purpose: ProductCapturePurpose.gcashReceipt,
+                        sessionFactory: () async => session,
+                      ),
+                    ),
+                  ),
+                ),
+                child: const Text('Open receipt camera'),
+              ),
+            ),
           ),
         ),
       );
+      await tester.tap(find.text('Open receipt camera'));
       await tester.pumpAndSettle();
-      expect(find.text('Read GCash receipt'), findsOneWidget);
-      expect(find.byType(CameraScanFrame), findsOneWidget);
-      expect(tester.takeException(), isNull);
-      tester.view.physicalSize = const Size(844, 390);
+      final viewport = tester.getSize(
+        find.byKey(const ValueKey('gcash-receipt-preview')),
+      );
+      final crop = GcashReceiptFrameGeometry(
+        viewport,
+      ).sourceRect(const Size(2400, 3200));
+      await tester.tap(
+        find.byKey(const ValueKey('product-capture-shutter-button')),
+      );
+      for (var attempt = 0; attempt < 100 && !returned.isCompleted; attempt++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+      expect(returned.isCompleted, isTrue);
+      final captured = await returned.future;
+      expect(captured, isNotNull);
+      final codec = await tester.runAsync(
+        () async => ui.instantiateImageCodec(await captured!.readAsBytes()),
+      );
+      final output = (await tester.runAsync(
+        () => codec!.getNextFrame(),
+      ))!.image;
+      codec!.dispose();
+      expect(output.width, crop.width.round());
+      expect(output.height, crop.height.round());
+      expect(output.width, greaterThan(1100));
+      output.dispose();
+      expect(
+        session.events,
+        containsAllInOrder(['stopLuminanceSampling', 'takePicture', 'dispose']),
+      );
     },
   );
+
   test('rear camera is preferred and the first camera is the fallback', () {
     const front = CameraDescription(
       name: 'front',
@@ -598,4 +833,80 @@ class _FakeProductCaptureLauncher implements ProductCaptureLauncher {
   }) async {
     return null;
   }
+}
+
+class _SanitizedReceiptCameraSession extends _FakeProductCameraSession
+    implements ProductCameraPreviewGeometry {
+  @override
+  Size get orientedPreviewSize => const Size(1200, 1600);
+
+  @override
+  Widget buildPreview() =>
+      const CustomPaint(painter: _SanitizedReceiptPainter());
+}
+
+class _SanitizedReceiptPainter extends CustomPainter {
+  const _SanitizedReceiptPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFFCCCCCC),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(70, 100, 1060, 1460),
+        const Radius.circular(30),
+      ),
+      Paint()..color = Colors.white,
+    );
+    void text(
+      String value,
+      double y,
+      double fontSize, {
+      Color color = Colors.black,
+      bool bold = false,
+    }) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: value,
+          style: TextStyle(
+            fontFamily: 'Roboto',
+            fontSize: fontSize,
+            color: color,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout(maxWidth: 920);
+      painter.paint(canvas, Offset((1200 - painter.width) / 2, y));
+      painter.dispose();
+    }
+
+    text('GCash', 165, 64, color: const Color(0xFF005CE5), bold: true);
+    text('DEMO R***', 390, 50, color: const Color(0xFF005CE5), bold: true);
+    text('09XX XXX 1234', 470, 40);
+    text('Sent via GCash', 550, 36);
+    text('Amount                       500.00', 710, 40);
+    canvas.drawLine(
+      const Offset(150, 805),
+      const Offset(1050, 805),
+      Paint()
+        ..color = const Color(0xFFCCCCCC)
+        ..strokeWidth = 2,
+    );
+    text('Total Amount Sent       ₱500.00', 845, 42, bold: true);
+    text('Ref. No. 0000 000 123456', 1030, 34);
+    text('Sep 05, 2026 4:00 PM', 1110, 34);
+    canvas.drawRect(
+      const Rect.fromLTWH(70, 1400, 1060, 160),
+      Paint()..color = const Color(0xFFC1EBB1),
+    );
+    text('Promotional footer', 1450, 38);
+  }
+
+  @override
+  bool shouldRepaint(_SanitizedReceiptPainter oldDelegate) => false;
 }

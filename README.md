@@ -243,33 +243,85 @@ spreadsheet. Export an app-generated CSV first to get the supported columns and
 ## GCash Services
 
 Open **Home → GCash Services** or **Profile → GCash Services** for the separate
-GCash history. Home has direct **Cash In** and **Cash Out** buttons.
+GCash history. Home has one blue **GCash Services** card with a forward arrow.
+Tap **Price list** inside that card for a quick, read-only sheet of your saved
+Cash In/Cash Out charge tiers. It stays on Home and uses the same prices as
+GCash Settings; change the charges in Settings when needed. Tapping the card's
+title or arrow still opens GCash Services.
+The GCash page has sticky **Cash In** and **Cash Out** buttons at the bottom;
+either opens a rounded, Cupertino-style sheet with the previous page stacked
+behind it. Use the close button or swipe down to dismiss the idle form.
+Dismissal is blocked while a receipt is processing or a record is saving.
+**Save GCash record / Save changes** stays fixed at the bottom, above the
+keyboard, even with a receipt attached. The fields scroll separately; saving
+checks every required field and highlights missing details.
 Cash In records cash received from a customer and GCash sent to them; Cash Out
 records GCash received from a customer and cash given to them.
 
 Choose **Scan receipt** for the framed camera, **Recent photo** for the system
 photo picker, or type the details manually. Camera captures are cropped to the
-frame. OCR runs on the phone and suggests the customer name, mobile number,
+frame. For an Express Send receipt, fit the **name and mobile number through the
+amount, reference, and date** inside the square guide. Leave the large blank area,
+green carbon-savings message, and sharing buttons outside it. Keep the phone
+steady, avoid screen glare, and follow the low-light guidance when shown.
+OCR runs on the phone and suggests the customer name, mobile number,
 amount, reference number, and transaction date/time. Review all fields before
 saving; missing or ambiguous details need manual entry. Masked names/numbers
-stay masked. The optional service fee starts at ₱0.00.
+stay masked. Both transaction types use the same saved profit-charge brackets.
+
+The reader supports the supplied **GCash Express Send** layout, including
+unlabelled masked recipient names, spaced `+63` numbers, and reference/date values
+on the same row. Leading zeros in references are preserved. These receipts show
+the **recipient**: that can fill the customer details for Cash In, but Cash Out
+requires the sender. When only a recipient is shown, Cash Out leaves the customer
+name and number blank and asks you to enter them manually.
+
+Receipt reading works best with GCash receipts. Other formats can be hard to read;
+use manual entry and check every suggested field. An unrecognized layout or failed
+reading shows a note in the form. Importing a replacement receipt clears previous
+suggestions so details from two transactions are not mixed.
+
+Open the gear button on a GCash page or **Settings → GCash settings** to view
+one shared **Amount range / Profit charge** table. It is read-only initially;
+tap **Edit** to modify charges, amount limits, or automatic charging. Save applies
+the same rates to Cash In and Cash Out; Cancel discards the draft. Older separate
+settings use the saved Cash In schedule as the shared schedule. The initial example
+matches the supplied store sign: up to ₱500 costs ₱10, up to ₱1,000 costs ₱20,
+and so on through ₱10,000/₱200. These are editable store charges, not an official
+GCash fee schedule. Amounts between whole pesos are covered: ₱500.01 belongs to
+the next bracket. Amounts above the final bracket require a manual charge.
+
+Typing or reading a new amount fills in its charge automatically. Editing the
+charge yourself keeps it fixed for that transaction; **Use default charge**
+reapplies your saved rate. Existing records retain their recorded fees. Save
+the settings to apply them to new transactions and include them in full-store
+backups. The GCash pages use their own blue-and-white theme with dark-mode support.
 
 Cash Out asks you to confirm that you checked the payment in the official GCash
 app. Raze Store records transactions; it does not transfer money or authenticate
 screenshots. Duplicate reference numbers are rejected across Cash In and Cash
-Out. Tap a saved record to edit it, delete it, or download/share its attached
-receipt image. Manual records without an attached image have no image to export.
+Out. Tap a saved record in **History** to open its read-only transaction page:
+a check icon, Cash In/Cash Out amount, name, number, recorded profit charge, and
+transaction number. The check means **Recorded in Raze Store**, not payment
+verification by GCash. This page has no photo or editable fields; its profit
+is the fee saved with that transaction, not a recalculation from today's rates.
+The **Record actions** menu keeps deletion (with confirmation) and download/share
+of the attached receipt available without cluttering the details. Manual records
+without an attached image have no image to export.
 
-History supports Today, 7 days, 30 days, all dates, and a custom range using the
-calendar button. Cash In, Cash Out, and service fees have separate totals; none
+**History** starts on Today and shows an empty state when no transactions match.
+The **Filter** button beside History opens a dialog with day presets, a custom
+range, and transaction type. Apply updates the history; Cancel keeps the current
+selection. Cash In, Cash Out, and service fees have separate totals; none
 are counted as grocery sales. Records load in pages as you scroll.
 
 Records and resized PNG receipts stay in the local store database, counted under
 **Storage → Store database**, and are included in full `.razestore` backups.
 Product catalog packs and CSV exports do not include customer GCash details.
 The picker accesses selected images; it does not silently inspect the gallery.
-Parser rules currently support common labeled receipts; real receipt samples
-are still needed to tune and verify additional GCash layouts.
+Parser rules support common labeled receipts and the supplied Express Send
+layout. Anonymized text fixtures test these rules; camera quality and on-device
+OCR still need testing on the target phone. Additional layouts may need tuning.
 
 ## Sales and storage
 

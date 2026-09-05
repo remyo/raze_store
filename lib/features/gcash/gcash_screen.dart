@@ -11,274 +11,36 @@ import 'package:raze_store/features/receipt/application/receipt_export_service.d
 import 'gcash_parser.dart';
 import 'gcash_record.dart';
 import 'gcash_repository.dart';
+import 'gcash_fee_settings.dart';
+import 'gcash_settings_screen.dart';
+import 'gcash_theme.dart';
+export 'gcash_form_sheet.dart' show showGcashFormSheet;
+export 'gcash_history_screen.dart' show GcashScreen;
 
 String _money(int value) =>
     NumberFormat.currency(locale: 'en_PH', symbol: '₱').format(value / 100);
 
-class GcashScreen extends ConsumerStatefulWidget {
-  const GcashScreen({super.key});
-  @override
-  ConsumerState<GcashScreen> createState() => _GcashScreenState();
-}
-
-class _GcashScreenState extends ConsumerState<GcashScreen> {
-  int _days = 7;
-  int _limit = 40;
-  GcashKind? _kind;
-  late Stream<List<GcashRecord>> _records;
-  late Stream<({int cashIn, int cashOut, int fees})> _totals;
-  DateTimeRange? _range;
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  void _load() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final since =
-        _range?.start ??
-        (_days == 0 ? null : today.subtract(Duration(days: _days - 1)));
-    final until = _range == null
-        ? (_days == 0 ? null : today.add(const Duration(days: 1)))
-        : _range!.end.add(const Duration(days: 1));
-    _totals = ref
-        .read(gcashRepositoryProvider)
-        .totals(since: since, until: until, kind: _kind);
-    _records = ref
-        .read(gcashRepositoryProvider)
-        .watch(since: since, until: until, kind: _kind, limit: _limit + 1);
-  }
-
-  Future<void> _open({
-    GcashRecord? record,
-    GcashKind kind = GcashKind.cashIn,
-  }) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => GcashFormScreen(kind: kind, record: record),
-    ),
-  );
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('GCash Services'),
-      actions: [
-        IconButton(
-          tooltip: 'Choose date range',
-          icon: const Icon(Icons.date_range_outlined),
-          onPressed: () async {
-            final range = await showDateRangePicker(
-              context: context,
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2200),
-              initialDateRange: _range,
-            );
-            if (range != null && mounted) {
-              setState(() {
-                _range = range;
-                _limit = 40;
-                _load();
-              });
-            }
-          },
-        ),
-      ],
-    ),
-    body: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  for (final kind in GcashKind.values)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: FilledButton.icon(
-                          onPressed: () => _open(kind: kind),
-                          icon: Icon(
-                            kind == GcashKind.cashIn
-                                ? Icons.add_circle_outline
-                                : Icons.payments_outlined,
-                          ),
-                          label: Text(kind.label),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final days in [1, 7, 30, 0])
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: Text(switch (days) {
-                            1 => 'Today',
-                            7 => '7 days',
-                            30 => '30 days',
-                            _ => 'All dates',
-                          }),
-                          selected: _range == null && _days == days,
-                          onSelected: (_) => setState(() {
-                            _days = days;
-                            _range = null;
-                            _limit = 40;
-                            _load();
-                          }),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              DropdownButton<GcashKind?>(
-                value: _kind,
-                isExpanded: true,
-                items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('Cash In & Cash Out'),
-                  ),
-                  for (final kind in GcashKind.values)
-                    DropdownMenuItem(value: kind, child: Text(kind.label)),
-                ],
-                onChanged: (value) => setState(() {
-                  _kind = value;
-                  _limit = 40;
-                  _load();
-                }),
-              ),
-              if (_range != null)
-                Text(
-                  '${DateFormat.yMMMd().format(_range!.start)} – ${DateFormat.yMMMd().format(_range!.end)}',
-                ),
-              StreamBuilder<({int cashIn, int cashOut, int fees})>(
-                stream: _totals,
-                builder: (context, snapshot) {
-                  final totals = snapshot.data;
-                  if (snapshot.hasError) {
-                    return const Text('Totals unavailable');
-                  }
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        'In: ${totals == null ? '…' : _money(totals.cashIn)}',
-                      ),
-                      Text(
-                        'Out: ${totals == null ? '…' : _money(totals.cashOut)}',
-                      ),
-                      Text(
-                        'Fees: ${totals == null ? '…' : _money(totals.fees)}',
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: StreamBuilder<List<GcashRecord>>(
-            stream: _records,
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(
-                  child: TextButton(
-                    onPressed: () => setState(_load),
-                    child: const Text('Could not load records. Retry'),
-                  ),
-                );
-              }
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final rows = snapshot.data!;
-              if (rows.isEmpty) {
-                return const Center(
-                  child: Text('No GCash records for these dates.'),
-                );
-              }
-              final hasMore = rows.length > _limit;
-              return NotificationListener<ScrollNotification>(
-                onNotification: (event) {
-                  if (hasMore &&
-                      event.metrics.extentAfter < 240 &&
-                      event is ScrollUpdateNotification) {
-                    setState(() {
-                      _limit += 40;
-                      _load();
-                    });
-                  }
-                  return false;
-                },
-                child: ListView.builder(
-                  itemCount: rows.length,
-                  itemBuilder: (context, index) {
-                    if (index == _limit) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final record = rows[index];
-                    return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: record.receipt == null
-                            ? const SizedBox(
-                                width: 44,
-                                height: 52,
-                                child: Icon(Icons.receipt_long_outlined),
-                              )
-                            : Image.memory(
-                                record.receipt!,
-                                width: 44,
-                                height: 52,
-                                fit: BoxFit.cover,
-                              ),
-                      ),
-                      title: Text(
-                        record.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '${record.kind.label} · ${DateFormat('MMM d, h:mm a').format(record.date)}\n${record.number}',
-                        maxLines: 2,
-                      ),
-                      trailing: Text(_money(record.amount)),
-                      onTap: () => _open(record: record, kind: record.kind),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 class GcashFormScreen extends ConsumerStatefulWidget {
-  const GcashFormScreen({super.key, required this.kind, this.record});
+  const GcashFormScreen({
+    super.key,
+    required this.kind,
+    this.record,
+    this.asBottomSheet = false,
+    this.scrollController,
+    this.onBusyChanged,
+  });
   final GcashKind kind;
   final GcashRecord? record;
+  final bool asBottomSheet;
+  final ScrollController? scrollController;
+  final ValueChanged<bool>? onBusyChanged;
   @override
   ConsumerState<GcashFormScreen> createState() => _GcashFormScreenState();
 }
 
 class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
   final _form = GlobalKey<FormState>();
+  final _messages = GlobalKey<ScaffoldMessengerState>();
   final _name = TextEditingController();
   final _number = TextEditingController();
   final _amount = TextEditingController();
@@ -289,11 +51,17 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
   bool _busy = false;
   bool _verified = false;
   String? _rawText;
+  String? _receiptNotice;
   late final String _id;
+  bool _customFee = false;
+  AsyncValue<GcashFeeSettings> _feeSettings = const AsyncLoading();
+  late final ProviderSubscription<AsyncValue<GcashFeeSettings>>
+  _feeSubscription;
   @override
   void initState() {
     super.initState();
     final record = widget.record;
+    _customFee = record != null;
     _id = record?.id ?? const Uuid().v4();
     if (record != null) {
       _name.text = record.name;
@@ -305,10 +73,40 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
       _receipt = record.receipt;
       _verified = true;
     }
+    _amount.addListener(_amountChanged);
+    _feeSubscription = ref.listenManual(gcashFeeSettingsProvider, (
+      previous,
+      next,
+    ) {
+      if (!mounted) return;
+      setState(() {
+        _feeSettings = next;
+        _applyDefaultFee();
+      });
+    }, fireImmediately: true);
+  }
+
+  void _amountChanged() {
+    if (mounted) setState(_applyDefaultFee);
+  }
+
+  void _applyDefaultFee() {
+    if (_customFee) return;
+    final settings = _feeSettings.value;
+    if (settings == null) return;
+    final amount = gcashCentavos(_amount.text);
+    if (amount == null || amount == 0 || !settings.autoFillFor(widget.kind)) {
+      _fee.text = '0.00';
+      return;
+    }
+    final suggested = settings.feeFor(widget.kind, amount);
+    _fee.text = suggested == null ? '' : (suggested / 100).toStringAsFixed(2);
   }
 
   @override
   void dispose() {
+    _feeSubscription.close();
+    _amount.removeListener(_amountChanged);
     for (final controller in [_name, _number, _amount, _fee, _reference]) {
       controller.dispose();
     }
@@ -317,14 +115,19 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
 
   void _message(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      _messages.currentState?.showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
+  void _setBusy(bool value) {
+    if (!mounted || _busy == value) return;
+    setState(() => _busy = value);
+    widget.onBusyChanged?.call(value);
+  }
+
   Future<void> _pick(bool camera) async {
-    setState(() => _busy = true);
+    if (_busy) return;
+    _setBusy(true);
     try {
       final file = camera
           ? await ref
@@ -359,8 +162,10 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
       if (!mounted) return;
       setState(() {
         _receipt = receipt;
+        _customFee = false;
         _verified = false;
         _rawText = null;
+        _receiptNotice = null;
         _name.clear();
         _number.clear();
         _amount.clear();
@@ -376,6 +181,11 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
         final details = parseGcashReceipt(result.rawText, widget.kind);
         setState(() {
           _rawText = result.rawText;
+          _receiptNotice = !details.isGcashReceipt
+              ? 'GCash receipt not recognized. Other receipts can be hard to read; enter and check the details manually.'
+              : details.recipientOnly
+              ? 'This Express Send receipt shows the recipient, not the sender. For Cash Out, enter the customer’s name and number manually.'
+              : null;
           // A replacement receipt must never retain another transaction's details.
           _name.text = details.name ?? '';
           _number.text = details.number ?? '';
@@ -387,6 +197,12 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
         });
         _message('Review the extracted details. Fill in anything missing.');
       } catch (_) {
+        if (mounted) {
+          setState(() {
+            _receiptNotice =
+                'The receipt text could not be read. Please enter the details manually.';
+          });
+        }
         _message(
           'Photo attached. Text could not be read; enter the details manually.',
         );
@@ -396,20 +212,20 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
         'Could not open the photo. Check camera/photos access and try again.',
       );
     } finally {
-      if (mounted) setState(() => _busy = false);
+      _setBusy(false);
     }
   }
 
-  Future<void> _chooseDate() async {
+  Future<void> _chooseDate(BuildContext pageContext) async {
     final day = await showDatePicker(
-      context: context,
+      context: pageContext,
       initialDate: _date ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2200),
     );
-    if (day == null || !mounted) return;
+    if (day == null || !pageContext.mounted) return;
     final time = await showTimePicker(
-      context: context,
+      context: pageContext,
       initialTime: TimeOfDay.fromDateTime(_date ?? DateTime.now()),
     );
     if (time != null && mounted) {
@@ -426,7 +242,25 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
   }
 
   Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
+    if (_busy) return;
+    if (!_customFee && !_feeSettings.hasValue) {
+      _message(
+        _feeSettings.isLoading
+            ? 'Loading your default charges…'
+            : 'Enter the service fee manually or reload GCash settings.',
+      );
+      return;
+    }
+    final invalidFields = _form.currentState!.validateGranularly();
+    if (invalidFields.isNotEmpty) {
+      _message('Review the highlighted receipt details before saving.');
+      await Scrollable.ensureVisible(
+        invalidFields.first.context,
+        duration: const Duration(milliseconds: 200),
+        alignment: 0.15,
+      );
+      return;
+    }
     if (_date == null) {
       _message('Choose the transaction date and time.');
       return;
@@ -437,7 +271,7 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
       );
       return;
     }
-    setState(() => _busy = true);
+    _setBusy(true);
     try {
       await ref
           .read(gcashRepositoryProvider)
@@ -455,8 +289,12 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
             ),
           );
       if (mounted) {
+        _setBusy(false);
+        final messenger = ScaffoldMessenger.maybeOf(context);
         Navigator.pop(context);
-        _message('GCash record saved.');
+        messenger?.showSnackBar(
+          const SnackBar(content: Text('GCash record saved.')),
+        );
       }
     } on DuplicateGcashReference {
       _message(
@@ -465,13 +303,14 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
     } catch (_) {
       _message('Could not save. Check the details and try again.');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      _setBusy(false);
     }
   }
 
-  Future<void> _delete() async {
+  Future<void> _delete(BuildContext pageContext) async {
+    if (_busy) return;
     final confirmed = await showDialog<bool>(
-      context: context,
+      context: pageContext,
       builder: (context) => AlertDialog(
         title: const Text('Delete GCash record?'),
         content: const Text(
@@ -490,19 +329,23 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    setState(() => _busy = true);
+    _setBusy(true);
     try {
       await ref.read(gcashRepositoryProvider).delete(_id);
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        _setBusy(false);
+        Navigator.pop(context);
+      }
     } catch (_) {
       _message('Could not delete the record.');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      _setBusy(false);
     }
   }
 
   Future<void> _export(bool share, BuildContext anchor) async {
-    setState(() => _busy = true);
+    if (_busy) return;
+    _setBusy(true);
     try {
       final service = ReceiptExportService.device();
       final box = anchor.findRenderObject() as RenderBox?;
@@ -527,172 +370,297 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
     } catch (_) {
       _message('Could not export the receipt. Please try again.');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      _setBusy(false);
     }
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_busy,
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.record == null
-              ? 'New ${widget.kind.label}'
-              : widget.kind.label,
-        ),
-        actions: [
-          if (widget.record != null)
-            IconButton(
-              onPressed: _busy ? null : _delete,
-              tooltip: 'Delete record',
-              icon: const Icon(Icons.delete_outline),
+  Widget build(BuildContext context) => ScaffoldMessenger(
+    key: _messages,
+    child: GcashTheme(
+      builder: (context) => PopScope(
+        canPop: !_busy,
+        child: Scaffold(
+          resizeToAvoidBottomInset: true,
+          appBar: AppBar(
+            leading: widget.asBottomSheet
+                ? IconButton(
+                    tooltip: 'Close form',
+                    onPressed: _busy ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  )
+                : null,
+            title: Text(
+              widget.record == null
+                  ? 'New ${widget.kind.label}'
+                  : widget.kind.label,
             ),
-        ],
-      ),
-      body: AbsorbPointer(
-        absorbing: _busy,
-        child: Form(
-          key: _form,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
+            actions: [
+              IconButton(
+                tooltip: 'GCash settings',
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const GcashSettingsScreen(),
+                        ),
+                      ),
+              ),
+              if (widget.record != null)
+                IconButton(
+                  onPressed: _busy ? null : () => _delete(context),
+                  tooltip: 'Delete record',
+                  icon: const Icon(Icons.delete_outline),
+                ),
+            ],
+          ),
+          body: Column(
             children: [
-              Text(widget.kind.description),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pick(true),
-                      icon: const Icon(Icons.document_scanner_outlined),
-                      label: const Text('Scan receipt'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _pick(false),
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text('Recent photo'),
-                    ),
-                  ),
-                ],
-              ),
-              const Text(
-                'Or enter details manually. Receipt reading works on this phone.',
-              ),
-              if (_busy) const LinearProgressIndicator(),
-              if (_receipt != null) ...[
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () => showDialog<void>(
-                    context: context,
-                    builder: (_) => Dialog(
-                      child: InteractiveViewer(
-                        child: Image.memory(_receipt!, fit: BoxFit.contain),
+              Expanded(
+                child: AbsorbPointer(
+                  absorbing: _busy,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('gcash-form-scroll'),
+                    controller: widget.scrollController,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: _form,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(widget.kind.description),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _pick(true),
+                                  icon: const Icon(
+                                    Icons.document_scanner_outlined,
+                                  ),
+                                  label: const Text('Scan receipt'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _pick(false),
+                                  icon: const Icon(
+                                    Icons.photo_library_outlined,
+                                  ),
+                                  label: const Text('Recent photo'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Best with GCash receipts. Other receipts may be hard to read—enter the details manually. Reading stays on this phone.',
+                            key: const ValueKey('gcash-receipt-guidance'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (_busy) const LinearProgressIndicator(),
+                          if (_receipt != null) ...[
+                            const SizedBox(height: 12),
+                            GestureDetector(
+                              onTap: () => showDialog<void>(
+                                context: context,
+                                builder: (_) => Dialog(
+                                  child: InteractiveViewer(
+                                    child: Image.memory(
+                                      _receipt!,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              child: Image.memory(
+                                _receipt!,
+                                key: const ValueKey('gcash-receipt-preview'),
+                                height: 180,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: [
+                                Builder(
+                                  builder: (context) => TextButton(
+                                    onPressed: () => _export(false, context),
+                                    child: const Text('Download'),
+                                  ),
+                                ),
+                                Builder(
+                                  builder: (context) => TextButton(
+                                    onPressed: () => _export(true, context),
+                                    child: const Text('Share'),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      setState(() => _receipt = null),
+                                  child: const Text('Remove photo'),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (_receiptNotice != null) ...[
+                            const SizedBox(height: 12),
+                            _receiptNoticeCard(context),
+                          ],
+                          const SizedBox(height: 12),
+                          _field(_name, 'Customer name', maxLength: 150),
+                          _field(
+                            _number,
+                            'Mobile number (as shown on receipt)',
+                            maxLength: 40,
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _field(
+                                  _amount,
+                                  'Amount (₱)',
+                                  money: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _field(
+                                  _fee,
+                                  'Service fee (₱)',
+                                  money: true,
+                                  allowZero: true,
+                                  onChanged: (_) =>
+                                      setState(() => _customFee = true),
+                                ),
+                              ),
+                            ],
+                          ),
+                          _feeHelp(),
+                          _field(
+                            _reference,
+                            'Reference / transaction number',
+                            maxLength: 80,
+                            reference: true,
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _chooseDate(context),
+                            icon: const Icon(Icons.calendar_today_outlined),
+                            label: Text(
+                              _date == null
+                                  ? 'Choose transaction date & time'
+                                  : DateFormat(
+                                      'MMM d, yyyy · h:mm a',
+                                    ).format(_date!),
+                            ),
+                          ),
+                          if (_rawText != null)
+                            ExpansionTile(
+                              title: const Text('Text read from receipt'),
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: SelectableText(_rawText!),
+                                ),
+                              ],
+                            ),
+                          if (widget.kind == GcashKind.cashOut)
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              value: _verified,
+                              onChanged: (value) =>
+                                  setState(() => _verified = value ?? false),
+                              title: const Text(
+                                'I checked the payment in GCash',
+                              ),
+                              subtitle: const Text(
+                                'Check the official app before releasing cash. A screenshot alone does not confirm payment.',
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                        ],
                       ),
                     ),
                   ),
-                  child: Image.memory(
-                    _receipt!,
-                    height: 180,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Builder(
-                      builder: (context) => TextButton(
-                        onPressed: () => _export(false, context),
-                        child: const Text('Download'),
-                      ),
-                    ),
-                    Builder(
-                      builder: (context) => TextButton(
-                        onPressed: () => _export(true, context),
-                        child: const Text('Share'),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(() => _receipt = null),
-                      child: const Text('Remove photo'),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
-              _field(_name, 'Customer name', maxLength: 150),
-              _field(
-                _number,
-                'Mobile number (as shown on receipt)',
-                maxLength: 40,
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _field(_amount, 'Amount (₱)', money: true)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _field(
-                      _fee,
-                      'Service fee (₱)',
-                      money: true,
-                      allowZero: true,
-                    ),
-                  ),
-                ],
-              ),
-              _field(
-                _reference,
-                'Reference / transaction number',
-                maxLength: 80,
-                reference: true,
-              ),
-              OutlinedButton.icon(
-                onPressed: _chooseDate,
-                icon: const Icon(Icons.calendar_today_outlined),
-                label: Text(
-                  _date == null
-                      ? 'Choose transaction date & time'
-                      : DateFormat('MMM d, yyyy · h:mm a').format(_date!),
                 ),
               ),
-              if (_rawText != null)
-                ExpansionTile(
-                  title: const Text('Text read from receipt'),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SelectableText(_rawText!),
-                    ),
-                  ],
-                ),
-              if (widget.kind == GcashKind.cashOut)
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _verified,
-                  onChanged: (value) =>
-                      setState(() => _verified = value ?? false),
-                  title: const Text('I checked the payment in GCash'),
-                  subtitle: const Text(
-                    'Check the official app before releasing cash. A screenshot alone does not confirm payment.',
-                  ),
-                ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _save,
-                child: Text(
-                  widget.record == null ? 'Save GCash record' : 'Save changes',
-                ),
-              ),
-              const SizedBox(height: 24),
+              _saveBar(context),
             ],
           ),
         ),
       ),
     ),
   );
+
+  Widget _receiptNoticeCard(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const ValueKey('gcash-receipt-warning'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 20,
+            color: scheme.onSecondaryContainer,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _receiptNotice!,
+              style: TextStyle(color: scheme.onSecondaryContainer),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _saveBar(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      key: const ValueKey('gcash-save-bar'),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color ?? theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            key: const ValueKey('gcash-save-record'),
+            onPressed: _busy ? null : _save,
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            icon: _busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check_circle_outline_rounded, size: 20),
+            label: Text(
+              widget.record == null ? 'Save GCash record' : 'Save changes',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _field(
     TextEditingController controller,
@@ -701,10 +669,12 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
     bool allowZero = false,
     bool reference = false,
     int maxLength = 20,
+    ValueChanged<String>? onChanged,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: controller,
+      onChanged: onChanged,
       maxLength: maxLength,
       keyboardType: money
           ? const TextInputType.numberWithOptions(decimal: true)
@@ -728,4 +698,46 @@ class _GcashFormScreenState extends ConsumerState<GcashFormScreen> {
       },
     ),
   );
+
+  Widget _feeHelp() {
+    final settings = _feeSettings.value;
+    final amount = gcashCentavos(_amount.text);
+    final enabled = settings?.autoFillFor(widget.kind) ?? false;
+    final suggestion = amount == null
+        ? null
+        : settings?.feeFor(widget.kind, amount);
+    final message = _customFee
+        ? 'Custom charge for this transaction. Your saved rates are unchanged.'
+        : _feeSettings.isLoading
+        ? 'Loading default charges…'
+        : _feeSettings.hasError
+        ? 'Default charges could not load. Enter the charge manually.'
+        : !enabled
+        ? 'Automatic charges are off. Enter the service fee yourself.'
+        : amount != null && amount > 0 && suggestion == null
+        ? 'Amount is above your configured brackets. Enter a charge manually.'
+        : 'Charge follows your shared profit-charge table. You can change it here.';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message, style: Theme.of(context).textTheme.bodySmall),
+          if (_customFee && enabled && suggestion != null)
+            TextButton(
+              onPressed: () => setState(() {
+                _customFee = false;
+                _applyDefaultFee();
+              }),
+              child: Text('Use default charge · ${_money(suggestion)}'),
+            ),
+          if (_feeSettings.hasError)
+            TextButton(
+              onPressed: () => ref.invalidate(gcashFeeSettingsProvider),
+              child: const Text('Reload default charges'),
+            ),
+        ],
+      ),
+    );
+  }
 }

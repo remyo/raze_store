@@ -14,6 +14,8 @@ enum BackupReminderFrequency {
   };
 }
 
+enum CatalogViewLayout { grid, list }
+
 /// Lightweight, device-local behavior settings that do not belong in the
 /// product or sales database.
 final class AppPreferences {
@@ -24,6 +26,8 @@ final class AppPreferences {
     required this.autoAddMainUnitOnScan,
     required this.backupReminderFrequency,
     required this.reminderAnchorAtUtc,
+    this.productsViewLayout = CatalogViewLayout.grid,
+    this.quickUnitsViewLayout = CatalogViewLayout.grid,
     this.lastSuccessfulBackupAtUtc,
     this.snoozedUntilUtc,
   });
@@ -46,6 +50,10 @@ final class AppPreferences {
   final bool autoAddMainUnitOnScan;
 
   final BackupReminderFrequency backupReminderFrequency;
+
+  /// Each catalog surface remembers its own device-local list/grid choice.
+  final CatalogViewLayout productsViewLayout;
+  final CatalogViewLayout quickUnitsViewLayout;
 
   /// Starts the first reminder interval without immediately nagging an
   /// existing installation when this feature first appears.
@@ -81,6 +89,8 @@ final class AppPreferences {
     int? scannerRepeatCooldownMs,
     bool? autoAddMainUnitOnScan,
     BackupReminderFrequency? backupReminderFrequency,
+    CatalogViewLayout? productsViewLayout,
+    CatalogViewLayout? quickUnitsViewLayout,
     DateTime? reminderAnchorAtUtc,
     DateTime? lastSuccessfulBackupAtUtc,
     DateTime? snoozedUntilUtc,
@@ -94,6 +104,8 @@ final class AppPreferences {
     autoAddMainUnitOnScan: autoAddMainUnitOnScan ?? this.autoAddMainUnitOnScan,
     backupReminderFrequency:
         backupReminderFrequency ?? this.backupReminderFrequency,
+    productsViewLayout: productsViewLayout ?? this.productsViewLayout,
+    quickUnitsViewLayout: quickUnitsViewLayout ?? this.quickUnitsViewLayout,
     reminderAnchorAtUtc: (reminderAnchorAtUtc ?? this.reminderAnchorAtUtc)
         .toUtc(),
     lastSuccessfulBackupAtUtc:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:raze_store/features/gcash/gcash_screen.dart';
 import 'package:raze_store/features/gcash/gcash_record.dart';
+import 'package:raze_store/features/gcash/gcash_settings_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:raze_store/app/shell/app_shell.dart';
 import 'package:raze_store/features/cart/presentation/cart_screen.dart';
@@ -27,6 +28,10 @@ final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
+    GoRoute(
+      path: '/gcash/settings',
+      builder: (context, state) => const GcashSettingsScreen(),
+    ),
     GoRoute(path: '/gcash', builder: (context, state) => const GcashScreen()),
     GoRoute(
       path: '/gcash/new',

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -12,8 +13,15 @@ import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
+import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('debounces search and keeps keyboard focused while reloading', (
     tester,
   ) async {
@@ -83,7 +91,9 @@ void main() {
     expect(tester.testTextInput.isVisible, isTrue);
   });
 
-  testWidgets('opens the dedicated Quick units page from Home', (tester) async {
+  testWidgets('the filled Quick units row opens its dedicated page', (
+    tester,
+  ) async {
     final router = GoRouter(
       initialLocation: '/products',
       routes: [
@@ -111,10 +121,108 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('home-quick-units')));
+    final shortcut = find.byKey(const ValueKey('home-quick-units'));
+    expect(tester.widget(shortcut), isA<FilledButton>());
+    expect(
+      find.descendant(
+        of: shortcut,
+        matching: find.text('Pieces, sticks, sachets & packs'),
+      ),
+      findsOneWidget,
+    );
+    final surface = tester.widget<Material>(
+      find.descendant(of: shortcut, matching: find.byType(Material)),
+    );
+    expect(surface.color, AppTheme.light.colorScheme.primary);
+    expect(
+      tester.getSize(shortcut).width,
+      tester.getSize(find.byType(TextField)).width,
+    );
+
+    for (final alignment in [Alignment.centerLeft, Alignment.centerRight]) {
+      final bounds = tester.getRect(shortcut).deflate(8);
+      await tester.tapAt(alignment.withinRect(bounds));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quick units destination'), findsOneWidget);
+
+      router.pop();
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('Quick units fits a narrow screen with large text', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(320, 900);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _emptyCartOverride,
+          catalogProductsProvider.overrideWith(
+            (ref) => Stream.value([_coffee]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const ProductsScreen(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Quick units destination'), findsOneWidget);
+    final shortcut = find.byKey(const ValueKey('home-quick-units'));
+    await tester.ensureVisible(shortcut);
+    await tester.pumpAndSettle();
+
+    final bounds = tester.getRect(shortcut);
+    final titleBounds = tester.getRect(find.text('Quick units'));
+    final subtitle = find.text('Pieces, sticks, sachets & packs');
+    final subtitleBounds = tester.getRect(subtitle);
+    final unitIconBounds = tester.getRect(
+      find.descendant(
+        of: shortcut,
+        matching: find.byIcon(Icons.format_list_numbered_rounded),
+      ),
+    );
+    final arrowBounds = tester.getRect(
+      find.descendant(
+        of: shortcut,
+        matching: find.byIcon(Icons.arrow_forward_rounded),
+      ),
+    );
+    expect(bounds.width, lessThanOrEqualTo(320));
+    expect(bounds.height, greaterThanOrEqualTo(48));
+    expect(titleBounds.left, greaterThan(bounds.left));
+    expect(titleBounds.right, lessThan(bounds.right));
+    expect(titleBounds.top, greaterThanOrEqualTo(bounds.top));
+    expect(subtitleBounds.top, greaterThanOrEqualTo(titleBounds.bottom));
+    expect(subtitleBounds.left, closeTo(titleBounds.left, 0.1));
+    expect(subtitleBounds.right, lessThan(bounds.right));
+    expect(subtitleBounds.bottom, lessThanOrEqualTo(bounds.bottom));
+    expect(unitIconBounds.left, greaterThan(bounds.left));
+    expect(unitIconBounds.right, lessThan(titleBounds.left));
+    expect(arrowBounds.left, greaterThan(subtitleBounds.right));
+    expect(arrowBounds.right, lessThan(bounds.right));
+    expect(
+      tester
+          .renderObject<RenderParagraph>(
+            find.descendant(of: subtitle, matching: find.byType(RichText)),
+          )
+          .didExceedMaxLines,
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('builds product slivers in pages and resets pagination', (
@@ -299,6 +407,7 @@ void main() {
       '1',
       reason: 'A non-default sort is shown as active.',
     );
+    _expectCircularFilterBadge(tester, '1');
 
     await _chooseProductBrowseOption(tester, 'product-sort-name-a-z');
     expect(_verticalProductOrder(tester, products), [
@@ -315,6 +424,7 @@ void main() {
       'product-3',
     });
     expect(_activeFilterCount(tester), '2');
+    _expectCircularFilterBadge(tester, '2');
 
     await _chooseProductBrowseOption(tester, 'product-filter-without-photo');
     expect(_visibleProductIds(tester, products), {'product-0'});
@@ -410,7 +520,7 @@ void main() {
     );
   });
 
-  testWidgets('defaults to a two-column image grid and toggles to list', (
+  testWidgets('product grid toggles and restores saved list layout', (
     tester,
   ) async {
     tester.view
@@ -462,6 +572,29 @@ void main() {
       find.byKey(const ValueKey('product-results-list')),
     );
     expect(list.delegate.estimatedChildCount, products.length);
+
+    final stored = await SharedPreferences.getInstance();
+    expect(
+      stored.getString(productsViewLayoutPreferenceKey),
+      CatalogViewLayout.list.name,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _emptyCartOverride,
+          catalogProductsProvider.overrideWith((ref) => Stream.value(products)),
+        ],
+        child: MaterialApp(theme: AppTheme.light, home: const ProductsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('products-list')), findsOneWidget);
+    expect(find.byKey(const ValueKey('product-results-list')), findsOneWidget);
+    expect(find.byKey(const ValueKey('product-results-grid')), findsNothing);
   });
 
   testWidgets('product grid does not overflow a 320 by 667 viewport', (
@@ -550,6 +683,7 @@ void main() {
         find.byKey(const ValueKey('product-filter-active-count')),
         findsOneWidget,
       );
+      _expectCircularFilterBadge(tester, '1');
       expect(tester.takeException(), isNull);
     },
   );
@@ -739,6 +873,24 @@ String _activeFilterCount(WidgetTester tester) => tester
       ),
     )
     .data!;
+
+void _expectCircularFilterBadge(WidgetTester tester, String count) {
+  final badge = find.byKey(const ValueKey('product-filter-active-count'));
+  final label = find.descendant(of: badge, matching: find.text(count));
+  final container = tester.widget<Container>(badge);
+  final decoration = container.decoration! as BoxDecoration;
+  final size = tester.getSize(badge);
+
+  expect(size.width, 20);
+  expect(size.height, size.width);
+  expect(decoration.shape, BoxShape.circle);
+  expect(container.alignment, Alignment.center);
+  expect(label, findsOneWidget);
+  expect(
+    (tester.getCenter(label) - tester.getCenter(badge)).distance,
+    lessThan(0.1),
+  );
+}
 
 Set<String> _visibleProductIds(
   WidgetTester tester,

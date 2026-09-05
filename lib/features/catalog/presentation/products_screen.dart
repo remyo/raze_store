@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:raze_store/features/gcash/gcash_home_shortcut.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/cart/presentation/cart_shortcut_button.dart';
@@ -12,8 +13,8 @@ import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/product_image.dart';
 import 'package:raze_store/features/catalog/presentation/product_quick_view.dart';
-
-enum _ProductBrowseLayout { grid, list }
+import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
 
 enum _ProductSortOrder {
   defaultOrder('Default order', 'default'),
@@ -61,7 +62,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Timer? _searchDebounce;
   String? _selectedCategory;
   int _visibleProductLimit = _pageSize;
-  _ProductBrowseLayout _layout = _ProductBrowseLayout.grid;
   _ProductSortOrder _sortOrder = _ProductSortOrder.defaultOrder;
   _ProductBrowseFilter _productFilter = _ProductBrowseFilter.all;
 
@@ -109,12 +109,22 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     setState(() => _visibleProductLimit += _pageSize);
   }
 
-  void _changeLayout(_ProductBrowseLayout layout) {
-    if (_layout == layout) return;
-    setState(() {
-      _layout = layout;
-      _visibleProductLimit = _pageSize;
-    });
+  Future<void> _changeLayout(CatalogViewLayout layout) async {
+    final current =
+        ref.read(appPreferencesProvider).value?.productsViewLayout ??
+        CatalogViewLayout.grid;
+    if (current == layout) return;
+    setState(() => _visibleProductLimit = _pageSize);
+    try {
+      await ref
+          .read(appPreferencesProvider.notifier)
+          .setProductsViewLayout(layout);
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save the product view.')),
+      );
+    }
   }
 
   void _changeSortOrder(_ProductSortOrder sortOrder) {
@@ -149,6 +159,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Widget build(BuildContext context) {
     final products = ref.watch(catalogProductsProvider);
     final query = ref.watch(catalogSearchQueryProvider).trim();
+    final appPreferences = ref.watch(appPreferencesProvider);
+    final layout =
+        appPreferences.value?.productsViewLayout ?? CatalogViewLayout.grid;
 
     return AppPageScaffold(
       title: 'Home',
@@ -161,48 +174,53 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         const CartShortcutButton(),
       ],
       padBody: false,
-      body: products.when(
-        // A search query rebuilds the stream provider. Keep the current
-        // catalog on screen while the filtered stream starts so the search
-        // field is not removed from the tree (which would dismiss its
-        // keyboard after every character).
-        skipLoadingOnReload: true,
-        loading: () => const AppLoadingState(),
-        error: (error, _) => AppErrorState(
-          message: 'Your saved products could not be loaded.',
-          onRetry: () => ref.invalidate(catalogProductsProvider),
-        ),
-        data: (items) => _ProductsBody(
-          products: items,
-          query: query,
-          selectedCategory: _selectedCategory,
-          searchController: _searchController,
-          searchFocusNode: _searchFocusNode,
-          isSearching: products.isLoading,
-          visibleProductLimit: _visibleProductLimit,
-          layout: _layout,
-          sortOrder: _sortOrder,
-          productFilter: _productFilter,
-          onSearch: _onSearchChanged,
-          onCategorySelected: _selectCategory,
-          onLayoutChanged: _changeLayout,
-          onSortOrderChanged: _changeSortOrder,
-          onProductFilterChanged: _changeProductFilter,
-          onBrowseOptionsReset: _resetBrowseOptions,
-          onLoadMore: _showNextPage,
-          onOpen: (product) async {
-            final added = await showProductQuickView(context, product: product);
-            if (added == true && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${product.name} added to cart.')),
-              );
-            }
-          },
-          onAddFirst: () => context.push('/products/quick-add'),
-          onScan: () => context.go('/scan'),
-          onQuickUnits: () => context.push('/quick-sell'),
-        ),
-      ),
+      body: appPreferences.isLoading && !appPreferences.hasValue
+          ? const AppLoadingState(message: 'Loading your product view…')
+          : products.when(
+              // A search query rebuilds the stream provider. Keep the current
+              // catalog on screen while the filtered stream starts so the search
+              // field is not removed from the tree (which would dismiss its
+              // keyboard after every character).
+              skipLoadingOnReload: true,
+              loading: () => const AppLoadingState(),
+              error: (error, _) => AppErrorState(
+                message: 'Your saved products could not be loaded.',
+                onRetry: () => ref.invalidate(catalogProductsProvider),
+              ),
+              data: (items) => _ProductsBody(
+                products: items,
+                query: query,
+                selectedCategory: _selectedCategory,
+                searchController: _searchController,
+                searchFocusNode: _searchFocusNode,
+                isSearching: products.isLoading,
+                visibleProductLimit: _visibleProductLimit,
+                layout: layout,
+                sortOrder: _sortOrder,
+                productFilter: _productFilter,
+                onSearch: _onSearchChanged,
+                onCategorySelected: _selectCategory,
+                onLayoutChanged: _changeLayout,
+                onSortOrderChanged: _changeSortOrder,
+                onProductFilterChanged: _changeProductFilter,
+                onBrowseOptionsReset: _resetBrowseOptions,
+                onLoadMore: _showNextPage,
+                onOpen: (product) async {
+                  final added = await showProductQuickView(
+                    context,
+                    product: product,
+                  );
+                  if (added == true && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${product.name} added to cart.')),
+                    );
+                  }
+                },
+                onAddFirst: () => context.push('/products/quick-add'),
+                onScan: () => context.go('/scan'),
+                onQuickUnits: () => context.push('/quick-sell'),
+              ),
+            ),
     );
   }
 }
@@ -239,12 +257,12 @@ class _ProductsBody extends StatelessWidget {
   final FocusNode searchFocusNode;
   final bool isSearching;
   final int visibleProductLimit;
-  final _ProductBrowseLayout layout;
+  final CatalogViewLayout layout;
   final _ProductSortOrder sortOrder;
   final _ProductBrowseFilter productFilter;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onCategorySelected;
-  final ValueChanged<_ProductBrowseLayout> onLayoutChanged;
+  final ValueChanged<CatalogViewLayout> onLayoutChanged;
   final ValueChanged<_ProductSortOrder> onSortOrderChanged;
   final ValueChanged<_ProductBrowseFilter> onProductFilterChanged;
   final VoidCallback onBrowseOptionsReset;
@@ -362,7 +380,7 @@ class _ProductsBody extends StatelessWidget {
               return SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: inset),
                 sliver: switch (layout) {
-                  _ProductBrowseLayout.grid => SliverGrid.builder(
+                  CatalogViewLayout.grid => SliverGrid.builder(
                     key: const ValueKey('product-results-grid'),
                     itemCount: shownProducts.length + (hasMore ? 1 : 0),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -387,7 +405,7 @@ class _ProductsBody extends StatelessWidget {
                       );
                     },
                   ),
-                  _ProductBrowseLayout.list => SliverList.builder(
+                  CatalogViewLayout.list => SliverList.builder(
                     key: const ValueKey('product-results-list'),
                     itemCount: shownProducts.length + (hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
@@ -504,12 +522,12 @@ class _ProductsHeader extends StatelessWidget {
   final TextEditingController searchController;
   final FocusNode searchFocusNode;
   final bool isSearching;
-  final _ProductBrowseLayout layout;
+  final CatalogViewLayout layout;
   final _ProductSortOrder sortOrder;
   final _ProductBrowseFilter productFilter;
   final ValueChanged<String> onSearch;
   final ValueChanged<String?> onCategorySelected;
-  final ValueChanged<_ProductBrowseLayout> onLayoutChanged;
+  final ValueChanged<CatalogViewLayout> onLayoutChanged;
   final ValueChanged<_ProductSortOrder> onSortOrderChanged;
   final ValueChanged<_ProductBrowseFilter> onProductFilterChanged;
   final VoidCallback onBrowseOptionsReset;
@@ -523,60 +541,7 @@ class _ProductsHeader extends StatelessWidget {
       children: [
         _ScanCallout(onScan: onScan),
         const SizedBox(height: AppSpacing.xs),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: Column(
-              children: [
-                InkWell(
-                  onTap: () => context.push('/gcash'),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        Icon(Icons.account_balance_wallet_outlined, size: 20),
-                        SizedBox(width: 8),
-                        Expanded(child: Text('GCash Services')),
-                        Flexible(
-                          child: Text(
-                            'History',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Icon(Icons.chevron_right),
-                      ],
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => context.push('/gcash/new?kind=cashIn'),
-                        child: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('Cash In'),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () =>
-                            context.push('/gcash/new?kind=cashOut'),
-                        child: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('Cash Out'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+        const GcashHomeShortcut(),
         const SizedBox(height: AppSpacing.xs),
         _QuickUnitsShortcut(onPressed: onQuickUnits),
         const SizedBox(height: AppSpacing.md),
@@ -636,21 +601,29 @@ class _QuickUnitsShortcut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return OutlinedButton(
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return FilledButton(
       key: const ValueKey('home-quick-units'),
       onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
+      style: FilledButton.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
         alignment: Alignment.centerLeft,
-        visualDensity: VisualDensity.compact,
+        minimumSize: const Size(0, AppSize.comfortableRow),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.card),
       ),
       child: Row(
         children: [
-          const Icon(Icons.format_list_numbered_rounded, size: AppSize.icon),
+          Icon(
+            Icons.format_list_numbered_rounded,
+            size: AppSize.iconLarge,
+            color: scheme.onPrimary,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -659,24 +632,36 @@ class _QuickUnitsShortcut extends StatelessWidget {
               children: [
                 Text(
                   'Quick units',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: scheme.primary,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: scheme.onPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
-                  'Punch pieces, sticks, sachets, and packs',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
+                  'Pieces, sticks, sachets & packs',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onPrimary.withValues(alpha: 0.88),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.xs),
-          Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.sm),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.onPrimary.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xxs),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: AppSize.icon,
+                color: scheme.onPrimary,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -966,23 +951,23 @@ class _ProductSortFilterMenu extends StatelessWidget {
                     const SizedBox(width: AppSpacing.xxs),
                     Container(
                       key: const ValueKey('product-filter-active-count'),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
                         color: scheme.secondary,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        shape: BoxShape.circle,
                       ),
                       alignment: Alignment.center,
                       child: FittedBox(
+                        fit: BoxFit.scaleDown,
                         child: Text(
                           '$activeCount',
+                          textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
                                 color: scheme.onSecondary,
                                 fontWeight: FontWeight.w800,
+                                height: 1,
                               ),
                         ),
                       ),
@@ -1001,15 +986,15 @@ class _ProductSortFilterMenu extends StatelessWidget {
 class _ProductLayoutToggle extends StatelessWidget {
   const _ProductLayoutToggle({required this.value, required this.onChanged});
 
-  final _ProductBrowseLayout value;
-  final ValueChanged<_ProductBrowseLayout> onChanged;
+  final CatalogViewLayout value;
+  final ValueChanged<CatalogViewLayout> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       label: 'Product layout',
-      child: SegmentedButton<_ProductBrowseLayout>(
+      child: SegmentedButton<CatalogViewLayout>(
         showSelectedIcon: false,
         selected: {value},
         style: ButtonStyle(
@@ -1032,7 +1017,7 @@ class _ProductLayoutToggle extends StatelessWidget {
         ),
         segments: const [
           ButtonSegment(
-            value: _ProductBrowseLayout.grid,
+            value: CatalogViewLayout.grid,
             icon: SizedBox.square(
               key: ValueKey('product-layout-grid'),
               dimension: AppSize.compactControl,
@@ -1041,7 +1026,7 @@ class _ProductLayoutToggle extends StatelessWidget {
             tooltip: 'Show products as a grid',
           ),
           ButtonSegment(
-            value: _ProductBrowseLayout.list,
+            value: CatalogViewLayout.list,
             icon: SizedBox.square(
               key: ValueKey('product-layout-list'),
               dimension: AppSize.compactControl,

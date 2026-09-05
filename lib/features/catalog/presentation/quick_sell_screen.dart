@@ -12,8 +12,8 @@ import 'package:raze_store/features/cart/domain/cart_repository.dart';
 import 'package:raze_store/features/catalog/application/quick_sell_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/product_image.dart';
-
-enum _QuickSellLayout { grid, list }
+import 'package:raze_store/features/settings/application/settings_providers.dart';
+import 'package:raze_store/features/settings/domain/app_preferences.dart';
 
 /// Fast cart controls for products sold in more than one unit.
 ///
@@ -33,7 +33,6 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
   late final TextEditingController _searchController;
   String _query = '';
   bool _openingCart = false;
-  _QuickSellLayout _layout = _QuickSellLayout.grid;
 
   bool get _canOpenCart => !_openingCart && _lineQueues.isEmpty;
 
@@ -49,11 +48,31 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
     super.dispose();
   }
 
+  Future<void> _changeLayout(CatalogViewLayout layout) async {
+    final current =
+        ref.read(appPreferencesProvider).value?.quickUnitsViewLayout ??
+        CatalogViewLayout.grid;
+    if (current == layout) return;
+    try {
+      await ref
+          .read(appPreferencesProvider.notifier)
+          .setQuickUnitsViewLayout(layout);
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save the Quick units view.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(quickSellProductsProvider);
     final cart = ref.watch(cartDraftProvider);
     final currentCart = cart.asData?.value;
+    final appPreferences = ref.watch(appPreferencesProvider);
+    final layout =
+        appPreferences.value?.quickUnitsViewLayout ?? CatalogViewLayout.grid;
 
     return AppPageScaffold(
       title: 'Quick units',
@@ -70,23 +89,25 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
         ),
       ],
       padBody: false,
-      body: products.when(
-        loading: () => const AppLoadingState(
-          message: 'Loading products with unit prices…',
-        ),
-        error: (_, _) => AppErrorState(
-          message: 'Products with unit prices could not be loaded.',
-          onRetry: () => ref.invalidate(quickSellProductsProvider),
-        ),
-        data: (items) => cart.when(
-          loading: () => const AppLoadingState(message: 'Loading cart…'),
-          error: (_, _) => AppErrorState(
-            message: 'Your unfinished cart could not be loaded.',
-            onRetry: () => ref.invalidate(cartDraftProvider),
-          ),
-          data: (draft) => _buildBody(context, items, draft),
-        ),
-      ),
+      body: appPreferences.isLoading && !appPreferences.hasValue
+          ? const AppLoadingState(message: 'Loading your Quick units view…')
+          : products.when(
+              loading: () => const AppLoadingState(
+                message: 'Loading products with unit prices…',
+              ),
+              error: (_, _) => AppErrorState(
+                message: 'Products with unit prices could not be loaded.',
+                onRetry: () => ref.invalidate(quickSellProductsProvider),
+              ),
+              data: (items) => cart.when(
+                loading: () => const AppLoadingState(message: 'Loading cart…'),
+                error: (_, _) => AppErrorState(
+                  message: 'Your unfinished cart could not be loaded.',
+                  onRetry: () => ref.invalidate(cartDraftProvider),
+                ),
+                data: (draft) => _buildBody(context, items, draft, layout),
+              ),
+            ),
       bottomNavigationBar: currentCart?.isNotEmpty == true
           ? _CartSummaryBar(
               cart: currentCart!,
@@ -100,6 +121,7 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
     BuildContext context,
     List<StoreProduct> products,
     CartDraft cart,
+    CatalogViewLayout layout,
   ) {
     final query = _query.trim().toLowerCase();
     final visible = query.isEmpty
@@ -154,7 +176,7 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
     );
 
     return CustomScrollView(
-      key: ValueKey('quick-sell-${_layout.name}'),
+      key: ValueKey('quick-sell-${layout.name}'),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       slivers: [
         SliverToBoxAdapter(
@@ -187,10 +209,8 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
                   subtitle:
                       '${visible.length} ${visible.length == 1 ? 'product' : 'products'}',
                   action: _QuickSellLayoutToggle(
-                    value: _layout,
-                    onChanged: (layout) {
-                      if (_layout != layout) setState(() => _layout = layout);
-                    },
+                    value: layout,
+                    onChanged: _changeLayout,
                   ),
                 ),
               ],
@@ -206,7 +226,7 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
               message: 'Try another product name, barcode, or unit.',
             ),
           )
-        else if (_layout == _QuickSellLayout.list)
+        else if (layout == CatalogViewLayout.list)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.xs,
@@ -442,15 +462,15 @@ class _QuickSellScreenState extends ConsumerState<QuickSellScreen> {
 class _QuickSellLayoutToggle extends StatelessWidget {
   const _QuickSellLayoutToggle({required this.value, required this.onChanged});
 
-  final _QuickSellLayout value;
-  final ValueChanged<_QuickSellLayout> onChanged;
+  final CatalogViewLayout value;
+  final ValueChanged<CatalogViewLayout> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       label: 'Quick units layout',
-      child: SegmentedButton<_QuickSellLayout>(
+      child: SegmentedButton<CatalogViewLayout>(
         showSelectedIcon: false,
         selected: {value},
         style: ButtonStyle(
@@ -473,7 +493,7 @@ class _QuickSellLayoutToggle extends StatelessWidget {
         ),
         segments: const [
           ButtonSegment(
-            value: _QuickSellLayout.grid,
+            value: CatalogViewLayout.grid,
             icon: SizedBox.square(
               key: ValueKey('quick-sell-layout-grid'),
               dimension: AppSize.compactControl,
@@ -482,7 +502,7 @@ class _QuickSellLayoutToggle extends StatelessWidget {
             tooltip: 'Show quick units as a grid',
           ),
           ButtonSegment(
-            value: _QuickSellLayout.list,
+            value: CatalogViewLayout.list,
             icon: SizedBox.square(
               key: ValueKey('quick-sell-layout-list'),
               dimension: AppSize.compactControl,

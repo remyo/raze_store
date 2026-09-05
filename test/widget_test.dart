@@ -5,8 +5,13 @@ import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_product.dart';
 import 'package:raze_store/features/catalog/presentation/products_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('opens the empty offline product catalog', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

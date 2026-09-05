@@ -12,6 +12,7 @@ import 'package:raze_store/core/database/app_database.dart' as database;
 import 'package:raze_store/core/storage/local_product_image_store.dart';
 import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
 import 'package:raze_store/features/catalog_transfer/domain/catalog_transfer_result.dart';
+import 'package:raze_store/features/gcash/gcash_fee_settings.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 import 'package:raze_store/features/settings/domain/app_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -62,6 +63,7 @@ final class CatalogBackupService {
     scannerRepeatCooldownPreferenceKey,
     autoAddMainUnitOnScanPreferenceKey,
     backupReminderFrequencyPreferenceKey,
+    gcashFeeSettingsPreferenceKey,
   ];
   static const _maximumArchiveBytes = 512 * 1024 * 1024;
   static const _maximumExpandedBytes = 768 * 1024 * 1024;
@@ -153,6 +155,7 @@ final class CatalogBackupService {
           'scannerRepeatCooldownMs': snapshot.scannerRepeatCooldownMs,
           'autoAddMainUnitOnScan': snapshot.autoAddMainUnitOnScan,
           'backupReminderFrequency': snapshot.backupReminderFrequency.name,
+          'gcashFeeSettings': snapshot.gcashFeeSettings.toJson(),
         },
       };
       final dataFile = File(p.join(staging.path, _dataPath));
@@ -429,6 +432,26 @@ final class CatalogBackupService {
         error,
       );
     }
+    late final GcashFeeSettings gcashFeeSettings;
+    try {
+      final stored = preferences.get(gcashFeeSettingsPreferenceKey);
+      if (stored == null) {
+        gcashFeeSettings = GcashFeeSettings.defaults();
+      } else {
+        if (stored is! String) {
+          throw const FormatException('GCash fee settings must be JSON.');
+        }
+        gcashFeeSettings = GcashFeeSettings.fromJson(
+          _asMap(jsonDecode(stored), 'GCash fee settings'),
+        );
+      }
+    } on FormatException catch (error) {
+      throw _BackupException(
+        CatalogTransferFailureCode.validationFailed,
+        'GCash fee settings are invalid. Review them before creating a backup.',
+        error,
+      );
+    }
     return _DatabaseSnapshot(
       gcashEntries: databaseRows.gcashEntries,
       products: databaseRows.products,
@@ -448,6 +471,7 @@ final class CatalogBackupService {
       autoAddMainUnitOnScan:
           _storedBool(preferences, autoAddMainUnitOnScanPreferenceKey) ?? false,
       backupReminderFrequency: _storedBackupReminderFrequency(preferences),
+      gcashFeeSettings: gcashFeeSettings,
     );
   }
 
@@ -1508,6 +1532,12 @@ final class CatalogBackupService {
               backupReminderFrequencyPreferenceKey,
               preferences.backupReminderFrequency!.name,
             );
+        final gcashFeeSettingsSaved =
+            preferences.gcashFeeSettings == null ||
+            await storage.setString(
+              gcashFeeSettingsPreferenceKey,
+              jsonEncode(preferences.gcashFeeSettings!.toJson()),
+            );
         if (!themeSaved ||
             !onboardingSaved ||
             !customCategoriesSaved ||
@@ -1515,7 +1545,8 @@ final class CatalogBackupService {
             !scannerVibrationSaved ||
             !scannerCooldownSaved ||
             !autoMainUnitSaved ||
-            !backupReminderSaved) {
+            !backupReminderSaved ||
+            !gcashFeeSettingsSaved) {
           throw StateError('save failed');
         }
         return true;
@@ -1800,6 +1831,7 @@ final class _DatabaseSnapshot {
     required this.scannerRepeatCooldownMs,
     required this.autoAddMainUnitOnScan,
     required this.backupReminderFrequency,
+    required this.gcashFeeSettings,
   });
 
   final List<database.StoreProduct> products;
@@ -1816,6 +1848,7 @@ final class _DatabaseSnapshot {
   final int scannerRepeatCooldownMs;
   final bool autoAddMainUnitOnScan;
   final BackupReminderFrequency backupReminderFrequency;
+  final GcashFeeSettings gcashFeeSettings;
 }
 
 enum _ProductImageSlot { local, catalog }
@@ -2327,6 +2360,7 @@ final class _BackupPreferences {
     required this.scannerRepeatCooldownMs,
     required this.autoAddMainUnitOnScan,
     required this.backupReminderFrequency,
+    required this.gcashFeeSettings,
   });
 
   factory _BackupPreferences.fromJson(Map<String, Object?> json) {
@@ -2389,6 +2423,12 @@ final class _BackupPreferences {
         'automatic main unit setting',
       ),
       backupReminderFrequency: reminderFrequency,
+      // Archives created before GCash fee settings retain the device's config.
+      gcashFeeSettings: json.containsKey('gcashFeeSettings')
+          ? GcashFeeSettings.fromJson(
+              _asMap(json['gcashFeeSettings'], 'GCash fee settings'),
+            )
+          : null,
     );
   }
 
@@ -2400,6 +2440,7 @@ final class _BackupPreferences {
   final int? scannerRepeatCooldownMs;
   final bool? autoAddMainUnitOnScan;
   final BackupReminderFrequency? backupReminderFrequency;
+  final GcashFeeSettings? gcashFeeSettings;
 }
 
 List<String> _parseCustomCategories(Object? value) {

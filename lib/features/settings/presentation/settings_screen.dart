@@ -198,6 +198,14 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                     _SettingsNavigationCard(
                       children: [
                         _SettingsNavigationRow(
+                          key: const ValueKey('manage-gcash-settings'),
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: 'GCash settings',
+                          subtitle: 'Shared Cash In / Cash Out profit charges',
+                          onTap: () => context.push('/gcash/settings'),
+                        ),
+                        const Divider(height: 1),
+                        _SettingsNavigationRow(
                           key: const ValueKey('manage-product-categories'),
                           icon: Icons.category_outlined,
                           title: 'Product categories',

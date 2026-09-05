@@ -10,6 +10,7 @@ import 'package:raze_store/features/catalog_transfer/data/catalog_backup_service
 import 'package:raze_store/features/catalog_transfer/data/catalog_csv_service.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_file_gateway.dart';
 import 'package:raze_store/features/catalog_transfer/data/catalog_pack_service.dart';
+import 'package:raze_store/features/gcash/gcash_fee_settings.dart';
 import 'package:raze_store/features/onboarding/application/onboarding_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
 
@@ -27,6 +28,7 @@ final catalogBackupServiceProvider = Provider<CatalogBackupService>((ref) {
       ref.invalidate(storeProfileProvider);
       ref.invalidate(themeModeProvider);
       ref.invalidate(appPreferencesProvider);
+      ref.invalidate(gcashFeeSettingsProvider);
       ref.invalidate(customCatalogCategoriesProvider);
       ref.invalidate(onboardingControllerProvider);
       ref.invalidate(catalogPackUndoSummaryProvider);

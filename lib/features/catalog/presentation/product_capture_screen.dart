@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
+import 'package:raze_store/features/gcash/gcash_theme.dart';
 
 /// The kind of product detail the guided camera should frame.
 enum ProductCapturePurpose { productPhoto, productLabel, gcashReceipt }
@@ -71,8 +72,58 @@ abstract interface class ProductCameraSwitchingSession {
 
 /// Optional preview geometry used to crop a camera feed like the barcode
 /// scanner without stretching it.
-abstract interface class _ProductCameraPreviewGeometry {
+abstract interface class ProductCameraPreviewGeometry {
   Size? get orientedPreviewSize;
+}
+
+/// The same information window drives the receipt overlay and saved crop.
+///
+/// A square fits the Express Send information block, from the recipient through
+/// the reference/date, without including the tall blank promotional footer.
+@visibleForTesting
+class GcashReceiptFrameGeometry {
+  GcashReceiptFrameGeometry(this.viewport) {
+    final side = math.min(
+      600.0,
+      math.min(viewport.width * 0.90, viewport.height * 0.90),
+    );
+    frame = Rect.fromCenter(
+      center: viewport.center(Offset.zero),
+      width: side,
+      height: side,
+    );
+  }
+
+  static const aspectRatio = 1.0;
+  final Size viewport;
+  late final Rect frame;
+
+  /// Maps the centered BoxFit.cover preview back to oriented image pixels.
+  /// Preview/still aspect ratios can differ: the preview represents a centered
+  /// crop of the still image, so both cover transforms must be accounted for.
+  Rect sourceRect(Size imageSize, {Size? previewSize}) {
+    final preview = previewSize ?? imageSize;
+    final sourceFit = applyBoxFit(BoxFit.cover, imageSize, preview);
+    final source = Alignment.center.inscribe(
+      sourceFit.source,
+      Offset.zero & imageSize,
+    );
+    final scale = math.max(
+      viewport.width / preview.width,
+      viewport.height / preview.height,
+    );
+    final previewOffset = Offset(
+      (viewport.width - preview.width * scale) / 2,
+      (viewport.height - preview.height * scale) / 2,
+    );
+    final sourceScale = source.width / preview.width / scale;
+    return Rect.fromLTWH(
+      source.left + (frame.left - previewOffset.dx) * sourceScale,
+      source.top + (frame.top - previewOffset.dy) * sourceScale,
+      frame.width * sourceScale,
+      frame.height * sourceScale,
+    ).intersect(Offset.zero & imageSize);
+  }
 }
 
 /// Creates a session using the rear camera, falling back to the first camera.
@@ -188,7 +239,9 @@ class ProductCaptureScreen extends StatefulWidget {
     return Navigator.of(context).push<XFile>(
       MaterialPageRoute<XFile>(
         fullscreenDialog: true,
-        builder: (context) => ProductCaptureScreen(purpose: purpose),
+        builder: (context) => purpose == ProductCapturePurpose.gcashReceipt
+            ? GcashTheme(builder: (_) => ProductCaptureScreen(purpose: purpose))
+            : ProductCaptureScreen(purpose: purpose),
       ),
     );
   }
@@ -200,30 +253,26 @@ class ProductCaptureScreen extends StatefulWidget {
 class _ProductCaptureScreenState extends State<ProductCaptureScreen>
     with WidgetsBindingObserver {
   final ProductLowLightMonitor _lightMonitor = ProductLowLightMonitor();
-  Size? _receiptViewport;
+  GcashReceiptFrameGeometry? _receiptGeometry;
 
-  Future<XFile> _cropReceipt(XFile photo) async {
-    final viewport = _receiptViewport;
-    if (viewport == null) return photo;
+  Future<XFile> _cropReceipt(
+    XFile photo,
+    GcashReceiptFrameGeometry? geometry,
+    Size? previewSize,
+  ) async {
+    if (geometry == null) return photo;
     final codec = await ui.instantiateImageCodec(await photo.readAsBytes());
     final source = (await codec.getNextFrame()).image;
     codec.dispose();
     try {
-      final scale = math.max(
-        viewport.width / source.width,
-        viewport.height / source.height,
+      final rect = geometry.sourceRect(
+        Size(source.width.toDouble(), source.height.toDouble()),
+        previewSize: previewSize,
       );
-      final width =
-          math.min(viewport.width * 0.82, viewport.height * 0.60 * 0.62) /
-          scale;
-      final height = width / 0.62;
-      final rect = Rect.fromCenter(
-        center: Offset(source.width / 2, source.height / 2),
-        width: width,
-        height: height,
-      );
-      final outputWidth = math.min(1100, width.round());
-      final outputHeight = (outputWidth / 0.62).round();
+      // Keep the camera's available detail; small receipt text needs the native
+      // crop resolution and must not be reduced to an arbitrary output width.
+      final outputWidth = math.max(1, rect.width.round());
+      final outputHeight = math.max(1, rect.height.round());
       final recorder = ui.PictureRecorder();
       Canvas(recorder).drawImageRect(
         source,
@@ -384,12 +433,16 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
       return;
     }
 
+    final receiptGeometry = _receiptGeometry;
+    final previewSize = session is ProductCameraPreviewGeometry
+        ? (session as ProductCameraPreviewGeometry).orientedPreviewSize
+        : null;
     setState(() => _capturing = true);
     try {
       await session.stopLuminanceSampling();
       var photo = await session.takePicture();
       if (widget.purpose == ProductCapturePurpose.gcashReceipt && mounted) {
-        photo = await _cropReceipt(photo);
+        photo = await _cropReceipt(photo, receiptGeometry, previewSize);
       }
       if (!mounted || !identical(_session, session)) {
         return;
@@ -508,7 +561,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
 
   @override
   Widget build(BuildContext context) {
-    final readsLabel = widget.purpose == ProductCapturePurpose.productLabel;
+    final readsLabel = widget.purpose != ProductCapturePurpose.productPhoto;
     return PopScope(
       canPop: !_capturing,
       child: Scaffold(
@@ -531,6 +584,9 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
   }
 
   Widget _buildBody() {
+    if (widget.purpose == ProductCapturePurpose.gcashReceipt) {
+      return _buildReceiptBody();
+    }
     if (widget.purpose == ProductCapturePurpose.productLabel) {
       return _buildLabelBody();
     }
@@ -562,14 +618,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
       children: [
         ColoredBox(
           color: Colors.black,
-          child: widget.purpose == ProductCapturePurpose.gcashReceipt
-              ? LayoutBuilder(
-                  builder: (context, constraints) {
-                    _receiptViewport = constraints.biggest;
-                    return _CoverCameraPreview(session: session);
-                  },
-                )
-              : Center(child: session.buildPreview()),
+          child: Center(child: session.buildPreview()),
         ),
         Semantics(
           key: widget.purpose == ProductCapturePurpose.productLabel
@@ -578,20 +627,7 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
           container: true,
           label: widget.purpose.guideSemanticsLabel,
           child: IgnorePointer(
-            child: widget.purpose == ProductCapturePurpose.gcashReceipt
-                ? LayoutBuilder(
-                    builder: (context, constraints) => CameraScanFrame(
-                      widthFactor: math.min(
-                        0.82,
-                        constraints.maxHeight *
-                            0.60 *
-                            0.62 /
-                            constraints.maxWidth,
-                      ),
-                      aspectRatio: 0.62,
-                    ),
-                  )
-                : widget.purpose == ProductCapturePurpose.productLabel
+            child: widget.purpose == ProductCapturePurpose.productLabel
                 ? const CameraScanFrame(
                     key: ValueKey('product-capture-guide-frame'),
                     frameKey: ValueKey('product-label-guide-window'),
@@ -736,6 +772,261 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReceiptBody() {
+    const receiptNote =
+        'For GCash receipts. Other receipts may be hard to read; enter details manually.';
+    final theme = Theme.of(context);
+    final instructionStyle = theme.textTheme.bodyMedium!.copyWith(
+      color: Colors.white,
+      fontWeight: FontWeight.w600,
+    );
+    final hintStyle = theme.textTheme.bodySmall!.copyWith(
+      color: Colors.white70,
+    );
+    final warning = _torchEnabled
+        ? 'Still too dark? Move somewhere brighter.'
+        : 'Too dark. Turn on the flashlight or move somewhere brighter.';
+
+    final instructions = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.purpose.instruction,
+          key: const ValueKey('gcash-receipt-instruction'),
+          textAlign: TextAlign.center,
+          style: instructionStyle,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          widget.purpose.secondaryInstruction!,
+          textAlign: TextAlign.center,
+          style: hintStyle,
+        ),
+      ],
+    );
+    final footer = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_isLowLight) ...[
+          Semantics(
+            liveRegion: true,
+            child: DecoratedBox(
+              key: const ValueKey('product-capture-low-light-warning'),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE2AD),
+                borderRadius: AppRadius.control,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  warning,
+                  textAlign: TextAlign.center,
+                  style: hintStyle.copyWith(color: const Color(0xFF3D2500)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        SizedBox(
+          height: 72,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton.filledTonal(
+                key: const ValueKey('product-capture-torch-button'),
+                onPressed: _session == null || _changingTorch || _capturing
+                    ? null
+                    : _toggleTorch,
+                tooltip: _torchEnabled ? 'Turn flash off' : 'Turn flash on',
+                icon: Icon(
+                  _torchEnabled
+                      ? Icons.flash_on_rounded
+                      : Icons.flash_off_rounded,
+                ),
+              ),
+              const SizedBox(width: 20),
+              SizedBox.square(
+                dimension: 72,
+                child: IconButton.filled(
+                  key: const ValueKey('product-capture-shutter-button'),
+                  onPressed:
+                      _session == null ||
+                          _starting ||
+                          _capturing ||
+                          _changingTorch
+                      ? null
+                      : _capture,
+                  tooltip: 'Read GCash receipt',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                  ),
+                  icon: _capturing
+                      ? const SizedBox.square(
+                          dimension: 28,
+                          child: CircularProgressIndicator(strokeWidth: 3),
+                        )
+                      : const Icon(Icons.camera_alt_rounded, size: 32),
+                ),
+              ),
+              // Keep the capture control centered relative to the frame.
+              const SizedBox(width: 68),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          receiptNote,
+          key: const ValueKey('gcash-receipt-support-note'),
+          textAlign: TextAlign.center,
+          style: hintStyle,
+        ),
+      ],
+    );
+
+    return ColoredBox(
+      color: Colors.black,
+      child: SafeArea(
+        top: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const inset = 12.0;
+            final width = math.max(1.0, constraints.maxWidth - inset * 2);
+            final height = math.max(1.0, constraints.maxHeight - inset * 2);
+            if (width > height) {
+              final panelWidth = math.min(330.0, width * 0.44);
+              return Padding(
+                padding: const EdgeInsets.all(inset),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildReceiptPreview()),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: panelWidth,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            instructions,
+                            const SizedBox(height: 16),
+                            footer,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            double textHeight(String text, TextStyle style, double maxWidth) {
+              final painter = TextPainter(
+                text: TextSpan(text: text, style: style),
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+              )..layout(maxWidth: maxWidth);
+              final result = painter.height;
+              painter.dispose();
+              return result;
+            }
+
+            final helpHeight =
+                textHeight(
+                  widget.purpose.instruction,
+                  instructionStyle,
+                  width,
+                ) +
+                4 +
+                textHeight(
+                  widget.purpose.secondaryInstruction!,
+                  hintStyle,
+                  width,
+                ) +
+                72 +
+                8 +
+                textHeight(receiptNote, hintStyle, width) +
+                (_isLowLight
+                    ? textHeight(warning, hintStyle, width - 16) + 24
+                    : 0);
+            final cameraHeight = math.max(
+              180.0,
+              math.min(width, height - helpHeight - 16),
+            );
+            return SingleChildScrollView(
+              key: const ValueKey('gcash-receipt-camera-scroll-view'),
+              padding: const EdgeInsets.all(inset),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: height),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    instructions,
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: cameraHeight,
+                      child: _buildReceiptPreview(),
+                    ),
+                    const SizedBox(height: 8),
+                    footer,
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReceiptPreview() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final geometry = GcashReceiptFrameGeometry(constraints.biggest);
+        _receiptGeometry = geometry;
+        final session = _session;
+        return ClipRRect(
+          key: const ValueKey('gcash-receipt-preview'),
+          borderRadius: AppRadius.card,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (_errorMessage case final message?)
+                _CameraUnavailableView(message: message, onRetry: _openCamera)
+              else if (_starting || session == null)
+                const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+              else ...[
+                _CoverCameraPreview(session: session),
+                Semantics(
+                  container: true,
+                  label: widget.purpose.guideSemanticsLabel,
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      key: const ValueKey('gcash-receipt-guide-frame'),
+                      painter: _ReceiptGuidePainter(geometry.frame),
+                      child: Stack(
+                        children: [
+                          Positioned.fromRect(
+                            rect: geometry.frame,
+                            child: const SizedBox(
+                              key: ValueKey('gcash-receipt-guide-window'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -987,6 +1278,58 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
   }
 }
 
+class _ReceiptGuidePainter extends CustomPainter {
+  const _ReceiptGuidePainter(this.frame);
+
+  final Rect frame;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rounded = RRect.fromRectAndRadius(frame, const Radius.circular(12));
+    canvas.drawPath(
+      Path.combine(
+        PathOperation.difference,
+        Path()..addRect(Offset.zero & size),
+        Path()..addRRect(rounded),
+      ),
+      Paint()..color = const Color(0x66000000),
+    );
+    canvas.drawRRect(
+      rounded,
+      Paint()
+        ..color = Colors.white54
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+    final corner = Path()
+      ..moveTo(0, 28)
+      ..lineTo(0, 12)
+      ..quadraticBezierTo(0, 0, 12, 0)
+      ..lineTo(28, 0);
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 3.5;
+    for (final (origin, x, y) in [
+      (frame.topLeft, 1.0, 1.0),
+      (frame.topRight, -1.0, 1.0),
+      (frame.bottomLeft, 1.0, -1.0),
+      (frame.bottomRight, -1.0, -1.0),
+    ]) {
+      canvas.save();
+      canvas.translate(origin.dx, origin.dy);
+      canvas.scale(x, y);
+      canvas.drawPath(corner, paint);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ReceiptGuidePainter oldDelegate) =>
+      frame != oldDelegate.frame;
+}
+
 class _CoverCameraPreview extends StatelessWidget {
   const _CoverCameraPreview({super.key, required this.session});
 
@@ -997,8 +1340,8 @@ class _CoverCameraPreview extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final targetSize = constraints.biggest;
-        final reportedSize = session is _ProductCameraPreviewGeometry
-            ? (session as _ProductCameraPreviewGeometry).orientedPreviewSize
+        final reportedSize = session is ProductCameraPreviewGeometry
+            ? (session as ProductCameraPreviewGeometry).orientedPreviewSize
             : null;
         final sourceSize =
             reportedSize == null ||
@@ -1071,7 +1414,7 @@ class _PluginProductCameraSession
     implements
         ProductCameraSession,
         ProductCameraSwitchingSession,
-        _ProductCameraPreviewGeometry {
+        ProductCameraPreviewGeometry {
   _PluginProductCameraSession(
     List<CameraDescription> cameras,
     this._cameraIndex,
@@ -1492,7 +1835,8 @@ extension on ProductCapturePurpose {
   String get instruction => switch (this) {
     ProductCapturePurpose.productPhoto =>
       'Fit the whole product inside the frame',
-    ProductCapturePurpose.gcashReceipt => 'Fit the receipt inside the frame',
+    ProductCapturePurpose.gcashReceipt =>
+      'Fit the name, number, amount, and reference/date inside the frame.',
     ProductCapturePurpose.productLabel =>
       'Center the product name inside the frame',
   };
@@ -1500,7 +1844,7 @@ extension on ProductCapturePurpose {
   String? get secondaryInstruction => switch (this) {
     ProductCapturePurpose.productPhoto => null,
     ProductCapturePurpose.gcashReceipt =>
-      'Include the amount, reference number and date. Avoid screen glare.',
+      'Skip blank space and the green footer. Avoid glare.',
     ProductCapturePurpose.productLabel =>
       'Keep other words outside the frame, avoid glare, and hold steady.',
   };
@@ -1513,7 +1857,7 @@ extension on ProductCapturePurpose {
 
   double get guideAspectRatio => switch (this) {
     ProductCapturePurpose.productPhoto => 0.78,
-    ProductCapturePurpose.gcashReceipt => 0.62,
+    ProductCapturePurpose.gcashReceipt => GcashReceiptFrameGeometry.aspectRatio,
     ProductCapturePurpose.productLabel => 2.25,
   };
 }
