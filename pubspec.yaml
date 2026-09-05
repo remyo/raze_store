@@ -74,6 +74,11 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # Keep iOS plugins on CocoaPods. flutter_onnxruntime's generated Swift
+  # package currently cannot be resolved reliably during a local device run.
+  config:
+    enable-swift-package-manager: false
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

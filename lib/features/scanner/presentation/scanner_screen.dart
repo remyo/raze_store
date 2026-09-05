@@ -57,7 +57,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final visible = AppShellBranchScope.of(context) == 1;
-    final routeForeground = TickerMode.of(context);
+    final routeForeground = TickerMode.valuesOf(context).enabled;
     final wasVisible = _branchVisible;
     final wasRouteForeground = _routeForeground;
     _branchVisible = visible;

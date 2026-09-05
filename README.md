@@ -268,17 +268,23 @@ can change size later.
 This workspace currently uses Flutter through FVM:
 
 ```sh
-/Users/rem/fvm/default/bin/flutter pub get
-/Users/rem/fvm/default/bin/dart run build_runner build --force-jit --delete-conflicting-outputs
-/Users/rem/fvm/default/bin/flutter analyze
-/Users/rem/fvm/default/bin/flutter test
+fvm flutter pub get
+fvm dart run build_runner build --force-jit --delete-conflicting-outputs
+fvm flutter analyze
+fvm flutter test
 ```
 
 Run on a connected Android or iOS device with:
 
 ```sh
-/Users/rem/fvm/default/bin/flutter run
+fvm flutter devices
+fvm flutter run -d <device-id>
 ```
+
+The project pins Flutter 3.44.7 in `.fvmrc`. For iOS, open
+`ios/Runner.xcworkspace` (not `Runner.xcodeproj`) when using Xcode. The iOS
+plugins intentionally use CocoaPods, so run `pod install` after a dependency
+change if Xcode reports missing pods.
 
 Barcode scanning, guided photo framing, low-light detection, the flashlight,
 label reading, and gallery export require a physical-device smoke test even when

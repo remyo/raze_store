@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:intl/intl.dart';
 import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/product_image_placeholder.dart';
@@ -458,7 +459,7 @@ final class _ReviewProductTabState extends State<_ReviewProductTab>
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
                       ),
-                      cacheExtent: 360,
+                      scrollCacheExtent: const ScrollCacheExtent.pixels(360),
                       addAutomaticKeepAlives: false,
                       itemCount: shownProducts.length + (hasMore ? 1 : 0),
                       itemBuilder: (context, index) {
