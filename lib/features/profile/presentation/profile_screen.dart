@@ -36,6 +36,13 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                   const BackupReminderCard(),
                   _ProfileDestinationCard(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'GCash Services',
+                    subtitle: 'Cash In, Cash Out, and saved receipts.',
+                    onTap: () => context.push('/gcash'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _ProfileDestinationCard(
                     key: const ValueKey('profile-open-sales'),
                     icon: Icons.receipt_long_outlined,
                     title: 'Sales',

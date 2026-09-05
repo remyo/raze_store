@@ -90,7 +90,7 @@ void main() {
     );
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 7);
+    expect(database.schemaVersion, 8);
     final product = await database.select(database.storeProducts).getSingle();
     expect(product.id, 'coffee');
     expect(product.priceCentavos, 12000);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:raze_store/features/gcash/gcash_record.dart';
 
 import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
@@ -45,7 +46,7 @@ final class CatalogBackupService {
            preferencesFactory ?? SharedPreferences.getInstance,
        _uuid = uuid;
 
-  static const archiveVersion = 3;
+  static const archiveVersion = 4;
   static const archiveFormat = 'raze-store-backup';
   static const archiveExtension = 'razestore';
   static const _oldestSupportedArchiveVersion = 1;
@@ -106,9 +107,27 @@ final class CatalogBackupService {
         stagedFiles: stagedFiles,
         portableByCanonicalSource: stagedPhotos.portableByCanonicalSource,
       );
+      final gcashData = <Map<String, Object?>>[];
+      for (final row in snapshot.gcashEntries) {
+        final record = GcashRecord.fromJson(
+          jsonDecode(row.payload) as Map<String, dynamic>,
+          receipt: row.receipt,
+        );
+        String? portable;
+        if (row.receipt != null) {
+          portable =
+              'photos/${sha256.convert(utf8.encode('gcash:${row.id}')).toString().substring(0, 28)}.png';
+          final file = _safeStageFile(staging, portable);
+          await file.parent.create(recursive: true);
+          await file.writeAsBytes(row.receipt!, flush: true);
+          stagedFiles[portable] = file;
+        }
+        gcashData.add({...record.toJson(), 'receipt': portable});
+      }
       final photoCount = stagedFiles.length;
 
       final data = <String, Object?>{
+        'gcashEntries': gcashData,
         'products': [
           for (final row in snapshot.products)
             _productToJson(row, stagedPhotos.byProduct[row.id]),
@@ -308,6 +327,7 @@ final class CatalogBackupService {
           restoredLocalPhotoPaths,
           restoredCatalogImagePaths,
           restoredSaleLineImages,
+          staging,
         );
         databaseReplaced = true;
       } catch (_) {
@@ -387,6 +407,7 @@ final class CatalogBackupService {
           .select(_database.storeProfiles)
           .getSingleOrNull();
       return (
+        gcashEntries: await _database.select(_database.gcashEntries).get(),
         products: products,
         units: units,
         sales: sales,
@@ -409,6 +430,7 @@ final class CatalogBackupService {
       );
     }
     return _DatabaseSnapshot(
+      gcashEntries: databaseRows.gcashEntries,
       products: databaseRows.products,
       sellingUnits: databaseRows.units,
       sales: databaseRows.sales,
@@ -1268,6 +1290,13 @@ final class CatalogBackupService {
         .map((item) => item.path)
         .where((path) => path.startsWith(_photoPrefix))
         .toSet();
+    for (final photo in data.gcashReceiptPaths.values) {
+      _validatePortablePath(photo);
+      if (!_portablePhotoPattern.hasMatch(photo)) {
+        throw const FormatException('Invalid GCash receipt path.');
+      }
+      referencedPhotos.add(photo);
+    }
     if (descriptorPhotos.length != referencedPhotos.length ||
         !descriptorPhotos.containsAll(referencedPhotos)) {
       throw const _BackupException(
@@ -1292,7 +1321,18 @@ final class CatalogBackupService {
     Map<String, String> localPhotoPaths,
     Map<String, String> catalogImagePaths,
     Map<(String, int), String> saleLineImagePaths,
+    Directory staging,
   ) async {
+    // Validate receipt bytes before beginning the destructive replacement.
+    for (final row in data.gcashEntries) {
+      final path = data.gcashReceiptPaths[row.id];
+      if (path != null) {
+        GcashRecord.fromJson(
+          row.toJson(),
+          receipt: await _safeStageFile(staging, path).readAsBytes(),
+        );
+      }
+    }
     await _database.transaction(() async {
       // A complete replacement invalidates the one-level catalog-import undo
       // checkpoint; that checkpoint belongs to the catalog being replaced.
@@ -1304,7 +1344,26 @@ final class CatalogBackupService {
       await _database.delete(_database.productSellingUnits).go();
       await _database.delete(_database.storeProducts).go();
       await _database.delete(_database.storeProfiles).go();
+      await _database.delete(_database.gcashEntries).go();
 
+      for (final row in data.gcashEntries) {
+        final path = data.gcashReceiptPaths[row.id];
+        await _database
+            .into(_database.gcashEntries)
+            .insert(
+              database.GcashEntriesCompanion.insert(
+                id: row.id,
+                reference: normalizeGcashReference(row.reference),
+                payload: jsonEncode(row.toJson()),
+                occurredAt: row.date,
+                receipt: Value(
+                  path == null
+                      ? null
+                      : await _safeStageFile(staging, path).readAsBytes(),
+                ),
+              ),
+            );
+      }
       await _database.batch((batch) {
         batch.insertAll(_database.storeProducts, [
           for (final item in data.products)
@@ -1727,6 +1786,7 @@ final class CatalogBackupService {
 
 final class _DatabaseSnapshot {
   const _DatabaseSnapshot({
+    required this.gcashEntries,
     required this.products,
     required this.sellingUnits,
     required this.sales,
@@ -1743,6 +1803,7 @@ final class _DatabaseSnapshot {
   });
 
   final List<database.StoreProduct> products;
+  final List<database.GcashEntry> gcashEntries;
   final List<database.ProductSellingUnit> sellingUnits;
   final List<database.Sale> sales;
   final List<database.SaleLine> saleLines;
@@ -1872,6 +1933,8 @@ final class _FileDescriptor {
 
 final class _BackupData {
   const _BackupData({
+    required this.gcashEntries,
+    required this.gcashReceiptPaths,
     required this.products,
     required this.sellingUnits,
     required this.sales,
@@ -1917,6 +1980,14 @@ final class _BackupData {
           product.withoutCatalogIdentity(),
     ];
     return _BackupData(
+      gcashEntries: _parseGcashBackup(json['gcashEntries'], archiveVersion),
+      gcashReceiptPaths: {
+        if (archiveVersion >= 4)
+          for (final value in _asList(json['gcashEntries'], 'GCash records'))
+            if (_asMap(value, 'GCash record')['receipt'] != null)
+              _asMap(value, 'GCash record')['id'] as String:
+                  _asMap(value, 'GCash record')['receipt'] as String,
+      },
       products: products,
       sellingUnits: sellingUnitValues
           .map(
@@ -1939,11 +2010,34 @@ final class _BackupData {
   }
 
   final List<_BackupProduct> products;
+  final List<GcashRecord> gcashEntries;
+  final Map<String, String> gcashReceiptPaths;
   final List<_BackupSellingUnit> sellingUnits;
   final List<_BackupSale> sales;
   final List<_BackupSaleLine> saleLines;
   final _BackupProfile profile;
   final _BackupPreferences preferences;
+}
+
+List<GcashRecord> _parseGcashBackup(Object? value, int version) {
+  if (version < 4) return const [];
+  final list = _asList(value, 'GCash records');
+  if (list.length > 250000) {
+    throw const FormatException('Too many GCash records.');
+  }
+  final ids = <String>{};
+  final references = <String>{};
+  return [
+    for (final item in list)
+      (() {
+        final json = _asMap(item, 'GCash record');
+        final record = GcashRecord.fromJson(json);
+        if (!ids.add(record.id) || !references.add(record.reference)) {
+          throw const FormatException('Duplicate GCash record in backup.');
+        }
+        return record;
+      })(),
+  ];
 }
 
 final class _BackupProduct {

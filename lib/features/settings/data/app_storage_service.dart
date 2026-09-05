@@ -53,6 +53,7 @@ class AppStorageService {
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   );
   static const _ownedTemporaryDirectoryPrefixes = <String>[
+    'raze_store_gcash_',
     'raze_store_transfer_',
     'raze_store_export_',
     'raze_store_restore_',

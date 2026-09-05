@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -10,7 +13,7 @@ import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 
 /// The kind of product detail the guided camera should frame.
-enum ProductCapturePurpose { productPhoto, productLabel }
+enum ProductCapturePurpose { productPhoto, productLabel, gcashReceipt }
 
 /// Injectable entry point for opening the guided product camera.
 abstract interface class ProductCaptureLauncher {
@@ -197,6 +200,56 @@ class ProductCaptureScreen extends StatefulWidget {
 class _ProductCaptureScreenState extends State<ProductCaptureScreen>
     with WidgetsBindingObserver {
   final ProductLowLightMonitor _lightMonitor = ProductLowLightMonitor();
+  Size? _receiptViewport;
+
+  Future<XFile> _cropReceipt(XFile photo) async {
+    final viewport = _receiptViewport;
+    if (viewport == null) return photo;
+    final codec = await ui.instantiateImageCodec(await photo.readAsBytes());
+    final source = (await codec.getNextFrame()).image;
+    codec.dispose();
+    try {
+      final scale = math.max(
+        viewport.width / source.width,
+        viewport.height / source.height,
+      );
+      final width =
+          math.min(viewport.width * 0.82, viewport.height * 0.60 * 0.62) /
+          scale;
+      final height = width / 0.62;
+      final rect = Rect.fromCenter(
+        center: Offset(source.width / 2, source.height / 2),
+        width: width,
+        height: height,
+      );
+      final outputWidth = math.min(1100, width.round());
+      final outputHeight = (outputWidth / 0.62).round();
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImageRect(
+        source,
+        rect,
+        Rect.fromLTWH(0, 0, outputWidth.toDouble(), outputHeight.toDouble()),
+        Paint()..filterQuality = FilterQuality.high,
+      );
+      final picture = recorder.endRecording();
+      final output = await picture.toImage(outputWidth, outputHeight);
+      picture.dispose();
+      final bytes = await output.toByteData(format: ui.ImageByteFormat.png);
+      output.dispose();
+      final directory = await getTemporaryDirectory();
+      final captureDirectory = Directory(
+        '${directory.path}/raze_store_gcash_capture',
+      );
+      await captureDirectory.create(recursive: true);
+      final file = File(
+        '${captureDirectory.path}/${DateTime.now().microsecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
+      return XFile(file.path);
+    } finally {
+      source.dispose();
+    }
+  }
 
   ProductCameraSession? _session;
   int _sessionGeneration = 0;
@@ -334,7 +387,10 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
     setState(() => _capturing = true);
     try {
       await session.stopLuminanceSampling();
-      final photo = await session.takePicture();
+      var photo = await session.takePicture();
+      if (widget.purpose == ProductCapturePurpose.gcashReceipt && mounted) {
+        photo = await _cropReceipt(photo);
+      }
       if (!mounted || !identical(_session, session)) {
         return;
       }
@@ -506,7 +562,14 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
       children: [
         ColoredBox(
           color: Colors.black,
-          child: Center(child: session.buildPreview()),
+          child: widget.purpose == ProductCapturePurpose.gcashReceipt
+              ? LayoutBuilder(
+                  builder: (context, constraints) {
+                    _receiptViewport = constraints.biggest;
+                    return _CoverCameraPreview(session: session);
+                  },
+                )
+              : Center(child: session.buildPreview()),
         ),
         Semantics(
           key: widget.purpose == ProductCapturePurpose.productLabel
@@ -515,7 +578,20 @@ class _ProductCaptureScreenState extends State<ProductCaptureScreen>
           container: true,
           label: widget.purpose.guideSemanticsLabel,
           child: IgnorePointer(
-            child: widget.purpose == ProductCapturePurpose.productLabel
+            child: widget.purpose == ProductCapturePurpose.gcashReceipt
+                ? LayoutBuilder(
+                    builder: (context, constraints) => CameraScanFrame(
+                      widthFactor: math.min(
+                        0.82,
+                        constraints.maxHeight *
+                            0.60 *
+                            0.62 /
+                            constraints.maxWidth,
+                      ),
+                      aspectRatio: 0.62,
+                    ),
+                  )
+                : widget.purpose == ProductCapturePurpose.productLabel
                 ? const CameraScanFrame(
                     key: ValueKey('product-capture-guide-frame'),
                     frameKey: ValueKey('product-label-guide-window'),
@@ -1410,28 +1486,34 @@ extension on ProductCapturePurpose {
   String get title => switch (this) {
     ProductCapturePurpose.productPhoto => 'Take product photo',
     ProductCapturePurpose.productLabel => 'Read label',
+    ProductCapturePurpose.gcashReceipt => 'Read GCash receipt',
   };
 
   String get instruction => switch (this) {
     ProductCapturePurpose.productPhoto =>
       'Fit the whole product inside the frame',
+    ProductCapturePurpose.gcashReceipt => 'Fit the receipt inside the frame',
     ProductCapturePurpose.productLabel =>
       'Center the product name inside the frame',
   };
 
   String? get secondaryInstruction => switch (this) {
     ProductCapturePurpose.productPhoto => null,
+    ProductCapturePurpose.gcashReceipt =>
+      'Include the amount, reference number and date. Avoid screen glare.',
     ProductCapturePurpose.productLabel =>
       'Keep other words outside the frame, avoid glare, and hold steady.',
   };
 
   String get guideSemanticsLabel => switch (this) {
     ProductCapturePurpose.productPhoto => 'Product photo guide frame',
+    ProductCapturePurpose.gcashReceipt => 'GCash receipt guide frame',
     ProductCapturePurpose.productLabel => 'Product name guide frame',
   };
 
   double get guideAspectRatio => switch (this) {
     ProductCapturePurpose.productPhoto => 0.78,
+    ProductCapturePurpose.gcashReceipt => 0.62,
     ProductCapturePurpose.productLabel => 2.25,
   };
 }

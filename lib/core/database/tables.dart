@@ -201,3 +201,14 @@ class SaleLines extends Table {
   @override
   Set<Column<Object>> get primaryKey => {saleId, position};
 }
+
+class GcashEntries extends Table {
+  TextColumn get id => text()();
+  TextColumn get reference => text().unique()();
+  TextColumn get payload => text()();
+  DateTimeColumn get occurredAt => dateTime()();
+  BlobColumn get receipt => blob().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

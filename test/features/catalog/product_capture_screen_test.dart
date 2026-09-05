@@ -7,6 +7,32 @@ import 'package:raze_store/core/widgets/camera_scan_frame.dart';
 import 'package:raze_store/features/catalog/presentation/product_capture_screen.dart';
 
 void main() {
+  testWidgets(
+    'GCash receipt frame fits portrait and landscape without overflow',
+    (tester) async {
+      final session = _FakeSwitchableProductCameraSession();
+      addTearDown(() => tester.view.resetPhysicalSize());
+      addTearDown(() => tester.view.resetDevicePixelRatio());
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ProductCaptureScreen(
+            purpose: ProductCapturePurpose.gcashReceipt,
+            sessionFactory: () async => session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Read GCash receipt'), findsOneWidget);
+      expect(find.byType(CameraScanFrame), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
   test('rear camera is preferred and the first camera is the fallback', () {
     const front = CameraDescription(
       name: 'front',

@@ -222,14 +222,16 @@ larger-pack sizing guidance are documented in
 provenance is recorded in
 [`catalog_packs/filipino-sari-sari-starter-v1/ATTRIBUTION.md`](catalog_packs/filipino-sari-sari-starter-v1/ATTRIBUTION.md).
 
-A `.razestore` file is the private, lossless backup. It contains products, main
+A `.razestore` file is the private, lossless backup. It contains GCash records
+and receipt images, products, main
 and sub-unit prices, managed product photos, completed sales, receipt/store
 details, custom categories, and the saved theme.
 It also keeps scanner sound, vibration, cooldown, automatic-unit behavior, and
 the selected backup-reminder frequency. Reminder timing itself—the last backup,
 first-reminder anchor, and one-day snooze—stays local to each phone.
 Backups are checksummed and validated before restore; restoring replaces the
-local catalog and sales history and clears the temporary cart. Backup files are
+local catalog, sales history, and GCash history and clears the temporary cart.
+Older backups without GCash records clear the current GCash history. Backup files are
 not encrypted and should be stored privately.
 
 CSV is for spreadsheet interchange, not backup. It excludes photos, settings,
@@ -237,6 +239,37 @@ and the temporary cart. Import validates the entire file, then merges by product
 ID and barcode in one transaction. It never deletes products missing from the
 spreadsheet. Export an app-generated CSV first to get the supported columns and
 `selling_units_json` format.
+
+## GCash Services
+
+Open **Home → GCash Services** or **Profile → GCash Services** for the separate
+GCash history. Home has direct **Cash In** and **Cash Out** buttons.
+Cash In records cash received from a customer and GCash sent to them; Cash Out
+records GCash received from a customer and cash given to them.
+
+Choose **Scan receipt** for the framed camera, **Recent photo** for the system
+photo picker, or type the details manually. Camera captures are cropped to the
+frame. OCR runs on the phone and suggests the customer name, mobile number,
+amount, reference number, and transaction date/time. Review all fields before
+saving; missing or ambiguous details need manual entry. Masked names/numbers
+stay masked. The optional service fee starts at ₱0.00.
+
+Cash Out asks you to confirm that you checked the payment in the official GCash
+app. Raze Store records transactions; it does not transfer money or authenticate
+screenshots. Duplicate reference numbers are rejected across Cash In and Cash
+Out. Tap a saved record to edit it, delete it, or download/share its attached
+receipt image. Manual records without an attached image have no image to export.
+
+History supports Today, 7 days, 30 days, all dates, and a custom range using the
+calendar button. Cash In, Cash Out, and service fees have separate totals; none
+are counted as grocery sales. Records load in pages as you scroll.
+
+Records and resized PNG receipts stay in the local store database, counted under
+**Storage → Store database**, and are included in full `.razestore` backups.
+Product catalog packs and CSV exports do not include customer GCash details.
+The picker accesses selected images; it does not silently inspect the gallery.
+Parser rules currently support common labeled receipts; real receipt samples
+are still needed to tune and verify additional GCash layouts.
 
 ## Sales and storage
 

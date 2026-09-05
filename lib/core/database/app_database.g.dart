@@ -4611,6 +4611,378 @@ class SaleLinesCompanion extends UpdateCompanion<SaleLine> {
   }
 }
 
+class $GcashEntriesTable extends GcashEntries
+    with TableInfo<$GcashEntriesTable, GcashEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GcashEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _referenceMeta = const VerificationMeta(
+    'reference',
+  );
+  @override
+  late final GeneratedColumn<String> reference = GeneratedColumn<String>(
+    'reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _receiptMeta = const VerificationMeta(
+    'receipt',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> receipt = GeneratedColumn<Uint8List>(
+    'receipt',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    reference,
+    payload,
+    occurredAt,
+    receipt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gcash_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GcashEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('reference')) {
+      context.handle(
+        _referenceMeta,
+        reference.isAcceptableOrUnknown(data['reference']!, _referenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_referenceMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('receipt')) {
+      context.handle(
+        _receiptMeta,
+        receipt.isAcceptableOrUnknown(data['receipt']!, _receiptMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GcashEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GcashEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      receipt: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}receipt'],
+      ),
+    );
+  }
+
+  @override
+  $GcashEntriesTable createAlias(String alias) {
+    return $GcashEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class GcashEntry extends DataClass implements Insertable<GcashEntry> {
+  final String id;
+  final String reference;
+  final String payload;
+  final DateTime occurredAt;
+  final Uint8List? receipt;
+  const GcashEntry({
+    required this.id,
+    required this.reference,
+    required this.payload,
+    required this.occurredAt,
+    this.receipt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['reference'] = Variable<String>(reference);
+    map['payload'] = Variable<String>(payload);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    if (!nullToAbsent || receipt != null) {
+      map['receipt'] = Variable<Uint8List>(receipt);
+    }
+    return map;
+  }
+
+  GcashEntriesCompanion toCompanion(bool nullToAbsent) {
+    return GcashEntriesCompanion(
+      id: Value(id),
+      reference: Value(reference),
+      payload: Value(payload),
+      occurredAt: Value(occurredAt),
+      receipt: receipt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receipt),
+    );
+  }
+
+  factory GcashEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GcashEntry(
+      id: serializer.fromJson<String>(json['id']),
+      reference: serializer.fromJson<String>(json['reference']),
+      payload: serializer.fromJson<String>(json['payload']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      receipt: serializer.fromJson<Uint8List?>(json['receipt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'reference': serializer.toJson<String>(reference),
+      'payload': serializer.toJson<String>(payload),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'receipt': serializer.toJson<Uint8List?>(receipt),
+    };
+  }
+
+  GcashEntry copyWith({
+    String? id,
+    String? reference,
+    String? payload,
+    DateTime? occurredAt,
+    Value<Uint8List?> receipt = const Value.absent(),
+  }) => GcashEntry(
+    id: id ?? this.id,
+    reference: reference ?? this.reference,
+    payload: payload ?? this.payload,
+    occurredAt: occurredAt ?? this.occurredAt,
+    receipt: receipt.present ? receipt.value : this.receipt,
+  );
+  GcashEntry copyWithCompanion(GcashEntriesCompanion data) {
+    return GcashEntry(
+      id: data.id.present ? data.id.value : this.id,
+      reference: data.reference.present ? data.reference.value : this.reference,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      receipt: data.receipt.present ? data.receipt.value : this.receipt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GcashEntry(')
+          ..write('id: $id, ')
+          ..write('reference: $reference, ')
+          ..write('payload: $payload, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('receipt: $receipt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    reference,
+    payload,
+    occurredAt,
+    $driftBlobEquality.hash(receipt),
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GcashEntry &&
+          other.id == this.id &&
+          other.reference == this.reference &&
+          other.payload == this.payload &&
+          other.occurredAt == this.occurredAt &&
+          $driftBlobEquality.equals(other.receipt, this.receipt));
+}
+
+class GcashEntriesCompanion extends UpdateCompanion<GcashEntry> {
+  final Value<String> id;
+  final Value<String> reference;
+  final Value<String> payload;
+  final Value<DateTime> occurredAt;
+  final Value<Uint8List?> receipt;
+  final Value<int> rowid;
+  const GcashEntriesCompanion({
+    this.id = const Value.absent(),
+    this.reference = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.receipt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GcashEntriesCompanion.insert({
+    required String id,
+    required String reference,
+    required String payload,
+    required DateTime occurredAt,
+    this.receipt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       reference = Value(reference),
+       payload = Value(payload),
+       occurredAt = Value(occurredAt);
+  static Insertable<GcashEntry> custom({
+    Expression<String>? id,
+    Expression<String>? reference,
+    Expression<String>? payload,
+    Expression<DateTime>? occurredAt,
+    Expression<Uint8List>? receipt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (reference != null) 'reference': reference,
+      if (payload != null) 'payload': payload,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (receipt != null) 'receipt': receipt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GcashEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? reference,
+    Value<String>? payload,
+    Value<DateTime>? occurredAt,
+    Value<Uint8List?>? receipt,
+    Value<int>? rowid,
+  }) {
+    return GcashEntriesCompanion(
+      id: id ?? this.id,
+      reference: reference ?? this.reference,
+      payload: payload ?? this.payload,
+      occurredAt: occurredAt ?? this.occurredAt,
+      receipt: receipt ?? this.receipt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (reference.present) {
+      map['reference'] = Variable<String>(reference.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (receipt.present) {
+      map['receipt'] = Variable<Uint8List>(receipt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GcashEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('reference: $reference, ')
+          ..write('payload: $payload, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('receipt: $receipt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4625,6 +4997,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $StoreProfilesTable storeProfiles = $StoreProfilesTable(this);
   late final $SalesTable sales = $SalesTable(this);
   late final $SaleLinesTable saleLines = $SaleLinesTable(this);
+  late final $GcashEntriesTable gcashEntries = $GcashEntriesTable(this);
   late final Index storeProductsBarcodeUniqueIdx = Index(
     'store_products_barcode_unique_idx',
     'CREATE UNIQUE INDEX store_products_barcode_unique_idx ON store_products (barcode)',
@@ -4658,6 +5031,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     storeProfiles,
     sales,
     saleLines,
+    gcashEntries,
     storeProductsBarcodeUniqueIdx,
     storeProductsNameIdx,
     storeProductsSourceIdentityUniqueIdx,
@@ -7652,6 +8026,208 @@ typedef $$SaleLinesTableProcessedTableManager =
       SaleLine,
       PrefetchHooks Function({bool saleId})
     >;
+typedef $$GcashEntriesTableCreateCompanionBuilder =
+    GcashEntriesCompanion Function({
+      required String id,
+      required String reference,
+      required String payload,
+      required DateTime occurredAt,
+      Value<Uint8List?> receipt,
+      Value<int> rowid,
+    });
+typedef $$GcashEntriesTableUpdateCompanionBuilder =
+    GcashEntriesCompanion Function({
+      Value<String> id,
+      Value<String> reference,
+      Value<String> payload,
+      Value<DateTime> occurredAt,
+      Value<Uint8List?> receipt,
+      Value<int> rowid,
+    });
+
+class $$GcashEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $GcashEntriesTable> {
+  $$GcashEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get receipt => $composableBuilder(
+    column: $table.receipt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GcashEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $GcashEntriesTable> {
+  $$GcashEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get receipt => $composableBuilder(
+    column: $table.receipt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GcashEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GcashEntriesTable> {
+  $$GcashEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get reference =>
+      $composableBuilder(column: $table.reference, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get receipt =>
+      $composableBuilder(column: $table.receipt, builder: (column) => column);
+}
+
+class $$GcashEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GcashEntriesTable,
+          GcashEntry,
+          $$GcashEntriesTableFilterComposer,
+          $$GcashEntriesTableOrderingComposer,
+          $$GcashEntriesTableAnnotationComposer,
+          $$GcashEntriesTableCreateCompanionBuilder,
+          $$GcashEntriesTableUpdateCompanionBuilder,
+          (
+            GcashEntry,
+            BaseReferences<_$AppDatabase, $GcashEntriesTable, GcashEntry>,
+          ),
+          GcashEntry,
+          PrefetchHooks Function()
+        > {
+  $$GcashEntriesTableTableManager(_$AppDatabase db, $GcashEntriesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GcashEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GcashEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GcashEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> reference = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<Uint8List?> receipt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GcashEntriesCompanion(
+                id: id,
+                reference: reference,
+                payload: payload,
+                occurredAt: occurredAt,
+                receipt: receipt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String reference,
+                required String payload,
+                required DateTime occurredAt,
+                Value<Uint8List?> receipt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GcashEntriesCompanion.insert(
+                id: id,
+                reference: reference,
+                payload: payload,
+                occurredAt: occurredAt,
+                receipt: receipt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GcashEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GcashEntriesTable,
+      GcashEntry,
+      $$GcashEntriesTableFilterComposer,
+      $$GcashEntriesTableOrderingComposer,
+      $$GcashEntriesTableAnnotationComposer,
+      $$GcashEntriesTableCreateCompanionBuilder,
+      $$GcashEntriesTableUpdateCompanionBuilder,
+      (
+        GcashEntry,
+        BaseReferences<_$AppDatabase, $GcashEntriesTable, GcashEntry>,
+      ),
+      GcashEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7678,4 +8254,6 @@ class $AppDatabaseManager {
       $$SalesTableTableManager(_db, _db.sales);
   $$SaleLinesTableTableManager get saleLines =>
       $$SaleLinesTableTableManager(_db, _db.saleLines);
+  $$GcashEntriesTableTableManager get gcashEntries =>
+      $$GcashEntriesTableTableManager(_db, _db.gcashEntries);
 }

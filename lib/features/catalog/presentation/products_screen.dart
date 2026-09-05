@@ -523,6 +523,61 @@ class _ProductsHeader extends StatelessWidget {
       children: [
         _ScanCallout(onScan: onScan),
         const SizedBox(height: AppSpacing.xs),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Column(
+              children: [
+                InkWell(
+                  onTap: () => context.push('/gcash'),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(child: Text('GCash Services')),
+                        Flexible(
+                          child: Text(
+                            'History',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => context.push('/gcash/new?kind=cashIn'),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Cash In'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () =>
+                            context.push('/gcash/new?kind=cashOut'),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Cash Out'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
         _QuickUnitsShortcut(onPressed: onQuickUnits),
         const SizedBox(height: AppSpacing.md),
         AppSearchField(

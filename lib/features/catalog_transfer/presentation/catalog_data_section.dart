@@ -125,12 +125,12 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
           key: const ValueKey('complete-backup-expansion'),
           icon: Icons.health_and_safety_outlined,
           title: 'Complete backup',
-          subtitle: 'Save or restore products, photos, settings, and sales',
+          subtitle: 'Save or restore products, photos, settings, sales, and GCash',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Includes products, main and sub-unit prices, photos, completed sales history, receipt details, categories, and appearance.',
+                'Includes products, main and sub-unit prices, photos, completed sales history, GCash records and receipts, store details, categories, and appearance.',
                 style: Theme.of(
                   context,
                 ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
@@ -322,7 +322,7 @@ final class _CatalogDataSectionState extends ConsumerState<CatalogDataSection> {
         scrollable: true,
         title: const Text('Replace local store data?'),
         content: const Text(
-          'Restore replaces all products, prices, sub-units, product photos, completed sales history, and store receipt details on this phone. It also clears the unfinished cart. An older backup that has no sales will replace the current history with an empty history.\n\nCreate a current backup first if you may need to undo this.',
+          'Restore replaces all products, prices, sub-units, product photos, completed sales history, GCash records and receipts, and store receipt details on this phone. It also clears the unfinished cart. Older backups without sales or GCash records will clear those histories.\n\nCreate a current backup first if you may need to undo this.',
         ),
         actions: [
           TextButton(
