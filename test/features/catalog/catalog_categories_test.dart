@@ -5,8 +5,108 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:raze_store/features/catalog/application/catalog_providers.dart';
 import 'package:raze_store/features/catalog/domain/catalog_categories.dart';
+import 'package:raze_store/features/catalog/domain/catalog_taxonomy.dart';
 
 void main() {
+  test('general taxonomy preserves all parent-scoped entries', () {
+    expect(generalCatalogCategoryGroups, hasLength(20));
+    expect(generalCatalogSubcategories, hasLength(283));
+    expect(
+      generalCatalogCategoryNames,
+      orderedEquals(const [
+        'Food & Beverages',
+        'Personal Care & Beauty',
+        'Health & Wellness',
+        'Household & Cleaning',
+        'Baby & Kids',
+        'Clothing & Fashion',
+        'Shoes & Accessories',
+        'Electronics & Gadgets',
+        'Home & Furniture',
+        'Appliances',
+        'Sports & Fitness',
+        'Automotive',
+        'Tools & Hardware',
+        'Pet Supplies',
+        'Office & School Supplies',
+        'Toys & Hobbies',
+        'Books & Media',
+        'Jewelry & Watches',
+        'Grocery & Daily Essentials',
+        'Agriculture & Garden',
+      ]),
+    );
+  });
+
+  test('same-named subcategories retain each parent membership', () {
+    final parentsBySubcategory = <String, List<String>>{};
+    for (final group in generalCatalogCategoryGroups) {
+      for (final subcategory in group.subcategories) {
+        parentsBySubcategory.putIfAbsent(subcategory, () => []).add(group.name);
+      }
+    }
+
+    expect(
+      parentsBySubcategory.entries
+          .where((entry) => entry.value.length > 1)
+          .map((entry) => entry.key)
+          .toSet(),
+      {
+        'Baby Clothing',
+        'Coffee & Tea',
+        'Computer Accessories',
+        'Office Furniture',
+        'Pest Control',
+      },
+    );
+    expect(parentsBySubcategory['Baby Clothing'], [
+      'Baby & Kids',
+      'Clothing & Fashion',
+    ]);
+    expect(parentsBySubcategory['Coffee & Tea'], [
+      'Food & Beverages',
+      'Grocery & Daily Essentials',
+    ]);
+    expect(parentsBySubcategory['Computer Accessories'], [
+      'Electronics & Gadgets',
+      'Office & School Supplies',
+    ]);
+    expect(parentsBySubcategory['Office Furniture'], [
+      'Home & Furniture',
+      'Office & School Supplies',
+    ]);
+    expect(parentsBySubcategory['Pest Control'], [
+      'Household & Cleaning',
+      'Agriculture & Garden',
+    ]);
+  });
+
+  test(
+    'flat built-in suggestions include starters, general groups, and leaves',
+    () {
+      expect(builtInCatalogCategories, hasLength(312));
+      expect(builtInCatalogCategories, containsAll(starterCatalogCategories));
+      expect(
+        builtInCatalogCategories,
+        containsAll(generalCatalogCategoryNames),
+      );
+      expect(
+        builtInCatalogCategories,
+        containsAll(generalCatalogSubcategories.toSet()),
+      );
+      expect(
+        builtInCatalogCategories
+            .map((category) => category.toLowerCase())
+            .toSet(),
+        hasLength(builtInCatalogCategories.length),
+      );
+      expect(isBuiltInCatalogCategory(' remote-controlled toys '), isTrue);
+      expect(matchingCatalogCategories('remote-controlled'), [
+        'Remote-Controlled Toys',
+      ]);
+    },
+  );
+
   test('merges starter, stored, and API categories without duplicates', () {
     final categories = mergeCatalogCategories(
       storedCategories: const [' Coffee & Beverages ', 'beverages', ''],
@@ -14,6 +114,7 @@ void main() {
     );
 
     expect(categories, containsAll(starterCatalogCategories));
+    expect(categories, containsAll(generalCatalogSubcategories.toSet()));
     expect(
       categories,
       containsAll(const ['Canned Goods', 'Snacks', 'Biscuits', 'Bread']),
@@ -46,9 +147,10 @@ void main() {
       storedCategories: const ['Mobile Load'],
     );
 
-    expect(matchingCatalogCategories('  mobile ', categories: categories), [
-      'Mobile Load',
-    ]);
+    expect(
+      matchingCatalogCategories('  mobile ', categories: categories),
+      containsAll(const ['Mobile Accessories', 'Mobile Load']),
+    );
   });
 
   test('starter catalog pack uses only broad shelf categories', () async {
@@ -86,7 +188,7 @@ void main() {
 
       final suggestions = container.read(catalogCategorySuggestionsProvider);
       expect(suggestions, contains('Mobile Load'));
-      expect(suggestions, containsAll(starterCatalogCategories));
+      expect(suggestions, containsAll(builtInCatalogCategories));
     },
   );
 }

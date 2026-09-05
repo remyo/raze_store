@@ -112,13 +112,14 @@ Products with alternate units also appear on the separate **Quick units** page.
 Its minus/quantity/plus controls update the unfinished cart immediately, while
 the full Products page remains the place to manage product details and prices.
 
-The product form suggests broad sari-sari shelf categories such as **Canned
-Goods**, **Snacks**, **Biscuits**, and **Bread**, while still accepting a custom
-category. Keep the product subtype in its name instead of creating narrow
-filters such as “Tuna Can.” Imported products can introduce more category names
-without a database migration. Open **Profile → Settings → Product
-categories** to add or remove reusable custom choices. A custom category in use
-by a saved product cannot be deleted until those products are moved to another
+The product form includes a built-in directory of 20 general groups and 283
+subcategories, alongside the familiar sari-sari shelf choices such as **Canned
+Goods**, **Snacks**, **Biscuits**, and **Bread**. Open **Profile → Settings →
+Product categories** to expand any general group, browse its subcategories, or
+manage reusable custom choices. The hierarchy is an offline directory; products
+continue storing their category as plain text so existing backups, catalog packs,
+and owner-created categories remain compatible. A custom category in use by a
+saved product cannot be deleted until those products are moved to another
 category.
 
 Open **Profile → Settings → Delete multiple products** to search the full

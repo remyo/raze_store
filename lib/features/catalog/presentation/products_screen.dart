@@ -410,10 +410,11 @@ class _ProductsHeader extends StatelessWidget {
   }
 }
 
-/// A single horizontal viewport with two category rows.
+/// A single horizontal viewport with two compact category rows.
 ///
-/// The grid owns one scroll position, so dragging either row moves the entire
-/// category browser instead of leaving the other row behind.
+/// Both rows live inside the same scroller, so dragging either row moves the
+/// entire browser. Each chip keeps its natural width until a long label reaches
+/// the width cap, where its fitted label scales down instead of overflowing.
 class _ProductCategoryBrowser extends StatelessWidget {
   const _ProductCategoryBrowser({
     required this.categories,
@@ -429,13 +430,19 @@ class _ProductCategoryBrowser extends StatelessWidget {
   Widget build(BuildContext context) {
     final choices = <String?>[null, ...categories];
     final textScaler = MediaQuery.textScalerOf(context);
-    final scaledLabelHeight = textScaler.scale(14);
-    final textScale = scaledLabelHeight / 14;
+    final scaledLabelHeight =
+        textScaler.scale(AppButtonStyles.compactFontSize) *
+        AppButtonStyles.compactLineHeight;
     const categoryGap = AppSpacing.xs;
-    // ChoiceChip labels stay on one line, but their row must follow the real
-    // accessibility scale instead of clipping it at an arbitrary ceiling.
-    final rowHeight = math.max(48.0, scaledLabelHeight + 30);
-    final columnWidth = 152.0 + math.max(0.0, textScale - 1) * 32;
+    final rowHeight = math.max(
+      AppSize.compactChip,
+      scaledLabelHeight + (AppSpacing.xxs * 2),
+    );
+    final firstRow = <String?>[];
+    final secondRow = <String?>[];
+    for (var index = 0; index < choices.length; index++) {
+      (index.isEven ? firstRow : secondRow).add(choices[index]);
+    }
 
     return Semantics(
       container: true,
@@ -443,49 +450,94 @@ class _ProductCategoryBrowser extends StatelessWidget {
       child: SizedBox(
         key: const ValueKey('product-category-browser'),
         height: rowHeight * 2 + categoryGap,
-        child: GridView.builder(
-          key: const ValueKey('product-category-grid'),
+        child: SingleChildScrollView(
+          key: const ValueKey('product-category-scroll'),
           scrollDirection: Axis.horizontal,
           primary: false,
-          padding: EdgeInsets.zero,
-          itemCount: choices.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: columnWidth,
-            mainAxisSpacing: categoryGap,
-            crossAxisSpacing: categoryGap,
-          ),
-          itemBuilder: (context, index) {
-            final category = choices[index];
-            final label = category ?? 'All';
-            return Align(
-              alignment: Alignment.centerLeft,
-              child: ChoiceChip(
-                key: ValueKey(
-                  category == null
-                      ? 'product-category-all'
-                      : 'product-category-$category',
-                ),
-                label: SizedBox(
-                  width: columnWidth - 34,
-                  child: FittedBox(
-                    key: ValueKey('product-category-label-$label'),
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs,
-                      ),
-                      child: Text(label, maxLines: 1, softWrap: false),
-                    ),
-                  ),
-                ),
-                tooltip: label,
-                selected: selectedCategory == category,
-                onSelected: (_) => onSelected(category),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ProductCategoryRow(
+                key: const ValueKey('product-category-row-first'),
+                categories: firstRow,
+                selectedCategory: selectedCategory,
+                height: rowHeight,
+                onSelected: onSelected,
               ),
-            );
-          },
+              const SizedBox(height: categoryGap),
+              _ProductCategoryRow(
+                key: const ValueKey('product-category-row-second'),
+                categories: secondRow,
+                selectedCategory: selectedCategory,
+                height: rowHeight,
+                onSelected: onSelected,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductCategoryRow extends StatelessWidget {
+  const _ProductCategoryRow({
+    super.key,
+    required this.categories,
+    required this.selectedCategory,
+    required this.height,
+    required this.onSelected,
+  });
+
+  static const _maximumChipWidth = 152.0;
+
+  final List<String?> categories;
+  final String? selectedCategory;
+  final double height;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < categories.length; index++) ...[
+          if (index > 0) const SizedBox(width: AppSpacing.xs),
+          _buildChip(categories[index]),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildChip(String? category) {
+    final label = category ?? 'All';
+    return SizedBox(
+      height: height,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maximumChipWidth),
+        child: ChoiceChip(
+          key: ValueKey(
+            category == null
+                ? 'product-category-all'
+                : 'product-category-$category',
+          ),
+          padding: EdgeInsets.zero,
+          labelPadding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          label: FittedBox(
+            key: ValueKey('product-category-label-$label'),
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Text(label, maxLines: 1, softWrap: false),
+            ),
+          ),
+          tooltip: label,
+          selected: selectedCategory == category,
+          onSelected: (_) => onSelected(category),
         ),
       ),
     );

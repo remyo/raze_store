@@ -250,17 +250,16 @@ void main() {
     await tester.pumpAndSettle();
 
     final browser = find.byKey(const ValueKey('product-category-browser'));
-    final gridFinder = find.byKey(const ValueKey('product-category-grid'));
-    final grid = tester.widget<GridView>(gridFinder);
-    final delegate =
-        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-    expect(grid.scrollDirection, Axis.horizontal);
-    expect(delegate.crossAxisCount, 2);
-    expect(delegate.mainAxisSpacing, AppSpacing.xs);
-    expect(delegate.crossAxisSpacing, delegate.mainAxisSpacing);
+    final scrollFinder = find.byKey(const ValueKey('product-category-scroll'));
+    final scroll = tester.widget<SingleChildScrollView>(scrollFinder);
+    expect(scroll.scrollDirection, Axis.horizontal);
     expect(
       find.descendant(of: browser, matching: find.byType(Scrollable)),
       findsOneWidget,
+    );
+    expect(
+      tester.getSize(browser).height,
+      (AppSize.compactChip * 2) + AppSpacing.xs,
     );
 
     final allLabel = tester.widget<FittedBox>(
@@ -278,12 +277,28 @@ void main() {
     final firstCategory = find.byKey(
       const ValueKey('product-category-Category 0'),
     );
+    final nextFirstRowCategory = find.byKey(
+      const ValueKey('product-category-Category 1'),
+    );
+    final allChip = tester.widget<ChoiceChip>(all);
+    expect(allChip.padding, EdgeInsets.zero);
+    expect(allChip.labelPadding, EdgeInsets.zero);
+    expect(allChip.visualDensity, VisualDensity.compact);
+    expect(allChip.materialTapTargetSize, MaterialTapTargetSize.shrinkWrap);
+
+    final allRect = tester.getRect(all);
+    final firstCategoryRect = tester.getRect(firstCategory);
+    final nextFirstRowRect = tester.getRect(nextFirstRowCategory);
+    expect(firstCategoryRect.top - allRect.bottom, closeTo(AppSpacing.xs, 0.1));
+    expect(nextFirstRowRect.left - allRect.right, closeTo(AppSpacing.xs, 0.1));
+    expect(allRect.width, lessThan(nextFirstRowRect.width));
+
     final allBefore = tester.getTopLeft(all);
     final firstBefore = tester.getTopLeft(firstCategory);
     expect(allBefore.dx, closeTo(firstBefore.dx, 0.1));
     expect(allBefore.dy, isNot(closeTo(firstBefore.dy, 0.1)));
 
-    await tester.drag(gridFinder, const Offset(-60, 0));
+    await tester.drag(scrollFinder, const Offset(-60, 0));
     await tester.pump();
 
     final allDelta = tester.getTopLeft(all).dx - allBefore.dx;
@@ -292,7 +307,7 @@ void main() {
     expect(allDelta, closeTo(firstDelta, 0.1));
   });
 
-  testWidgets('category rows grow for three-times accessibility text', (
+  testWidgets('long category labels fit and rows grow with accessible text', (
     tester,
   ) async {
     tester.view
@@ -337,11 +352,33 @@ void main() {
         ),
       ),
     );
-    expect(browser.height, greaterThan(140));
-    expect(all.height, greaterThan(54));
-    expect(all.bottom, lessThan(longCategory.top));
+    final longLabelFinder = find.byKey(
+      const ValueKey(
+        'product-category-label-Household cleaning and laundry supplies',
+      ),
+    );
+    final longLabel = tester.widget<FittedBox>(longLabelFinder);
+    final longLabelPadding = longLabel.child! as Padding;
+    expect(longLabel.fit, BoxFit.scaleDown);
+    expect(longLabel.alignment, Alignment.centerLeft);
+    expect(
+      longLabelPadding.padding,
+      const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+    );
+    expect(longCategory.width, lessThanOrEqualTo(152));
+    expect(
+      tester.getSize(longLabelFinder).width,
+      lessThan(tester.getSize(find.byWidget(longLabelPadding)).width),
+    );
+    expect(
+      browser.height,
+      greaterThan((AppSize.compactChip * 2) + AppSpacing.xs),
+    );
+    expect(all.height, greaterThan(AppSize.compactChip));
+    expect(longCategory.top - all.bottom, closeTo(AppSpacing.xs, 0.1));
     expect(browser.contains(all.topLeft), isTrue);
-    expect(browser.contains(longCategory.bottomRight), isTrue);
+    expect(longCategory.right, lessThanOrEqualTo(browser.right));
+    expect(longCategory.bottom, closeTo(browser.bottom, 0.1));
     expect(tester.takeException(), isNull);
   });
 }

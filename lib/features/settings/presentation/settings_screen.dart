@@ -5,6 +5,7 @@ import 'package:raze_store/app/theme/theme.dart';
 import 'package:raze_store/app/theme_mode_controller.dart';
 import 'package:raze_store/core/widgets/app_widgets.dart';
 import 'package:raze_store/features/catalog/application/custom_catalog_categories_controller.dart';
+import 'package:raze_store/features/catalog/domain/catalog_taxonomy.dart';
 import 'package:raze_store/features/catalog_transfer/presentation/catalog_data_section.dart';
 import 'package:raze_store/features/settings/application/app_storage_providers.dart';
 import 'package:raze_store/features/settings/application/settings_providers.dart';
@@ -200,9 +201,9 @@ class _SettingsEditorState extends ConsumerState<_SettingsEditor> {
                           key: const ValueKey('manage-product-categories'),
                           icon: Icons.category_outlined,
                           title: 'Product categories',
-                          subtitle: customCategoryCount == 0
-                              ? 'Built-in categories only'
-                              : '$customCategoryCount custom ${customCategoryCount == 1 ? 'category' : 'categories'}',
+                          subtitle:
+                              '${generalCatalogCategoryGroups.length} general categories • '
+                              '$customCategoryCount custom ${customCategoryCount == 1 ? 'category' : 'categories'}',
                           onTap: () => context.push('/settings/categories'),
                         ),
                         const Divider(height: 1),

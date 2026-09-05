@@ -2321,10 +2321,16 @@ List<String> _parseCustomCategories(Object? value) {
     final category = normalizeCatalogCategoryName(
       _nonEmptyString(value, 'custom category'),
     );
-    if (category.length > maxCatalogCategoryNameLength ||
-        isStarterCatalogCategory(category) ||
-        !normalizedNames.add(category.toLowerCase())) {
+    if (category.length > maxCatalogCategoryNameLength) {
       throw const FormatException('The backup custom categories are invalid.');
+    }
+    // A newer app can promote an old custom value into its built-in directory.
+    // Drop that now-redundant preference so an otherwise valid older backup
+    // remains restorable. Case-only legacy duplicates are equally safe to
+    // normalize away.
+    if (isStarterCatalogCategory(category) ||
+        !normalizedNames.add(category.toLowerCase())) {
+      continue;
     }
     categories.add(category);
   }

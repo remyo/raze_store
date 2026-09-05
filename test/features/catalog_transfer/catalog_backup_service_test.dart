@@ -334,6 +334,37 @@ void main() {
   });
 
   test(
+    'restores an older backup after custom categories become built in',
+    () async {
+      final archiveFile = File('${testRoot.path}/older-categories.razestore');
+      await CatalogBackupService(
+        database: sourceDatabase,
+        imageStore: LocalProductImageStore(
+          root: Directory('${testRoot.path}/older-categories-source'),
+        ),
+      ).createArchive(outputPath: archiveFile.path);
+      await _replaceArchiveCustomCategories(archiveFile, const [
+        'Skincare',
+        'Mobile Load',
+        ' mobile   load ',
+      ]);
+
+      final result = await CatalogBackupService(
+        database: targetDatabase,
+        imageStore: LocalProductImageStore(
+          root: Directory('${testRoot.path}/older-categories-target'),
+        ),
+      ).restoreReplacing(archivePath: archiveFile.path);
+
+      expect(result, isA<CatalogTransferSuccess>());
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getStringList(customCatalogCategoriesPreferenceKey), [
+        'Mobile Load',
+      ]);
+    },
+  );
+
+  test(
     'version 3 backups without behavior fields preserve device preferences',
     () async {
       await LocalCatalogRepository(sourceDatabase).createProduct(
@@ -632,6 +663,39 @@ void main() {
     );
     expect((await currentCatalog.searchProducts('')).single.id, 'keep-me');
   });
+}
+
+Future<void> _replaceArchiveCustomCategories(
+  File file,
+  List<String> categories,
+) async {
+  final archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+  final entries = <String, List<int>>{
+    for (final entry in archive.files) entry.name: entry.readBytes()!,
+  };
+  final data = (jsonDecode(utf8.decode(entries['data.json']!)) as Map)
+      .cast<String, Object?>();
+  final preferences = (data['preferences'] as Map).cast<String, Object?>();
+  preferences['customCategories'] = categories;
+  final dataBytes = utf8.encode(jsonEncode(data));
+  entries['data.json'] = dataBytes;
+
+  final manifest = (jsonDecode(utf8.decode(entries['manifest.json']!)) as Map)
+      .cast<String, Object?>();
+  for (final value in (manifest['files'] as List).cast<Object?>()) {
+    final descriptor = (value as Map).cast<String, Object?>();
+    if (descriptor['path'] == 'data.json') {
+      descriptor['size'] = dataBytes.length;
+      descriptor['sha256'] = sha256.convert(dataBytes).toString();
+    }
+  }
+  entries['manifest.json'] = utf8.encode(jsonEncode(manifest));
+
+  final rewritten = Archive();
+  for (final entry in entries.entries) {
+    rewritten.add(ArchiveFile.bytes(entry.key, entry.value));
+  }
+  await file.writeAsBytes(ZipEncoder().encode(rewritten));
 }
 
 Future<void> _rewriteAsVersion1(File file) async {
